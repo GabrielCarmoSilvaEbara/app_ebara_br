@@ -2,10 +2,6 @@ allprojects {
     repositories {
         google()
         mavenCentral()
-        maven {
-            url "https://repo.maven.apache.org/maven2/"
-            allowInsecureProtocol = true
-        }
     }
 }
 

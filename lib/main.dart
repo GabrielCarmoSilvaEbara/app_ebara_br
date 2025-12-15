@@ -16,7 +16,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Seu Projeto Flutter',
+      title: 'Ebara Brasil',
 
       theme: AppTheme.lightTheme,
 
