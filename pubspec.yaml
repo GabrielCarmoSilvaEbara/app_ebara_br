@@ -1,0 +1,59 @@
+name: app_ebara
+description: "A new Flutter project."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.3
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+  flutter_native_splash: ^2.4.7
+
+flutter_native_splash:
+  color: "#004F9F" 
+  image: assets/images/logo_2.png
+  android_gravity: center
+
+  android_12:
+    image: assets/images/logo_2.png
+    color: "#004F9F"
+    icon_background_color: "#FFFFFF"
+
+flutter:
+
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+
+  fonts:
+    - family: Poppins
+      fonts:
+        - asset: assets/fonts/Poppins-Regular.ttf
+          weight: 400
+        
+        - asset: assets/fonts/Poppins-Medium.ttf
+          weight: 500
+          
+        - asset: assets/fonts/Poppins-SemiBold.ttf
+          weight: 600
+          
+        - asset: assets/fonts/Poppins-Bold.ttf
+          weight: 700
+          
+        - asset: assets/fonts/Poppins-ExtraBold.ttf
+          weight: 800
+        
+        - asset: assets/fonts/Poppins-Italic.ttf
+          style: italic
