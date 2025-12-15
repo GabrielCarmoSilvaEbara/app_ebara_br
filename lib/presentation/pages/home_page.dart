@@ -4,6 +4,8 @@ import '../theme/app_text_styles.dart';
 import '../widgets/custom_search_bar.dart';
 import '../widgets/category_chip.dart';
 import '../widgets/product_card.dart';
+import '../services/location_service.dart';
+import '../widgets/location_selector_sheet.dart';
 
 class NoScrollbarScrollBehavior extends ScrollBehavior {
   @override
@@ -26,6 +28,11 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   String _selectedCategory = 'CENTRIFUGAL PUMPS';
   String _searchQuery = '';
+
+  String _city = 'Search...';
+  String _district = '';
+  String _state = '';
+  String _country = '';
 
   static const List<Map<String, dynamic>> _allCategories = [
     {'label': 'CENTRIFUGAL PUMPS', 'icon': Icons.tune},
@@ -85,6 +92,27 @@ class _HomePageState extends State<HomePage> {
     },
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    _initLocation();
+  }
+
+  Future<void> _initLocation() async {
+    final location = await LocationService.getCurrentCity();
+
+    if (location == null || location['city']!.isEmpty) {
+      setState(() {
+        _city = 'Choose location';
+      });
+    } else {
+      setState(() {
+        _city = location['city']!;
+        _country = location['country']!;
+      });
+    }
+  }
+
   List<Map<String, dynamic>> get _filteredProducts {
     return _allProducts.where((product) {
       final matchesCategory = product['category'] == _selectedCategory;
@@ -96,15 +124,31 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _onCategorySelected(String category) {
-    setState(() {
-      _selectedCategory = category;
-    });
+    setState(() => _selectedCategory = category);
   }
 
   void _onSearchChanged(String query) {
-    setState(() {
-      _searchQuery = query;
-    });
+    setState(() => _searchQuery = query);
+  }
+
+  void _openLocationSelector() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) {
+        return LocationSelectorSheet(
+          onSelected: (city, state, country) {
+            setState(() {
+              _city = city;
+              _state = state;
+              _country = country;
+            });
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -130,22 +174,29 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildLocationHeader() {
-    return const Padding(
-      padding: EdgeInsets.fromLTRB(20.0, 20.0, 20.0, 8.0),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 50, 20, 0),
       child: Center(
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.location_on, size: 24, color: AppColors.textDecoration),
-            SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Location', style: AppTextStyles.text4),
-                Text('Bauru', style: AppTextStyles.text),
-              ],
-            ),
-          ],
+        child: GestureDetector(
+          onTap: _openLocationSelector,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.location_on,
+                size: 24,
+                color: AppColors.textPrimary,
+              ),
+              const SizedBox(width: 8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Location', style: AppTextStyles.text4),
+                  Text(_city, style: AppTextStyles.text),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -153,7 +204,7 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildSearchBar() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       child: CustomSearchBar(
         hintText: 'Search...',
         onChanged: _onSearchChanged,
@@ -163,7 +214,7 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildCategoryTitle() {
     return Padding(
-      padding: const EdgeInsets.only(left: 20.0, top: 0.0, bottom: 10.0),
+      padding: const EdgeInsets.only(left: 20, bottom: 10),
       child: Text('Select Category', style: AppTextStyles.text),
     );
   }
@@ -173,7 +224,7 @@ class _HomePageState extends State<HomePage> {
       height: 48,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 20.0),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
         itemCount: _allCategories.length,
         itemBuilder: (context, index) {
           final category = _allCategories[index];
@@ -194,7 +245,7 @@ class _HomePageState extends State<HomePage> {
 
     if (products.isEmpty) {
       return Center(
-        child: Text('Nenhum produto encontrado', style: AppTextStyles.text4),
+        child: Text('No products found', style: AppTextStyles.text4),
       );
     }
 
