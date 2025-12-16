@@ -12,25 +12,24 @@ dependencies:
     sdk: flutter
 
   cupertino_icons: ^1.0.8
+  http: ^1.2.0
+  geolocator: ^14.0.2
+  geocoding: ^4.0.0
+  flutter_native_splash: ^2.4.7
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
 
   flutter_lints: ^6.0.0
-  flutter_native_splash: ^2.4.7
-  geolocator: ^10.1.0
-  geocoding: ^3.0.0
-  http: ^1.2.0
-
 
 flutter_native_splash:
   color: "#004F9F" 
-  image: assets/images/logo_2.png
+  image: assets/images/logo.png
   android_gravity: center
 
   android_12:
-    image: assets/images/logo_2.png
+    image: assets/images/logo.png
     color: "#004F9F"
     icon_background_color: "#FFFFFF"
 

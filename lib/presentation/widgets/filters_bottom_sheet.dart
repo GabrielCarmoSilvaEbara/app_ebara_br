@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
+import '../services/translation_service.dart';
 
 class FiltersBottomSheet extends StatefulWidget {
   const FiltersBottomSheet({super.key});
@@ -24,10 +25,10 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
   );
 
   final List<String> _applications = [
-    'Residential',
-    'Industrial',
-    'Agricultural',
-    'Commercial',
+    TranslationService.translate('residential'),
+    TranslationService.translate('industrial'),
+    TranslationService.translate('agricultural'),
+    TranslationService.translate('commercial'),
   ];
 
   final List<String> _models = ['B-12 NR', 'TSW-250', 'B-10', 'TH-12'];
@@ -60,8 +61,8 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildDropdownField(
-                    label: 'Applications',
-                    hint: 'Pick one',
+                    label: TranslationService.translate('applications'),
+                    hint: TranslationService.translate('pick_one'),
                     value: _selectedApplication,
                     items: _applications,
                     onChanged: (value) =>
@@ -69,8 +70,8 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
                   ),
                   const SizedBox(height: 16),
                   _buildDropdownField(
-                    label: 'Models',
-                    hint: 'Pick one',
+                    label: TranslationService.translate('models'),
+                    hint: TranslationService.translate('pick_one'),
                     value: _selectedModel,
                     items: _models,
                     onChanged: (value) =>
@@ -80,7 +81,7 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
                   _buildFrequencySection(),
                   const SizedBox(height: 20),
                   _buildNumericField(
-                    label: 'Flow',
+                    label: TranslationService.translate('flow'),
                     controller: _flowController,
                     unit: _selectedFlowUnit,
                     units: _flowUnits,
@@ -89,7 +90,7 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
                   ),
                   const SizedBox(height: 16),
                   _buildNumericField(
-                    label: 'Manometric Head',
+                    label: TranslationService.translate('manometric_head'),
                     controller: _headController,
                     unit: _selectedHeadUnit,
                     units: _headUnits,
@@ -173,7 +174,10 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Frequency', style: AppTextStyles.text1.copyWith(fontSize: 14)),
+        Text(
+          TranslationService.translate('frequency'),
+          style: AppTextStyles.text1.copyWith(fontSize: 14),
+        ),
         const SizedBox(height: 12),
         Row(
           children: [
@@ -344,7 +348,10 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
           children: [
             const Icon(Icons.search, size: 20),
             const SizedBox(width: 8),
-            Text('Search', style: AppTextStyles.text2.copyWith(fontSize: 16)),
+            Text(
+              TranslationService.translate('search'),
+              style: AppTextStyles.text2.copyWith(fontSize: 16),
+            ),
           ],
         ),
       ),

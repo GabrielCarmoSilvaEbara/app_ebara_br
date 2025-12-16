@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
+import '../services/translation_service.dart';
 
 class ProductDetailsPage extends StatelessWidget {
   final String productName;
@@ -17,7 +18,7 @@ class ProductDetailsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.backgroundSecondary,
       body: SafeArea(
         child: Column(
           children: [
@@ -29,20 +30,32 @@ class ProductDetailsPage extends StatelessWidget {
                   children: [
                     _buildProductImage(),
                     const SizedBox(height: 24),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildProductTitle(),
-                          const SizedBox(height: 16),
-                          _buildDescription(),
-                          const SizedBox(height: 24),
-                          _buildApplicationsSection(),
-                          const SizedBox(height: 24),
-                          _buildTechnicalInfoSection(),
-                          const SizedBox(height: 32),
-                        ],
+                    Container(
+                      padding: const EdgeInsets.only(top: 10),
+                      decoration: BoxDecoration(
+                        color: AppColors.backgroundCard,
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(30),
+                          topRight: Radius.circular(30),
+                          bottomLeft: Radius.zero,
+                          bottomRight: Radius.zero,
+                        ),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildProductTitle(),
+                            const SizedBox(height: 16),
+                            _buildDescription(),
+                            const SizedBox(height: 24),
+                            _buildApplicationsSection(),
+                            const SizedBox(height: 24),
+                            _buildTechnicalInfoSection(),
+                            const SizedBox(height: 32),
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -112,32 +125,32 @@ class ProductDetailsPage extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Motobomba Centrífuga Monoestágio - Monobloco - Motor Monofásico em II Polos, 60Hz, 3500rpm - Bocais com rosca BSP, Sucção 3/4" x Recalque 3/4".',
+          TranslationService.translate('product_description_1'),
           style: AppTextStyles.text4.copyWith(fontSize: 14, height: 1.5),
         ),
         const SizedBox(height: 12),
         Text(
-          'Utilizada para água limpa até temperatura de 40ºC (Temperaturas superiores, consultar opções).',
+          TranslationService.translate('product_description_2'),
           style: AppTextStyles.text4.copyWith(fontSize: 14, height: 1.5),
         ),
         const SizedBox(height: 12),
         Text(
-          'Carcaça da bomba em ferro fundido GG-20.',
+          TranslationService.translate('product_description_3'),
           style: AppTextStyles.text4.copyWith(fontSize: 14, height: 1.5),
         ),
         const SizedBox(height: 12),
         Text(
-          'Rotor fechado em termoplástico. Anel O\'ring de vedação da carcaça em Buna N.',
+          TranslationService.translate('product_description_4'),
           style: AppTextStyles.text4.copyWith(fontSize: 14, height: 1.5),
         ),
         const SizedBox(height: 12),
         Text(
-          'Selo mecânico: Faces em grafite e cerâmica.',
+          TranslationService.translate('product_description_5'),
           style: AppTextStyles.text4.copyWith(fontSize: 14, height: 1.5),
         ),
         const SizedBox(height: 12),
         Text(
-          'Mola em inox 304 e elastômero (borracha) em Buna N.',
+          TranslationService.translate('product_description_6'),
           style: AppTextStyles.text4.copyWith(fontSize: 14, height: 1.5),
         ),
       ],
@@ -148,7 +161,10 @@ class ProductDetailsPage extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Aplicações', style: AppTextStyles.text.copyWith(fontSize: 20)),
+        Text(
+          TranslationService.translate('applications_title'),
+          style: AppTextStyles.text.copyWith(fontSize: 20),
+        ),
         const SizedBox(height: 16),
         Wrap(
           spacing: 12,
@@ -182,13 +198,16 @@ class ProductDetailsPage extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Informações Técnicas',
+          TranslationService.translate('technical_info_title'),
           style: AppTextStyles.text.copyWith(fontSize: 20),
         ),
         const SizedBox(height: 16),
-        _buildTechnicalInfoRow('Potência', '0.5 cv'),
+        _buildTechnicalInfoRow(TranslationService.translate('power'), '0.5 cv'),
         const SizedBox(height: 12),
-        _buildTechnicalInfoRow('Voltagem', '127/220-254 V'),
+        _buildTechnicalInfoRow(
+          TranslationService.translate('voltage'),
+          '127/220-254 V',
+        ),
       ],
     );
   }
