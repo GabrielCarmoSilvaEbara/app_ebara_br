@@ -49,7 +49,7 @@ class CategoryChip extends StatelessWidget {
       border: Border.all(
         color: isSelected
             ? colorScheme.primary
-            : colorScheme.primary.withOpacity(0.3),
+            : colorScheme.primary.withValues(alpha: 0.3),
         width: 1,
       ),
     );

@@ -1,5 +1,5 @@
 class TranslationService {
-  static String currentLanguage = 'en';
+  static String currentLanguage = 'pt';
 
   static void setLanguageByCountry(String country) {
     if (country.toLowerCase().contains('brasil') ||
@@ -62,12 +62,17 @@ class TranslationService {
         'pt': 'Erro ao buscar cidades',
         'es': 'Error al buscar ciudades',
       },
-      'centrifugal_pumps': {
+      'bombas-centrifugas': {
         'en': 'CENTRIFUGAL PUMPS',
         'pt': 'BOMBAS CENTRÍFUGAS',
         'es': 'BOMBAS CENTRÍFUGAS',
       },
-      'submersible_pumps': {
+      'bombas-submersas': {
+        'en': 'SUBMERSIBLE PUMPS',
+        'pt': 'BOMBAS SUBMERSÍVEIS',
+        'es': 'BOMBAS SUMERGIBLES',
+      },
+      'bombas-submersiveis': {
         'en': 'SUBMERSIBLE PUMPS',
         'pt': 'BOMBAS SUBMERSÍVEIS',
         'es': 'BOMBAS SUMERGIBLES',
@@ -159,6 +164,48 @@ class TranslationService {
         'pt': 'Mola em inox 304 e elastômero (borracha) em Buna N.',
         'es': 'Muelle en acero inoxidable 304 y elastómero (goma) en Buna N.',
       },
+      'model_label': {'en': 'Mod.', 'pt': 'Mod.', 'es': 'Mod.'},
+      'current_tag': {'en': 'CURRENT', 'pt': 'ATUAL', 'es': 'ACTUAL'},
+      'compare_with': {
+        'en': 'Compare with:',
+        'pt': 'Comparar com:',
+        'es': 'Comparar con:',
+      },
+      'technical_comparison': {
+        'en': 'Technical Comparison',
+        'pt': 'Comparativo Técnico',
+        'es': 'Comparación Técnica',
+      },
+      'base_value': {'en': 'Base', 'pt': 'Base', 'es': 'Base'},
+      'technical_sheet': {
+        'en': 'Technical Sheet',
+        'pt': 'Ficha Técnica',
+        'es': 'Ficha Técnica',
+      },
+      'features': {
+        'en': 'Features',
+        'pt': 'Características',
+        'es': 'Características',
+      },
+      'specifications': {
+        'en': 'Specifications',
+        'pt': 'Especificações',
+        'es': 'Especificaciones',
+      },
+      'water_supply': {
+        'en': 'Water Supply',
+        'pt': 'Abastecimento',
+        'es': 'Abastecimiento',
+      },
+      'target_value': {'en': 'Target', 'pt': 'Alvo', 'es': 'Objetivo'},
+      'irrigation': {'en': 'Irrigation', 'pt': 'Irrigação', 'es': 'Irrigación'},
+      'rotation': {'en': 'Rotation', 'pt': 'Rotação', 'es': 'Rotación'},
+      'max_pressure': {
+        'en': 'Max Pressure',
+        'pt': 'Pressão Máx.',
+        'es': 'Presión Máx.',
+      },
+      'max_flow': {'en': 'Max Flow', 'pt': 'Vazão Máx.', 'es': 'Caudal Máx.'},
     };
 
     return translations[key]?[currentLanguage] ?? key;

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
-import '../services/translation_service.dart';
+import '../../core/services/translation_service.dart';
 
 class FiltersBottomSheet extends StatefulWidget {
   const FiltersBottomSheet({super.key});

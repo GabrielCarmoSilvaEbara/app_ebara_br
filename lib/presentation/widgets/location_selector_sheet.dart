@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
-import '../services/location_service.dart';
-import '../services/translation_service.dart';
+import '../../core/services/location_service.dart';
+import '../../core/services/translation_service.dart';
 
 class LocationSelectorSheet extends StatefulWidget {
   final Function(String city, String state, String country) onSelected;
@@ -27,11 +27,23 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
   static const _maxRecentItems = 5;
 
   @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(_onFocusChange);
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
     _focusNode.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _onFocusChange() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   Future<void> _search() async {
@@ -43,6 +55,8 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
       );
       return;
     }
+
+    _focusNode.unfocus();
 
     setState(() {
       _loading = true;
@@ -68,6 +82,7 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
   }
 
   void _selectCity(Map<String, String> city) {
+    FocusManager.instance.primaryFocus?.unfocus();
     _addToRecent(city);
     widget.onSelected(city['city']!, city['state']!, city['country']!);
     Navigator.of(context).pop();
@@ -87,55 +102,63 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
   @override
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
-    final screenHeight = mediaQuery.size.height;
     final keyboardHeight = mediaQuery.viewInsets.bottom;
-    final topPadding = mediaQuery.padding.top;
-    final isKeyboardVisible = keyboardHeight > 0;
 
-    final availableHeight = screenHeight - topPadding - keyboardHeight;
-    final sheetHeight = isKeyboardVisible
-        ? availableHeight - 40
-        : screenHeight * 0.6;
-
-    return AnimatedPadding(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOutCubic,
-      padding: EdgeInsets.only(bottom: keyboardHeight),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOutCubic,
-        height: sheetHeight,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            _buildHandle(),
-            _buildHeader(),
-            Expanded(
-              child: ListView(
-                controller: _scrollController,
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildHandle(),
+          _buildHeader(),
+          Flexible(
+            child: SingleChildScrollView(
+              controller: _scrollController,
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   _buildSearchField(),
                   if (_error != null) _buildError(),
                   const SizedBox(height: 16),
-                  _buildSearchButton(),
-                  const SizedBox(height: 24),
-                  _buildContent(),
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    transitionBuilder:
+                        (Widget child, Animation<double> animation) {
+                          return FadeTransition(
+                            opacity: animation,
+                            child: SlideTransition(
+                              position: Tween<Offset>(
+                                begin: const Offset(0, 0.1),
+                                end: Offset.zero,
+                              ).animate(animation),
+                              child: child,
+                            ),
+                          );
+                        },
+                    child: _buildContent(),
+                  ),
+                  const SizedBox(height: 20),
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            child: _buildSearchButton(),
+          ),
+          SizedBox(height: keyboardHeight),
+        ],
       ),
     );
   }
@@ -265,7 +288,7 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
           elevation: 0,
-          shadowColor: AppColors.primary.withOpacity(0.3),
+          shadowColor: AppColors.primary.withValues(alpha: 0.3),
           disabledBackgroundColor: Colors.grey.shade300,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -301,14 +324,20 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
 
   Widget _buildContent() {
     if (_cities.isNotEmpty) {
-      return _buildCityList();
+      return Container(
+        key: const ValueKey('cityList'),
+        child: _buildCityList(),
+      );
     }
 
     if (_recent.isNotEmpty && !_loading) {
-      return _buildRecent();
+      return Container(
+        key: const ValueKey('recentList'),
+        child: _buildRecent(),
+      );
     }
 
-    return const SizedBox.shrink();
+    return const SizedBox.shrink(key: ValueKey('empty'));
   }
 
   Widget _buildCityList() {
@@ -378,7 +407,7 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
                 decoration: BoxDecoration(
                   color: isRecent
                       ? Colors.grey.shade200
-                      : AppColors.primary.withOpacity(0.1),
+                      : AppColors.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(

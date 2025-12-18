@@ -79,7 +79,7 @@ class _CustomSearchBarState extends State<CustomSearchBar> {
       borderRadius: BorderRadius.circular(12),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.05),
+          color: Colors.black.withValues(alpha: 0.05),
           spreadRadius: 1,
           blurRadius: 5,
           offset: const Offset(0, 3),
@@ -95,7 +95,9 @@ class _CustomSearchBarState extends State<CustomSearchBar> {
       style: TextStyle(color: colorScheme.onSurface),
       decoration: InputDecoration(
         hintText: widget.hintText,
-        hintStyle: TextStyle(color: colorScheme.onSurface.withOpacity(0.5)),
+        hintStyle: TextStyle(
+          color: colorScheme.onSurface.withValues(alpha: 0.5),
+        ),
         prefixIcon: Icon(Icons.search, color: colorScheme.onSurface),
         suffixIcon: _hasText
             ? IconButton(
