@@ -1,8 +1,8 @@
 name: app_ebara
-description: "A new Flutter project."
+description: "Ebara APP"
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 1.0.0+2
 
 environment:
   sdk: ^3.10.3
@@ -17,14 +17,14 @@ dependencies:
   geocoding: ^4.0.0
   flutter_widget_from_html: ^0.17.1
   html_unescape: ^2.0.0
-  flutter_native_splash: ^2.4.7
 
   path_provider: ^2.1.2
   permission_handler: ^12.0.1
   open_filex: ^4.4.0
   shared_preferences: ^2.2.2
-  flutter_downloader: ^1.11.6
   flutter_launcher_icons: ^0.14.4
+  url_launcher: ^6.3.2
+  scrollable_positioned_list: ^0.3.8
 
 dev_dependencies:
   flutter_test:
@@ -32,21 +32,12 @@ dev_dependencies:
 
   flutter_lints: ^6.0.0
 
-flutter_native_splash:
-  color: "#004F9F" 
-  image: assets/images/logo.png
-
-  android_12:
-    image: assets/images/logo.png
-    color: "#004F9F"
-    icon_background_color: "#FFFFFF"
-
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: assets/images/logo.png
+  image_path: assets/images/logo_fundo.png
   adaptive_icon_background: "#004F9F"
-  adaptive_icon_foreground: assets/images/logo.png
+  adaptive_icon_foreground: assets/images/logo_fundo.png
 
 flutter:
 

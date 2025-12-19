@@ -7,19 +7,23 @@ import 'app_text_styles.dart';
 class AppTheme {
   static ThemeData get lightTheme {
     return ThemeData(
+      useMaterial3: true,
       fontFamily: AppTextStyles.fontFamily,
 
       primaryColor: AppColors.primary,
       scaffoldBackgroundColor: AppColors.backgroundSecondary,
 
-      colorScheme: ColorScheme.light(
+      colorScheme: ColorScheme(
+        brightness: Brightness.light,
         primary: AppColors.primary,
-        secondary: AppColors.secondary,
         onPrimary: AppColors.textSecondaryDecoration,
-        background: AppColors.background,
+        secondary: AppColors.secondary,
+        onSecondary: Colors.white,
+        error: Colors.red,
+        onError: Colors.white,
         surface: AppColors.backgroundCard,
         onSurface: AppColors.textPrimary,
-        error: Colors.red,
+        surfaceContainer: AppColors.background,
       ),
 
       textTheme: TextTheme(

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/custom_search_bar.dart';
@@ -8,8 +9,7 @@ import '../widgets/product_card.dart';
 import '../widgets/product_card_skeleton.dart';
 import '../../core/services/location_service.dart';
 import '../../core/services/translation_service.dart';
-import '../../core/services/category_service.dart';
-import '../../core/services/search_service.dart';
+import '../../core/services/ebara_data_service.dart';
 import '../widgets/location_selector_sheet.dart';
 import '../widgets/category_chip_skeleton.dart';
 
@@ -32,6 +32,8 @@ class HomePageState extends State<HomePage> {
   static const Duration _paginationDelay = Duration(milliseconds: 400);
 
   final ScrollController _scrollController = ScrollController();
+  final PageController _pageController = PageController();
+  final ItemScrollController _itemScrollController = ItemScrollController();
   Timer? _debounce;
 
   bool isLoadingCategories = true;
@@ -62,13 +64,13 @@ class HomePageState extends State<HomePage> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _pageController.dispose();
     _debounce?.cancel();
     super.dispose();
   }
 
   List<Map<String, dynamic>> get filteredAllProducts {
     if (searchQuery.isEmpty) return allProducts;
-
     final query = searchQuery.toLowerCase();
     return allProducts
         .where((product) => _matchesSearchQuery(product, query))
@@ -88,7 +90,6 @@ class HomePageState extends State<HomePage> {
   Future<void> initLocation() async {
     final location = await LocationService.getCurrentCity();
     if (!mounted) return;
-
     _updateLocationState(location);
     await loadCategories();
   }
@@ -98,18 +99,15 @@ class HomePageState extends State<HomePage> {
       setState(() => city = TranslationService.translate('choose_location'));
       return;
     }
-
     final cityValue = location['city'];
     if (cityValue == null || cityValue.isEmpty) {
       setState(() => city = TranslationService.translate('choose_location'));
       return;
     }
-
     final countryCode = location['country'];
     if (countryCode != null) {
       TranslationService.setLanguageByCountry(countryCode);
     }
-
     setState(() {
       city = cityValue;
       country = countryCode ?? '';
@@ -117,10 +115,13 @@ class HomePageState extends State<HomePage> {
     });
   }
 
-  Future<void> loadCategories() async {
-    _setLoadingState(isLoadingCategories: true, isLoadingProducts: true);
+  Future<void> loadCategories({bool refreshProducts = true}) async {
+    setState(() => isLoadingCategories = true);
 
-    final fetchedCategories = await CategoryService.fetchCategories();
+    final fetchedCategories = await EbaraDataService.fetchCategories(
+      idLanguage: TranslationService.getLanguageId(),
+    );
+
     if (!mounted) return;
 
     setState(() {
@@ -129,7 +130,17 @@ class HomePageState extends State<HomePage> {
     });
 
     if (categories.isNotEmpty) {
-      _selectFirstCategory();
+      if (refreshProducts) {
+        _selectFirstCategory();
+      } else {
+        final current = categories.firstWhere(
+          (cat) => cat['id'].toString() == selectedCategoryId.toString(),
+          orElse: () => categories.first,
+        );
+        setState(() {
+          selectedCategory = current['slug'] ?? '';
+        });
+      }
     }
   }
 
@@ -142,13 +153,9 @@ class HomePageState extends State<HomePage> {
 
   Future<void> loadProducts(String categoryId) async {
     if (categoryId.isEmpty) return;
-
     _resetProductState();
-
     final products = await _getProductsForCategory(categoryId);
-
     if (!mounted) return;
-
     setState(() {
       allProducts = products;
       searchQuery = '';
@@ -163,12 +170,11 @@ class HomePageState extends State<HomePage> {
     if (_cacheByCategory.containsKey(categoryId)) {
       return _cacheByCategory[categoryId]!;
     }
-
-    final fetchedProducts = await SearchService.searchProducts(
+    final fetchedProducts = await EbaraDataService.searchProducts(
       categoryId: categoryId,
+      idLanguage: TranslationService.getLanguageId(),
     );
-    final groupedProducts = SearchService.groupProducts(fetchedProducts);
-
+    final groupedProducts = EbaraDataService.groupProducts(fetchedProducts);
     _cacheByCategory[categoryId] = groupedProducts;
     return groupedProducts;
   }
@@ -180,22 +186,15 @@ class HomePageState extends State<HomePage> {
       currentPage = 1;
       visibleProducts.clear();
     });
-  }
-
-  void _setLoadingState({bool? isLoadingCategories, bool? isLoadingProducts}) {
-    setState(() {
-      if (isLoadingCategories != null) {
-        this.isLoadingCategories = isLoadingCategories;
-      }
-      if (isLoadingProducts != null) this.isLoadingProducts = isLoadingProducts;
-    });
+    if (_scrollController.hasClients) {
+      _scrollController.jumpTo(0);
+    }
   }
 
   void _onScroll() {
     final isNearBottom =
         _scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - _scrollThreshold;
-
     if (isNearBottom && canPaginate) {
       _loadMore();
     }
@@ -203,12 +202,9 @@ class HomePageState extends State<HomePage> {
 
   void _loadMore() {
     setState(() => isPaginating = true);
-
     Future.delayed(_paginationDelay, () {
       if (!mounted) return;
-
       final nextProducts = _getNextPageProducts();
-
       setState(() {
         visibleProducts.addAll(nextProducts);
         currentPage++;
@@ -237,7 +233,6 @@ class HomePageState extends State<HomePage> {
 
   void _performSearch(String query) {
     if (!mounted) return;
-
     setState(() {
       searchQuery = query;
       currentPage = 1;
@@ -258,25 +253,52 @@ class HomePageState extends State<HomePage> {
     );
   }
 
-  void _onLocationSelected(String newCity, String newState, String newCountry) {
+  void _onLocationSelected(
+    String newCity,
+    String newState,
+    String newCountry,
+  ) async {
     TranslationService.setLanguageByCountry(newCountry);
+
+    EbaraDataService.clearCategoryCache();
+
     setState(() {
       city = newCity;
       state = newState;
       country = newCountry;
     });
+
+    await loadCategories(refreshProducts: false);
   }
 
   void _onCategorySelected(Map<String, dynamic> category) {
-    final slug = category['slug'] ?? '';
-    final categoryId = category['id'] ?? '';
+    final index = categories.indexOf(category);
+    if (index != -1) {
+      _pageController.animateToPage(
+        index,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
 
+  void _onPageChanged(int index) {
+    final category = categories[index];
     setState(() {
-      selectedCategory = slug;
-      selectedCategoryId = categoryId;
+      selectedCategory = category['slug'] ?? '';
+      selectedCategoryId = category['id'] ?? '';
     });
 
-    loadProducts(categoryId);
+    if (_itemScrollController.isAttached) {
+      _itemScrollController.scrollTo(
+        index: index,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+        alignment: 0.4,
+      );
+    }
+
+    loadProducts(selectedCategoryId);
   }
 
   @override
@@ -292,19 +314,46 @@ class HomePageState extends State<HomePage> {
             categories: categories,
             selectedCategory: selectedCategory,
             onCategorySelected: _onCategorySelected,
+            itemScrollController: _itemScrollController,
           ),
           const SizedBox(height: 8),
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: _ProductGrid(
-                isLoading: isLoadingProducts,
-                products: visibleProducts,
-                isPaginating: isPaginating,
-                selectedCategory: selectedCategory,
-                scrollController: _scrollController,
-              ),
-            ),
+            child: isLoadingCategories
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: _ProductLoadingSkeleton(),
+                  )
+                : PageView.builder(
+                    controller: _pageController,
+                    onPageChanged: _onPageChanged,
+                    itemCount: categories.length,
+                    itemBuilder: (context, index) {
+                      return AnimatedBuilder(
+                        animation: _pageController,
+                        builder: (context, child) {
+                          double value = 1.0;
+                          if (_pageController.position.haveDimensions) {
+                            value = _pageController.page! - index;
+                            value = (1 - (value.abs() * 0.05)).clamp(0.0, 1.0);
+                          }
+                          return Opacity(
+                            opacity: value,
+                            child: Transform.scale(scale: value, child: child),
+                          );
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: _ProductGrid(
+                            isLoading: isLoadingProducts,
+                            products: visibleProducts,
+                            isPaginating: isPaginating,
+                            selectedCategory: selectedCategory,
+                            scrollController: _scrollController,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
@@ -315,9 +364,7 @@ class HomePageState extends State<HomePage> {
 class _LocationHeader extends StatelessWidget {
   final String city;
   final VoidCallback onTap;
-
   const _LocationHeader({required this.city, required this.onTap});
-
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -354,9 +401,7 @@ class _LocationHeader extends StatelessWidget {
 
 class _SearchSection extends StatelessWidget {
   final ValueChanged<String> onSearchChanged;
-
   const _SearchSection({required this.onSearchChanged});
-
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -374,14 +419,14 @@ class _CategorySection extends StatelessWidget {
   final List<Map<String, dynamic>> categories;
   final String selectedCategory;
   final ValueChanged<Map<String, dynamic>> onCategorySelected;
-
+  final ItemScrollController itemScrollController;
   const _CategorySection({
     required this.isLoading,
     required this.categories,
     required this.selectedCategory,
     required this.onCategorySelected,
+    required this.itemScrollController,
   });
-
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -402,6 +447,7 @@ class _CategorySection extends StatelessWidget {
                   categories: categories,
                   selectedCategory: selectedCategory,
                   onCategorySelected: onCategorySelected,
+                  itemScrollController: itemScrollController,
                 ),
         ),
       ],
@@ -416,7 +462,7 @@ class _CategoryLoadingSkeleton extends StatelessWidget {
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 20),
       itemCount: 6,
-      itemBuilder: (_, __) => const CategoryChipSkeleton(),
+      itemBuilder: (_, index) => const CategoryChipSkeleton(),
     );
   }
 }
@@ -425,16 +471,17 @@ class _CategoryList extends StatelessWidget {
   final List<Map<String, dynamic>> categories;
   final String selectedCategory;
   final ValueChanged<Map<String, dynamic>> onCategorySelected;
-
+  final ItemScrollController itemScrollController;
   const _CategoryList({
     required this.categories,
     required this.selectedCategory,
     required this.onCategorySelected,
+    required this.itemScrollController,
   });
-
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
+    return ScrollablePositionedList.builder(
+      itemScrollController: itemScrollController,
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 20),
       itemCount: categories.length,
@@ -442,7 +489,6 @@ class _CategoryList extends StatelessWidget {
         final category = categories[index];
         final slug = category['slug'] ?? '';
         final isSelected = slug == selectedCategory;
-
         return CategoryChip(
           label: category['title'] ?? '',
           icon: category['icon'],
@@ -460,7 +506,6 @@ class _ProductGrid extends StatelessWidget {
   final bool isPaginating;
   final String selectedCategory;
   final ScrollController scrollController;
-
   const _ProductGrid({
     required this.isLoading,
     required this.products,
@@ -468,17 +513,10 @@ class _ProductGrid extends StatelessWidget {
     required this.selectedCategory,
     required this.scrollController,
   });
-
   @override
   Widget build(BuildContext context) {
-    if (isLoading) {
-      return _ProductLoadingSkeleton();
-    }
-
-    if (products.isEmpty) {
-      return _EmptyProductsView();
-    }
-
+    if (isLoading) return _ProductLoadingSkeleton();
+    if (products.isEmpty) return _EmptyProductsView();
     return ScrollConfiguration(
       behavior: NoScrollbarScrollBehavior(),
       child: GridView.builder(
@@ -492,10 +530,7 @@ class _ProductGrid extends StatelessWidget {
         ),
         itemCount: products.length + (isPaginating ? 2 : 0),
         itemBuilder: (context, index) {
-          if (index >= products.length) {
-            return const ProductCardSkeleton();
-          }
-
+          if (index >= products.length) return const ProductCardSkeleton();
           final product = products[index];
           return ProductCard(
             category: TranslationService.translate(selectedCategory),
@@ -520,7 +555,7 @@ class _ProductLoadingSkeleton extends StatelessWidget {
         mainAxisSpacing: 10,
         childAspectRatio: 0.99,
       ),
-      itemBuilder: (_, __) => const ProductCardSkeleton(),
+      itemBuilder: (_, index) => const ProductCardSkeleton(),
     );
   }
 }

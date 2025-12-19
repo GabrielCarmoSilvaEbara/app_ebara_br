@@ -1,6 +1,19 @@
 class TranslationService {
   static String currentLanguage = 'pt';
 
+  static int getLanguageId() {
+    switch (currentLanguage) {
+      case 'pt':
+        return 1;
+      case 'en':
+        return 2;
+      case 'es':
+        return 3;
+      default:
+        return 1;
+    }
+  }
+
   static void setLanguageByCountry(String country) {
     if (country.toLowerCase().contains('brasil') ||
         country.toLowerCase().contains('brazil')) {
@@ -77,12 +90,110 @@ class TranslationService {
         'pt': 'BOMBAS SUBMERSÍVEIS',
         'es': 'BOMBAS SUMERGIBLES',
       },
-      'residential': {
+      'pump': {'en': 'PUMP', 'pt': 'BOMBA', 'es': 'BOMBA'},
+      'others': {'en': 'OTHERS', 'pt': 'OUTROS', 'es': 'OTROS'},
+      'models': {'en': 'Models', 'pt': 'Modelos', 'es': 'Modelos'},
+      'frequency': {'en': 'Frequency', 'pt': 'Frequência', 'es': 'Frecuencia'},
+      'flow': {'en': 'Flow', 'pt': 'Vazão', 'es': 'Caudal'},
+      'manometric_head': {
+        'en': 'Manometric Head',
+        'pt': 'Altura Manométrica',
+        'es': 'Altura Manométrica',
+      },
+      'power': {'en': 'Power', 'pt': 'Potência', 'es': 'Potencia'},
+      'voltage': {'en': 'Voltage', 'pt': 'Voltagem', 'es': 'Voltaje'},
+      'rotation': {'en': 'Rotation', 'pt': 'Rotação', 'es': 'Rotación'},
+      'max_pressure': {
+        'en': 'Max Pressure',
+        'pt': 'Pressão Máx.',
+        'es': 'Presión Máx.',
+      },
+      'max_flow': {'en': 'Max Flow', 'pt': 'Vazão Máx.', 'es': 'Caudal Máx.'},
+      'model_label': {'en': 'Mod.', 'pt': 'Mod.', 'es': 'Mod.'},
+      'technical_sheet': {
+        'en': 'Technical Sheet',
+        'pt': 'Ficha Técnica',
+        'es': 'Ficha Técnica',
+      },
+      'Ficha Técnica': {
+        'en': 'Technical Sheet',
+        'pt': 'Ficha Técnica',
+        'es': 'Ficha Técnica',
+      },
+      'features': {
+        'en': 'Features',
+        'pt': 'Características',
+        'es': 'Características',
+      },
+      'Características': {
+        'en': 'Features',
+        'pt': 'Características',
+        'es': 'Características',
+      },
+      'specifications': {
+        'en': 'Specifications',
+        'pt': 'Especificações',
+        'es': 'Especificaciones',
+      },
+      'Especificações': {
+        'en': 'Specifications',
+        'pt': 'Especificações',
+        'es': 'Especificaciones',
+      },
+      'options': {'en': 'Options', 'pt': 'Opções', 'es': 'Opciones'},
+      'Opções': {'en': 'Options', 'pt': 'Opções', 'es': 'Opciones'},
+      'applications': {
+        'en': 'Applications',
+        'pt': 'Aplicações',
+        'es': 'Aplicaciones',
+      },
+      'Aplicações': {
+        'en': 'Applications',
+        'pt': 'Aplicações',
+        'es': 'Aplicaciones',
+      },
+      'technical_info_title': {
+        'en': 'Technical Information',
+        'pt': 'Informações Técnicas',
+        'es': 'Información Técnica',
+      },
+
+      'Documentos': {'en': 'Documents', 'pt': 'Documentos', 'es': 'Documentos'},
+      'Nenhum documento disponível': {
+        'en': 'No documents available',
+        'pt': 'Nenhum documento disponível',
+        'es': 'No hay documentos disponibles',
+      },
+      'Abrir documento': {
+        'en': 'Open document',
+        'pt': 'Abrir documento',
+        'es': 'Abrir documento',
+      },
+      'technical_comparison': {
+        'en': 'Technical Comparison',
+        'pt': 'Comparativo Técnico',
+        'es': 'Comparación Técnica',
+      },
+      'current_tag': {'en': 'CURRENT', 'pt': 'ATUAL', 'es': 'ACTUAL'},
+      'compare_with': {
+        'en': 'Compare with:',
+        'pt': 'Comparar com:',
+        'es': 'Comparar con:',
+      },
+      'base_value': {'en': 'Base', 'pt': 'Base', 'es': 'Base'},
+      'target_value': {'en': 'Target', 'pt': 'Alvo', 'es': 'Objetivo'},
+      'Residencial': {
         'en': 'Residential',
         'pt': 'Residencial',
         'es': 'Residencial',
       },
-      'industrial': {
+      'Abastecimento': {
+        'en': 'Water Supply',
+        'pt': 'Abastecimento',
+        'es': 'Abastecimiento',
+      },
+      'Irrigação': {'en': 'Irrigation', 'pt': 'Irrigação', 'es': 'Irrigación'},
+      'Industrial': {
         'en': 'Industrial',
         'pt': 'Industrial',
         'es': 'Industrial',
@@ -93,119 +204,11 @@ class TranslationService {
         'es': 'Agrícola',
       },
       'commercial': {'en': 'Commercial', 'pt': 'Comercial', 'es': 'Comercial'},
-      'applications': {
-        'en': 'Applications',
-        'pt': 'Aplicações',
-        'es': 'Aplicaciones',
-      },
-      'models': {'en': 'Models', 'pt': 'Modelos', 'es': 'Modelos'},
-      'frequency': {'en': 'Frequency', 'pt': 'Frequência', 'es': 'Frecuencia'},
-      'flow': {'en': 'Flow', 'pt': 'Vazão', 'es': 'Caudal'},
-      'manometric_head': {
-        'en': 'Manometric Head',
-        'pt': 'Altura Manométrica',
-        'es': 'Altura Manométrica',
-      },
       'pick_one': {
         'en': 'Pick one',
         'pt': 'Selecione um',
         'es': 'Seleccionar uno',
       },
-      'pump': {'en': 'PUMP', 'pt': 'BOMBA', 'es': 'BOMBA'},
-      'others': {'en': 'OTHERS', 'pt': 'OUTROS', 'es': 'OTROS'},
-      'applications_title': {
-        'en': 'Applications',
-        'pt': 'Aplicações',
-        'es': 'Aplicaciones',
-      },
-      'technical_info_title': {
-        'en': 'Technical Information',
-        'pt': 'Informações Técnicas',
-        'es': 'Información Técnica',
-      },
-      'power': {'en': 'Power', 'pt': 'Potência', 'es': 'Potencia'},
-      'voltage': {'en': 'Voltage', 'pt': 'Voltagem', 'es': 'Voltaje'},
-      'product_description_1': {
-        'en':
-            'Single-Stage Centrifugal Pump - Monoblock - Single-Phase Motor in II Poles, 60Hz, 3500rpm - BSP threaded nozzles, Suction 3/4" x Discharge 3/4".',
-        'pt':
-            'Motobomba Centrífuga Monoestágio - Monobloco - Motor Monofásico em II Polos, 60Hz, 3500rpm - Bocais com rosca BSP, Sucção 3/4" x Recalque 3/4".',
-        'es':
-            'Bomba Centrífuga Monoetapa - Monobloque - Motor Monofásico en II Polos, 60Hz, 3500rpm - Boquillas con rosca BSP, Succión 3/4" x Descarga 3/4".',
-      },
-      'product_description_2': {
-        'en':
-            'Used for clean water up to 40ºC (Higher temperatures, consult options).',
-        'pt':
-            'Utilizada para água limpa até temperatura de 40ºC (Temperaturas superiores, consultar opções).',
-        'es':
-            'Utilizada para agua limpia hasta una temperatura de 40ºC (Temperaturas superiores, consultar opciones).',
-      },
-      'product_description_3': {
-        'en': 'Pump casing in GG-20 cast iron.',
-        'pt': 'Carcaça da bomba em ferro fundido GG-20.',
-        'es': 'Carcasa de la bomba en hierro fundido GG-20.',
-      },
-      'product_description_4': {
-        'en':
-            'Closed impeller in thermoplastic. Casing O\'ring seal in Buna N.',
-        'pt':
-            'Rotor fechado em termoplástico. Anel O\'ring de vedação da carcaça em Buna N.',
-        'es':
-            'Rodete cerrado en termoplástico. Anillo O\'ring de sellado de la carcasa en Buna N.',
-      },
-      'product_description_5': {
-        'en': 'Mechanical seal: Graphite and ceramic faces.',
-        'pt': 'Selo mecânico: Faces em grafite e cerâmica.',
-        'es': 'Sello mecánico: Caras en grafito y cerámica.',
-      },
-      'product_description_6': {
-        'en': 'Spring in stainless steel 304 and elastomer (rubber) in Buna N.',
-        'pt': 'Mola em inox 304 e elastômero (borracha) em Buna N.',
-        'es': 'Muelle en acero inoxidable 304 y elastómero (goma) en Buna N.',
-      },
-      'model_label': {'en': 'Mod.', 'pt': 'Mod.', 'es': 'Mod.'},
-      'current_tag': {'en': 'CURRENT', 'pt': 'ATUAL', 'es': 'ACTUAL'},
-      'compare_with': {
-        'en': 'Compare with:',
-        'pt': 'Comparar com:',
-        'es': 'Comparar con:',
-      },
-      'technical_comparison': {
-        'en': 'Technical Comparison',
-        'pt': 'Comparativo Técnico',
-        'es': 'Comparación Técnica',
-      },
-      'base_value': {'en': 'Base', 'pt': 'Base', 'es': 'Base'},
-      'technical_sheet': {
-        'en': 'Technical Sheet',
-        'pt': 'Ficha Técnica',
-        'es': 'Ficha Técnica',
-      },
-      'features': {
-        'en': 'Features',
-        'pt': 'Características',
-        'es': 'Características',
-      },
-      'specifications': {
-        'en': 'Specifications',
-        'pt': 'Especificações',
-        'es': 'Especificaciones',
-      },
-      'water_supply': {
-        'en': 'Water Supply',
-        'pt': 'Abastecimento',
-        'es': 'Abastecimiento',
-      },
-      'target_value': {'en': 'Target', 'pt': 'Alvo', 'es': 'Objetivo'},
-      'irrigation': {'en': 'Irrigation', 'pt': 'Irrigação', 'es': 'Irrigación'},
-      'rotation': {'en': 'Rotation', 'pt': 'Rotação', 'es': 'Rotación'},
-      'max_pressure': {
-        'en': 'Max Pressure',
-        'pt': 'Pressão Máx.',
-        'es': 'Presión Máx.',
-      },
-      'max_flow': {'en': 'Max Flow', 'pt': 'Vazão Máx.', 'es': 'Caudal Máx.'},
     };
 
     return translations[key]?[currentLanguage] ?? key;

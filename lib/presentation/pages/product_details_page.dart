@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../../core/services/translation_service.dart';
 import '../../core/utils/parse_util.dart';
 import '../../core/utils/file_type_util.dart';
-import '../../core/services/download_manager.dart';
-import '../../core/services/search_service.dart';
+import '../../core/services/ebara_data_service.dart';
 import '../widgets/files_skeleton.dart';
 
 class ProductDetailsPage extends StatefulWidget {
@@ -28,15 +28,29 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
   int _currentIndex = 0;
   int _comparisonBaseIndex = 0;
   final PageController _pageController = PageController();
-
+  late Future<Map<String, dynamic>?> _descriptionsFuture;
+  late Future<List<Map<String, dynamic>>> _applicationsFuture;
   late Future<List<Map<String, dynamic>>> _filesFuture;
   late String _productId;
 
   @override
   void initState() {
     super.initState();
+    final int langId = TranslationService.getLanguageId();
+
     _productId = widget.variants.first['id_product'].toString();
-    _filesFuture = SearchService.getProductFiles(_productId);
+    _descriptionsFuture = EbaraDataService.getProductDescriptions(
+      _productId,
+      idLanguage: langId,
+    );
+    _applicationsFuture = EbaraDataService.getProductApplications(
+      _productId,
+      idLanguage: langId,
+    );
+    _filesFuture = EbaraDataService.getProductFiles(
+      _productId,
+      idLanguage: langId,
+    );
   }
 
   @override
@@ -81,7 +95,10 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                     child: Column(
                       children: [
                         const SizedBox(height: 20),
-                        _buildHeroImageSection(variant['image']),
+                        _buildHeroImageSection(
+                          variant['image'],
+                          variant['ecommerce_link'],
+                        ),
                         const SizedBox(height: 20),
                         _buildInfoContent(variant),
                       ],
@@ -124,15 +141,36 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
     );
   }
 
-  Widget _buildHeroImageSection(String imageUrl) {
+  Future<void> _launchEcommerce(String? url) async {
+    if (url == null || url.isEmpty) return;
+    final Uri uri = Uri.parse(url);
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  Widget _buildHeroImageSection(String imageUrl, String? ecommerceLink) {
     final isBase = _currentIndex == _comparisonBaseIndex;
+    final bool isEcommerceEnabled =
+        ecommerceLink != null && ecommerceLink.isNotEmpty;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Stack(
         children: [
-          _ProductImage(imageUrl: imageUrl, index: _currentIndex, height: 200),
+          _ProductImage(imageUrl: imageUrl, index: _currentIndex, height: 220),
+
           Positioned(
-            top: 0,
+            top: 10,
+            left: 10,
+            child: _EcommerceButton(
+              isEnabled: isEcommerceEnabled,
+              onTap: isEcommerceEnabled
+                  ? () => _launchEcommerce(ecommerceLink)
+                  : null,
+            ),
+          ),
+
+          Positioned(
+            top: 10,
             right: 10,
             child: _PinButton(
               isActive: isBase,
@@ -147,7 +185,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
     );
   }
 
-  Widget _buildInfoContent(Map<String, dynamic> data) {
+  Widget _buildInfoContent(Map<String, dynamic> variantData) {
     return Container(
       padding: const EdgeInsets.fromLTRB(25, 30, 25, 120),
       width: double.infinity,
@@ -158,34 +196,49 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _ProductHeader(name: data['name'], model: data['model']),
-          const SizedBox(height: 25),
-          _SectionTitle(TranslationService.translate("Ficha Técnica")),
+          _ProductHeader(
+            name: variantData['name'],
+            model: variantData['model'],
+          ),
           const SizedBox(height: 10),
-          _TechnicalSpecs(data: data),
-          if (data['description'] != null)
-            _CollapsibleSection(
-              title: TranslationService.translate("Características"),
-              content: data['description'],
-              removeTraces: true,
-            ),
-          if (data['specifications'] != null)
-            _CollapsibleSection(
-              title: TranslationService.translate("Especificações"),
-              content: data['specifications'],
-              removeTraces: false,
-            ),
-          if (data['options'] != null)
-            _CollapsibleSection(
-              title: TranslationService.translate("Opções"),
-              content: data['options'],
-              removeTraces: true,
-            ),
-          _FilesSection(filesFuture: _filesFuture),
-          const SizedBox(height: 30),
           _SectionTitle(TranslationService.translate("Aplicações")),
           const SizedBox(height: 15),
-          const _ApplicationIcons(),
+          _ApplicationIcons(applicationsFuture: _applicationsFuture),
+          _SectionTitle(TranslationService.translate("Ficha Técnica")),
+          const SizedBox(height: 15),
+          _TechnicalSpecs(data: variantData),
+
+          FutureBuilder<Map<String, dynamic>?>(
+            future: _descriptionsFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const FilesSkeleton();
+              }
+
+              final desc = snapshot.data;
+              if (desc == null) return const SizedBox.shrink();
+
+              return Column(
+                children: [
+                  _CollapsibleSection(
+                    title: TranslationService.translate("Características"),
+                    items: desc['description'] as List<String>,
+                  ),
+                  _CollapsibleSection(
+                    title: TranslationService.translate("Especificações"),
+                    items: desc['specifications'] as List<String>,
+                  ),
+                  _CollapsibleSection(
+                    title: TranslationService.translate("Opções"),
+                    items: desc['options'] as List<String>,
+                  ),
+                ],
+              );
+            },
+          ),
+
+          _FilesSection(filesFuture: _filesFuture),
+          const SizedBox(height: 30),
         ],
       ),
     );
@@ -245,7 +298,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
 class _TechnicalSpecs extends StatelessWidget {
   final Map<String, dynamic> data;
   const _TechnicalSpecs({required this.data});
-
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -295,7 +347,6 @@ class _FilesSection extends StatelessWidget {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const FilesSkeleton();
               }
-
               if (!snapshot.hasData || snapshot.data!.isEmpty) {
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 10),
@@ -305,147 +356,10 @@ class _FilesSection extends StatelessWidget {
                   ),
                 );
               }
-
               final files = snapshot.data!;
-
               return Column(
                 children: files.map((file) {
-                  final fileUrl = file['full_url'];
-
-                  return StreamBuilder<Map<String, dynamic>>(
-                    stream: DownloadManager.watch(fileUrl),
-                    builder: (_, snap) {
-                      final state = snap.data ?? {};
-                      final running = state['running'] == true;
-                      final paused = state['paused'] == true;
-                      final downloaded = state['completed'] == true;
-                      final progress = (state['progress'] ?? 0.0) as double;
-
-                      return GestureDetector(
-                        onTap: downloaded
-                            ? () => DownloadManager.open(fileUrl)
-                            : null,
-                        child: Container(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: AppColors.backgroundSecondary,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Column(
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    FileTypeUtil.icon(file['extension']),
-                                    color: AppColors.primary,
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                file['name'],
-                                                overflow: TextOverflow.ellipsis,
-                                                style: AppTextStyles.text4
-                                                    .copyWith(
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                    ),
-                                              ),
-                                            ),
-                                            if (downloaded)
-                                              Container(
-                                                margin: const EdgeInsets.only(
-                                                  left: 8,
-                                                ),
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 8,
-                                                      vertical: 2,
-                                                    ),
-                                                decoration: BoxDecoration(
-                                                  color: AppColors.primary,
-                                                  borderRadius:
-                                                      BorderRadius.circular(12),
-                                                ),
-                                                child: const Text(
-                                                  "BAIXADO",
-                                                  style: TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 9,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                              ),
-                                          ],
-                                        ),
-                                        Text(
-                                          downloaded
-                                              ? TranslationService.translate(
-                                                  "Abrir documento",
-                                                )
-                                              : "${file['extension'].toString().toUpperCase()} • ${file['size']} bytes",
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            color: Colors.grey[600],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  IconButton(
-                                    icon: Icon(
-                                      downloaded
-                                          ? Icons.open_in_new
-                                          : running
-                                          ? Icons.pause
-                                          : paused
-                                          ? Icons.play_arrow
-                                          : Icons.download,
-                                      color: AppColors.primary,
-                                    ),
-                                    onPressed: () {
-                                      if (downloaded) {
-                                        DownloadManager.open(fileUrl);
-                                      } else if (running) {
-                                        DownloadManager.pause(fileUrl);
-                                      } else if (paused) {
-                                        DownloadManager.resume(fileUrl);
-                                      } else {
-                                        DownloadManager.enqueue(
-                                          url: fileUrl,
-                                          fileName:
-                                              "${file['file']}.${file['extension']}",
-                                        );
-                                      }
-                                    },
-                                  ),
-                                ],
-                              ),
-                              if (running || paused)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 8),
-                                  child: LinearProgressIndicator(
-                                    value: progress,
-                                    minHeight: 3,
-                                    backgroundColor: Colors.grey[200],
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      AppColors.primary,
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  );
+                  return _FileLinkItem(file: file);
                 }).toList(),
               );
             },
@@ -457,10 +371,75 @@ class _FilesSection extends StatelessWidget {
   }
 }
 
+class _FileLinkItem extends StatelessWidget {
+  final Map<String, dynamic> file;
+
+  const _FileLinkItem({required this.file});
+
+  Future<void> _openLink(String url) async {
+    final Uri uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final String fileUrl = file['full_url'];
+
+    return GestureDetector(
+      onTap: () => _openLink(fileUrl),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              FileTypeUtil.icon(file['extension']),
+              color: AppColors.primary,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    file['name'],
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.text4.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.open_in_new_rounded,
+                color: AppColors.primary,
+                size: 20,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _SectionTitle extends StatelessWidget {
   final String title;
   const _SectionTitle(this.title);
-
   @override
   Widget build(BuildContext context) {
     return Text(
@@ -478,7 +457,6 @@ class _TechTile extends StatelessWidget {
   final String label;
   final String value;
   const _TechTile({required this.label, required this.value});
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -514,18 +492,12 @@ class _TechTile extends StatelessWidget {
 
 class _CollapsibleSection extends StatelessWidget {
   final String title;
-  final String content;
-  final bool removeTraces;
+  final List<String> items;
 
-  const _CollapsibleSection({
-    required this.title,
-    required this.content,
-    required this.removeTraces,
-  });
+  const _CollapsibleSection({required this.title, required this.items});
 
   @override
   Widget build(BuildContext context) {
-    final items = ParseUtil.parseHtmlToList(content, removeTraces);
     if (items.isEmpty) return const SizedBox.shrink();
 
     return Theme(
@@ -551,7 +523,6 @@ class _CollapsibleSection extends StatelessWidget {
 class _FormattedItemTile extends StatelessWidget {
   final String text;
   const _FormattedItemTile({required this.text});
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -640,27 +611,27 @@ class _ProductImage extends StatelessWidget {
 class _PinButton extends StatelessWidget {
   final bool isActive;
   final VoidCallback onTap;
+
   const _PinButton({required this.isActive, required this.onTap});
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: isActive ? AppColors.primary : Colors.white,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 8,
-            ),
-          ],
+          color: AppColors.primary.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: AppColors.primary.withValues(alpha: isActive ? 0.5 : 0.1),
+            width: 1.5,
+          ),
         ),
         child: Icon(
           isActive ? Icons.push_pin : Icons.push_pin_outlined,
-          color: isActive ? Colors.white : AppColors.primary,
+          color: AppColors.primary.withValues(alpha: isActive ? 1.0 : 0.4),
           size: 20,
         ),
       ),
@@ -702,49 +673,123 @@ class _ProductHeader extends StatelessWidget {
 }
 
 class _ApplicationIcons extends StatelessWidget {
-  const _ApplicationIcons();
+  final Future<List<Map<String, dynamic>>> applicationsFuture;
+
+  const _ApplicationIcons({required this.applicationsFuture});
+
   @override
   Widget build(BuildContext context) {
-    final apps = [
-      {
-        'icon': Icons.home_work,
-        'label': TranslationService.translate('Residencial'),
-      },
-      {
-        'icon': Icons.water_drop,
-        'label': TranslationService.translate('Abastecimento'),
-      },
-      {
-        'icon': Icons.agriculture,
-        'label': TranslationService.translate('Irrigação'),
-      },
-      {
-        'icon': Icons.factory,
-        'label': TranslationService.translate('Industrial'),
-      },
-    ];
-    return Wrap(
-      spacing: 12,
-      children: apps
-          .map(
-            (app) => Tooltip(
-              message: app['label'] as String,
-              triggerMode: TooltipTriggerMode.longPress,
-              child: Container(
-                padding: const EdgeInsets.all(10),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: FutureBuilder<List<Map<String, dynamic>>>(
+        future: applicationsFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Wrap(
+              spacing: 12,
+              children: List.generate(4, (index) => _buildSkeletonIcon()),
+            );
+          }
+
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const SizedBox.shrink();
+          }
+
+          final apps = snapshot.data!;
+
+          return Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: apps.map((app) {
+              final String name = app['application_name'] ?? '';
+              final String iconFile = app['icon_file'] ?? '';
+              final String fullUrl =
+                  "https://ebara.com.br/userfiles/aplicacoes/$iconFile";
+
+              return Tooltip(
+                message: name,
+                triggerMode: TooltipTriggerMode.longPress,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
+                  color: AppColors.primary.withValues(alpha: 0.9),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(
-                  app['icon'] as IconData,
-                  color: AppColors.primary,
-                  size: 22,
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      width: 1,
+                    ),
+                  ),
+                  child: iconFile.isNotEmpty
+                      ? Image.network(
+                          fullUrl,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) => Icon(
+                            Icons.image_not_supported_outlined,
+                            size: 20,
+                            color: AppColors.primary.withValues(alpha: 0.3),
+                          ),
+                        )
+                      : Icon(Icons.apps, color: AppColors.primary),
                 ),
-              ),
-            ),
-          )
-          .toList(),
+              );
+            }).toList(),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildSkeletonIcon() {
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        color: Colors.grey[200],
+        borderRadius: BorderRadius.circular(10),
+      ),
+    );
+  }
+}
+
+class _EcommerceButton extends StatelessWidget {
+  final bool isEnabled;
+  final VoidCallback? onTap;
+
+  const _EcommerceButton({required this.isEnabled, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: isEnabled
+              ? AppColors.primary.withValues(alpha: 0.1)
+              : Colors.grey.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isEnabled
+                ? AppColors.primary.withValues(alpha: 0.2)
+                : Colors.grey.withValues(alpha: 0.2),
+            width: 1.5,
+          ),
+        ),
+        child: Icon(
+          Icons.monetization_on_outlined,
+          color: isEnabled
+              ? AppColors.primary
+              : Colors.grey.withValues(alpha: 0.5),
+          size: 20,
+        ),
+      ),
     );
   }
 }

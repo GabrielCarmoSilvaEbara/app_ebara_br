@@ -35,10 +35,14 @@ class LocationService {
     final permission = await checkAndRequestPermission();
     if (permission == null) return null;
 
+    const LocationSettings locationSettings = LocationSettings(
+      accuracy: LocationAccuracy.high,
+      timeLimit: Duration(seconds: 15),
+    );
+
     try {
       return await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 15),
+        locationSettings: locationSettings,
       );
     } on Exception {
       return null;

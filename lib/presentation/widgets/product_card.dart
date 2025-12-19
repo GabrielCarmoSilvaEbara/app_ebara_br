@@ -230,7 +230,7 @@ class _AnimatedProductCardState extends State<AnimatedProductCard>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
-  bool _isPressed = false;
+  bool isPressed = false;
 
   @override
   void initState() {
@@ -252,17 +252,17 @@ class _AnimatedProductCardState extends State<AnimatedProductCard>
   }
 
   void _handleTapDown(TapDownDetails details) {
-    setState(() => _isPressed = true);
+    setState(() => isPressed = true);
     _controller.forward();
   }
 
   void _handleTapUp(TapUpDetails details) {
-    setState(() => _isPressed = false);
+    setState(() => isPressed = false);
     _controller.reverse();
   }
 
   void _handleTapCancel() {
-    setState(() => _isPressed = false);
+    setState(() => isPressed = false);
     _controller.reverse();
   }
 
