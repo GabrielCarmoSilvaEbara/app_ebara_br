@@ -3,14 +3,16 @@ import 'filters_bottom_sheet.dart';
 
 class CustomSearchBar extends StatefulWidget {
   final String hintText;
-  final VoidCallback? onFilterPressed;
+  final String selectedCategoryId;
+  final Function(Map<String, dynamic>)? onFiltersApplied;
   final ValueChanged<String>? onChanged;
   final TextEditingController? controller;
 
   const CustomSearchBar({
     super.key,
     this.hintText = 'Search...',
-    this.onFilterPressed,
+    required this.selectedCategoryId,
+    this.onFiltersApplied,
     this.onChanged,
     this.controller,
   });
@@ -49,11 +51,17 @@ class _CustomSearchBarState extends State<CustomSearchBar> {
     widget.onChanged?.call('');
   }
 
-  void _openFilters() {
-    if (widget.onFilterPressed != null) {
-      widget.onFilterPressed!();
-    } else {
-      showFiltersBottomSheet(context);
+  Future<void> _openFilters() async {
+    final result = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) =>
+          FiltersBottomSheet(categoryId: widget.selectedCategoryId),
+    );
+
+    if (result != null && widget.onFiltersApplied != null) {
+      widget.onFiltersApplied!(result);
     }
   }
 

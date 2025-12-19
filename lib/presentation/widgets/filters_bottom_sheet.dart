@@ -3,9 +3,12 @@ import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../../core/services/translation_service.dart';
+import '../../core/services/ebara_data_service.dart';
 
 class FiltersBottomSheet extends StatefulWidget {
-  const FiltersBottomSheet({super.key});
+  final String categoryId;
+
+  const FiltersBottomSheet({super.key, required this.categoryId});
 
   @override
   State<FiltersBottomSheet> createState() => _FiltersBottomSheetState();
@@ -14,27 +17,111 @@ class FiltersBottomSheet extends StatefulWidget {
 class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
   String? _selectedApplication;
   String? _selectedModel;
-  String _selectedFrequency = '60Hz';
-  String _selectedFlowUnit = 'm3/h';
-  String _selectedHeadUnit = 'm3/h';
-  final TextEditingController _flowController = TextEditingController(
-    text: '20,5',
-  );
-  final TextEditingController _headController = TextEditingController(
-    text: '35,1',
-  );
+  String? _selectedFrequency;
+  String _selectedFlowUnit = 'mh';
+  String _selectedHeadUnit = 'm';
 
-  final List<String> _applications = [
-    TranslationService.translate('residential'),
-    TranslationService.translate('industrial'),
-    TranslationService.translate('agricultural'),
-    TranslationService.translate('commercial'),
-  ];
+  final TextEditingController _flowController = TextEditingController();
+  final TextEditingController _headController = TextEditingController();
 
-  final List<String> _models = ['B-12 NR', 'TSW-250', 'B-10', 'TH-12'];
+  List<String> _applications = [];
+  List<String> _models = [];
+  List<String> _frequencies = [];
+  List<String> _flowUnits = [];
+  List<String> _headUnits = [];
 
-  final List<String> _flowUnits = ['m3/h', 'L/min', 'GPM'];
-  final List<String> _headUnits = ['m3/h', 'm', 'ft'];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFiltersData();
+    _flowController.addListener(() => setState(() {}));
+    _headController.addListener(() => setState(() {}));
+  }
+
+  bool get _isFormValid {
+    return _selectedApplication != null &&
+        _selectedModel != null &&
+        _selectedFrequency != null &&
+        _flowController.text.isNotEmpty &&
+        _headController.text.isNotEmpty;
+  }
+
+  Future<void> _loadFiltersData() async {
+    setState(() => _isLoading = true);
+    try {
+      final results = await Future.wait([
+        EbaraDataService.getApplicationsByCategory(widget.categoryId),
+        EbaraDataService.getFrequencies(),
+        EbaraDataService.getFlowRates(),
+        EbaraDataService.getHeightGauges(),
+      ]);
+
+      if (mounted) {
+        setState(() {
+          _applications = (results[0] as List)
+              .map((e) => e['title'].toString())
+              .toList();
+
+          _frequencies = (results[1] as List)
+              .map((e) => e['value'].toString())
+              .toList();
+
+          _flowUnits = (results[2] as List)
+              .map((e) => e['value'].toString())
+              .toList();
+
+          _headUnits = (results[3] as List)
+              .map((e) => e['value'].toString())
+              .toList();
+
+          if (_applications.isNotEmpty) {
+            _selectedApplication = _applications.first;
+
+            _fetchModels(_selectedApplication!);
+          }
+
+          if (_frequencies.isNotEmpty) {
+            _selectedFrequency = _frequencies.first;
+          }
+
+          if (_flowUnits.isNotEmpty) {
+            _selectedFlowUnit = _flowUnits.first;
+          }
+
+          if (_headUnits.isNotEmpty) {
+            _selectedHeadUnit = _headUnits.first;
+          }
+
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _fetchModels(String application) async {
+    setState(() => _selectedModel = null);
+    try {
+      final data = await EbaraDataService.getLines(
+        widget.categoryId,
+        application: application,
+      );
+      if (mounted) {
+        setState(() {
+          _models = data.map((e) => e['title_product'].toString()).toList();
+
+          if (_models.isNotEmpty) {
+            _selectedModel = _models.first;
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint("Erro ao buscar modelos: $e");
+    }
+  }
 
   @override
   void dispose() {
@@ -46,6 +133,9 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
   @override
   Widget build(BuildContext context) {
     return Container(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -57,54 +147,85 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
           Flexible(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildDropdownField(
-                    label: TranslationService.translate('applications'),
-                    hint: TranslationService.translate('pick_one'),
-                    value: _selectedApplication,
-                    items: _applications,
-                    onChanged: (value) =>
-                        setState(() => _selectedApplication = value),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildDropdownField(
-                    label: TranslationService.translate('models'),
-                    hint: TranslationService.translate('pick_one'),
-                    value: _selectedModel,
-                    items: _models,
-                    onChanged: (value) =>
-                        setState(() => _selectedModel = value),
-                  ),
-                  const SizedBox(height: 20),
-                  _buildFrequencySection(),
-                  const SizedBox(height: 20),
-                  _buildNumericField(
-                    label: TranslationService.translate('flow'),
-                    controller: _flowController,
-                    unit: _selectedFlowUnit,
-                    units: _flowUnits,
-                    onUnitChanged: (value) =>
-                        setState(() => _selectedFlowUnit = value!),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildNumericField(
-                    label: TranslationService.translate('manometric_head'),
-                    controller: _headController,
-                    unit: _selectedHeadUnit,
-                    units: _headUnits,
-                    onUnitChanged: (value) =>
-                        setState(() => _selectedHeadUnit = value!),
-                  ),
-                  const SizedBox(height: 24),
-                  _buildSearchButton(),
-                  const SizedBox(height: 16),
-                ],
-              ),
+              child: _isLoading ? _buildSkeleton() : _buildContent(),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildDropdownField(
+          label: TranslationService.translate('applications'),
+          hint: TranslationService.translate('pick_one'),
+          value: _selectedApplication,
+          items: _applications,
+          onChanged: (val) {
+            if (val != null) {
+              setState(() => _selectedApplication = val);
+              _fetchModels(val);
+            }
+          },
+        ),
+        const SizedBox(height: 16),
+        _buildDropdownField(
+          label: TranslationService.translate('models'),
+          hint: TranslationService.translate('pick_one'),
+          value: _selectedModel,
+          items: _models,
+          onChanged: (val) => setState(() => _selectedModel = val),
+        ),
+        const SizedBox(height: 20),
+        _buildFrequencySection(),
+        const SizedBox(height: 20),
+        _buildNumericField(
+          label: TranslationService.translate('flow'),
+          controller: _flowController,
+          unit: _selectedFlowUnit,
+          units: _flowUnits,
+          onUnitChanged: (val) => setState(() => _selectedFlowUnit = val!),
+        ),
+        const SizedBox(height: 16),
+        _buildNumericField(
+          label: TranslationService.translate('manometric_head'),
+          controller: _headController,
+          unit: _selectedHeadUnit,
+          units: _headUnits,
+          onUnitChanged: (val) => setState(() => _selectedHeadUnit = val!),
+        ),
+        const SizedBox(height: 24),
+        _buildSearchButton(),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  Widget _buildSkeleton() {
+    return Column(
+      children: List.generate(
+        4,
+        (index) => Padding(
+          padding: const EdgeInsets.only(bottom: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(width: 100, height: 14, color: Colors.grey[200]),
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -126,7 +247,10 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
             ),
           ),
           const SizedBox(height: 12),
-          Text('Filters', style: AppTextStyles.text),
+          Text(
+            TranslationService.translate('filters'),
+            style: AppTextStyles.text,
+          ),
         ],
       ),
     );
@@ -153,15 +277,17 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               isExpanded: true,
-              value: value,
+              value: items.contains(value) ? value : null,
               hint: Text(hint, style: AppTextStyles.text4),
               icon: const Icon(Icons.unfold_more, color: AppColors.primary),
-              items: items.map((item) {
-                return DropdownMenuItem(
-                  value: item,
-                  child: Text(item, style: AppTextStyles.text1),
-                );
-              }).toList(),
+              items: items
+                  .map(
+                    (item) => DropdownMenuItem(
+                      value: item,
+                      child: Text(item, style: AppTextStyles.text1),
+                    ),
+                  )
+                  .toList(),
               onChanged: onChanged,
             ),
           ),
@@ -179,65 +305,42 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
           style: AppTextStyles.text1.copyWith(fontSize: 14),
         ),
         const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(child: _buildFrequencyButton('60Hz')),
-            const SizedBox(width: 12),
-            Expanded(child: _buildFrequencyButton('50Hz')),
-          ],
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: _frequencies
+                .map(
+                  (f) => Padding(
+                    padding: const EdgeInsets.only(right: 12),
+                    child: _buildFrequencyButton(f),
+                  ),
+                )
+                .toList(),
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildFrequencyButton(String frequency) {
-    final isSelected = _selectedFrequency == frequency;
+  Widget _buildFrequencyButton(String freq) {
+    final isSel = _selectedFrequency == freq;
     return InkWell(
-      onTap: () => setState(() => _selectedFrequency = frequency),
-      borderRadius: BorderRadius.circular(8),
+      onTap: () => setState(() => _selectedFrequency = freq),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary : Colors.white,
+          color: isSel ? AppColors.primary : Colors.white,
           border: Border.all(color: AppColors.primary, width: 2),
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 20,
-              height: 20,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isSelected ? Colors.white : Colors.transparent,
-                border: Border.all(
-                  color: isSelected ? Colors.white : AppColors.primary,
-                  width: 2,
-                ),
-              ),
-              child: isSelected
-                  ? Center(
-                      child: Container(
-                        width: 10,
-                        height: 10,
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    )
-                  : null,
+        child: Center(
+          child: Text(
+            "${freq}Hz",
+            style: AppTextStyles.text1.copyWith(
+              color: isSel ? Colors.white : AppColors.primary,
+              fontSize: 14,
             ),
-            const SizedBox(width: 8),
-            Text(
-              frequency,
-              style: AppTextStyles.text1.copyWith(
-                color: isSelected ? Colors.white : AppColors.primary,
-                fontSize: 14,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -272,14 +375,10 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
                     FilteringTextInputFormatter.allow(RegExp(r'^\d*,?\d*')),
                   ],
                   style: AppTextStyles.text1.copyWith(fontSize: 14),
-                  decoration: InputDecoration(
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
+                  decoration: const InputDecoration(
+                    contentPadding: EdgeInsets.symmetric(horizontal: 16),
                     border: InputBorder.none,
                     hintText: '0,0',
-                    hintStyle: AppTextStyles.text4,
                   ),
                 ),
               ),
@@ -294,20 +393,17 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
                   child: DropdownButton<String>(
                     value: unit,
                     isDense: true,
-                    icon: const Icon(
-                      Icons.unfold_more,
-                      color: AppColors.primary,
-                      size: 20,
-                    ),
-                    items: units.map((unitOption) {
-                      return DropdownMenuItem(
-                        value: unitOption,
-                        child: Text(
-                          unitOption,
-                          style: AppTextStyles.text1.copyWith(fontSize: 14),
-                        ),
-                      );
-                    }).toList(),
+                    items: units
+                        .map(
+                          (u) => DropdownMenuItem(
+                            value: u,
+                            child: Text(
+                              u,
+                              style: AppTextStyles.text1.copyWith(fontSize: 14),
+                            ),
+                          ),
+                        )
+                        .toList(),
                     onChanged: onUnitChanged,
                   ),
                 ),
@@ -320,50 +416,38 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
   }
 
   Widget _buildSearchButton() {
+    final bool active = _isFormValid;
     return SizedBox(
       width: double.infinity,
       height: 50,
       child: ElevatedButton(
-        onPressed: () {
-          Navigator.pop(context, {
-            'application': _selectedApplication,
-            'model': _selectedModel,
-            'frequency': _selectedFrequency,
-            'flow': _flowController.text,
-            'flowUnit': _selectedFlowUnit,
-            'head': _headController.text,
-            'headUnit': _selectedHeadUnit,
-          });
-        },
+        onPressed: active
+            ? () {
+                Navigator.pop(context, {
+                  'application': _selectedApplication,
+                  'line': _selectedModel,
+                  'frequency': _selectedFrequency,
+                  'flow_rate': _flowController.text.replaceAll(',', '.'),
+                  'flow_rate_measure': _selectedFlowUnit,
+                  'height_gauge': _headController.text.replaceAll(',', '.'),
+                  'height_gauge_measure': _selectedHeadUnit,
+                });
+              }
+            : null,
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
+          disabledBackgroundColor: Colors.grey[300],
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
           elevation: 0,
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.search, size: 20),
-            const SizedBox(width: 8),
-            Text(
-              TranslationService.translate('search'),
-              style: AppTextStyles.text2.copyWith(fontSize: 16),
-            ),
-          ],
+        child: Text(
+          TranslationService.translate('search'),
+          style: AppTextStyles.text2.copyWith(fontSize: 16),
         ),
       ),
     );
   }
-}
-
-void showFiltersBottomSheet(BuildContext context) {
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (context) => const FiltersBottomSheet(),
-  );
 }

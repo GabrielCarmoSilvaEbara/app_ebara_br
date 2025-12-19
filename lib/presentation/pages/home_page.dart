@@ -164,6 +164,31 @@ class HomePageState extends State<HomePage> {
     });
   }
 
+  Future<void> _performTechnicalSearch(Map<String, dynamic> filters) async {
+    _resetProductState();
+
+    final products = await EbaraDataService.searchProducts(
+      categoryId: selectedCategoryId,
+      application: filters['application'] ?? 'TODOS',
+      line: filters['line'] ?? 'TODOS',
+      frequency: int.tryParse(filters['frequency'].toString()) ?? 60,
+      flowRate: double.tryParse(filters['flow_rate'].toString()) ?? 0,
+      flowRateMeasure: filters['flow_rate_measure'] ?? 'm3/h',
+      heightGauge: double.tryParse(filters['height_gauge'].toString()) ?? 0,
+      heightGaugeMeasure: filters['height_gauge_measure'] ?? 'm',
+      idLanguage: TranslationService.getLanguageId(),
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      allProducts = EbaraDataService.groupProducts(products);
+      searchQuery = '';
+      visibleProducts = allProducts.take(_pageSize).toList();
+      isLoadingProducts = false;
+    });
+  }
+
   Future<List<Map<String, dynamic>>> _getProductsForCategory(
     String categoryId,
   ) async {
@@ -308,7 +333,11 @@ class HomePageState extends State<HomePage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _LocationHeader(city: city, onTap: openLocationSelector),
-          _SearchSection(onSearchChanged: onSearchChanged),
+          _SearchSection(
+            onSearchChanged: onSearchChanged,
+            selectedCategoryId: selectedCategoryId,
+            onFiltersApplied: _performTechnicalSearch,
+          ),
           _CategorySection(
             isLoading: isLoadingCategories,
             categories: categories,
@@ -401,7 +430,15 @@ class _LocationHeader extends StatelessWidget {
 
 class _SearchSection extends StatelessWidget {
   final ValueChanged<String> onSearchChanged;
-  const _SearchSection({required this.onSearchChanged});
+  final String selectedCategoryId;
+  final Function(Map<String, dynamic>) onFiltersApplied;
+
+  const _SearchSection({
+    required this.onSearchChanged,
+    required this.selectedCategoryId,
+    required this.onFiltersApplied,
+  });
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -409,6 +446,8 @@ class _SearchSection extends StatelessWidget {
       child: CustomSearchBar(
         hintText: TranslationService.translate('search'),
         onChanged: onSearchChanged,
+        selectedCategoryId: selectedCategoryId,
+        onFiltersApplied: onFiltersApplied,
       ),
     );
   }

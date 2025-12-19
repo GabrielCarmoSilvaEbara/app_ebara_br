@@ -235,4 +235,83 @@ class EbaraDataService {
     );
     return response.dataOrNull ?? [];
   }
+
+  static Future<List<Map<String, dynamic>>> getApplicationsByCategory(
+    String categoryId,
+  ) async {
+    final response = await _api.get(
+      'aplicacoes',
+      queryParams: {'id_category': categoryId},
+      parser: (json) {
+        if (json['status'] != true) return <Map<String, dynamic>>[];
+        final List<dynamic> data = json['data'];
+        return data.map((e) => e as Map<String, dynamic>).toList();
+      },
+    );
+    return response.dataOrNull ?? [];
+  }
+
+  static Future<List<Map<String, dynamic>>> getLines(
+    String categoryId, {
+    String application = 'TODOS',
+  }) async {
+    final response = await _api.get(
+      'busca-bombas/get-lines',
+      queryParams: {'id_category': categoryId, 'id_application': application},
+      parser: (json) {
+        if (json['status'] != true) return <Map<String, dynamic>>[];
+        final List<dynamic> data = json['data'];
+        return data.map((e) => e as Map<String, dynamic>).toList();
+      },
+    );
+    return response.dataOrNull ?? [];
+  }
+
+  static Future<List<Map<String, dynamic>>> getFlowRates() async {
+    final response = await _api.get(
+      'busca-bombas/list-flow-rate',
+      parser: (json) {
+        if (json['status'] != true) return <Map<String, dynamic>>[];
+        final List<dynamic> data = json['data'];
+        return data.map((e) => e as Map<String, dynamic>).toList();
+      },
+    );
+    return response.dataOrNull ?? [];
+  }
+
+  static Future<List<Map<String, dynamic>>> getHeightGauges() async {
+    final response = await _api.get(
+      'busca-bombas/list_height_gauge',
+      parser: (json) {
+        if (json['status'] != true) return <Map<String, dynamic>>[];
+        final List<dynamic> data = json['data'];
+        return data.map((e) => e as Map<String, dynamic>).toList();
+      },
+    );
+    return response.dataOrNull ?? [];
+  }
+
+  static Future<List<Map<String, dynamic>>> getFrequencies() async {
+    final response = await _api.get(
+      'busca-bombas/get-frequency',
+      parser: (json) {
+        if (json['status'] != true) return <Map<String, dynamic>>[];
+        final List<dynamic> data = json['data'];
+        return data.map((e) => e as Map<String, dynamic>).toList();
+      },
+    );
+    return response.dataOrNull ?? [];
+  }
+
+  static Future<List<Map<String, dynamic>>> getDiameters() async {
+    final response = await _api.get(
+      'busca-bombas/diametros',
+      parser: (json) {
+        if (json['status'] != true) return <Map<String, dynamic>>[];
+        final List<dynamic> data = json['data'];
+        return data.map((e) => e as Map<String, dynamic>).toList();
+      },
+    );
+    return response.dataOrNull ?? [];
+  }
 }

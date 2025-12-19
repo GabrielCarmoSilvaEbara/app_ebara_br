@@ -90,6 +90,7 @@ class TranslationService {
         'pt': 'BOMBAS SUBMERSÍVEIS',
         'es': 'BOMBAS SUMERGIBLES',
       },
+      'filters': {'en': 'Filters', 'pt': 'Filtros', 'es': 'Filtros'},
       'pump': {'en': 'PUMP', 'pt': 'BOMBA', 'es': 'BOMBA'},
       'others': {'en': 'OTHERS', 'pt': 'OUTROS', 'es': 'OTROS'},
       'models': {'en': 'Models', 'pt': 'Modelos', 'es': 'Modelos'},
