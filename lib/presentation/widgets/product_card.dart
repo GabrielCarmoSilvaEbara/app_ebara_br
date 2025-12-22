@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../theme/app_text_styles.dart';
 import '../pages/product_details_page.dart';
+import '../widgets/product_card_skeleton.dart';
 
 class ProductCard extends StatelessWidget {
   final String category;
@@ -83,36 +85,15 @@ class _ProductImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: hasImage
-          ? Image.network(
-              imageUrl,
-              fit: BoxFit.contain,
-              loadingBuilder: (context, child, loadingProgress) {
-                if (loadingProgress == null) return child;
-                return _LoadingIndicator(progress: loadingProgress);
-              },
-              errorBuilder: (context, error, stackTrace) => const _ErrorIcon(),
-            )
-          : const _ErrorIcon(),
-    );
-  }
-}
-
-class _LoadingIndicator extends StatelessWidget {
-  final ImageChunkEvent progress;
-
-  const _LoadingIndicator({required this.progress});
-
-  @override
-  Widget build(BuildContext context) {
-    final expectedBytes = progress.expectedTotalBytes;
-    final value = expectedBytes != null
-        ? progress.cumulativeBytesLoaded / expectedBytes
-        : null;
+    if (!hasImage) return const _ErrorIcon();
 
     return Center(
-      child: CircularProgressIndicator(value: value, strokeWidth: 2),
+      child: CachedNetworkImage(
+        imageUrl: imageUrl,
+        fit: BoxFit.contain,
+        placeholder: (context, url) => const ProductCardSkeleton(),
+        errorWidget: (context, url, error) => const _ErrorIcon(),
+      ),
     );
   }
 }

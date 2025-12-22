@@ -1,17 +1,17 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
+import '../../core/providers/home_provider.dart';
+import '../../core/services/translation_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
-import '../widgets/custom_search_bar.dart';
 import '../widgets/category_chip.dart';
+import '../widgets/category_chip_skeleton.dart';
+import '../widgets/custom_search_bar.dart';
+import '../widgets/location_selector_sheet.dart';
 import '../widgets/product_card.dart';
 import '../widgets/product_card_skeleton.dart';
-import '../../core/services/location_service.dart';
-import '../../core/services/translation_service.dart';
-import '../../core/services/ebara_data_service.dart';
-import '../widgets/location_selector_sheet.dart';
-import '../widgets/category_chip_skeleton.dart';
 
 class NoScrollbarScrollBehavior extends ScrollBehavior {
   @override
@@ -26,39 +26,18 @@ class HomePage extends StatefulWidget {
 }
 
 class HomePageState extends State<HomePage> {
-  static const int _pageSize = 10;
-  static const int _scrollThreshold = 200;
-  static const Duration _debounceDelay = Duration(milliseconds: 400);
-  static const Duration _paginationDelay = Duration(milliseconds: 400);
-
   final ScrollController _scrollController = ScrollController();
   final PageController _pageController = PageController();
   final ItemScrollController _itemScrollController = ItemScrollController();
   Timer? _debounce;
 
-  bool isLoadingCategories = true;
-  bool isLoadingProducts = true;
-  bool isPaginating = false;
-
-  String city = '';
-  String state = '';
-  String country = '';
-
-  String selectedCategory = '';
-  String selectedCategoryId = '';
-  String searchQuery = '';
-
-  int currentPage = 1;
-  List<Map<String, dynamic>> categories = [];
-  List<Map<String, dynamic>> allProducts = [];
-  List<Map<String, dynamic>> visibleProducts = [];
-
-  final Map<String, List<Map<String, dynamic>>> _cacheByCategory = {};
-
   @override
   void initState() {
     super.initState();
-    _initializeHomePage();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<HomeProvider>().initialize();
+    });
+    _scrollController.addListener(_onScroll);
   }
 
   @override
@@ -69,203 +48,15 @@ class HomePageState extends State<HomePage> {
     super.dispose();
   }
 
-  List<Map<String, dynamic>> get filteredAllProducts {
-    if (searchQuery.isEmpty) return allProducts;
-    final query = searchQuery.toLowerCase();
-    return allProducts
-        .where((product) => _matchesSearchQuery(product, query))
-        .toList();
-  }
-
-  bool get hasMoreProducts =>
-      visibleProducts.length < filteredAllProducts.length;
-  bool get canPaginate => !isPaginating && hasMoreProducts;
-
-  void _initializeHomePage() {
-    city = TranslationService.translate('search');
-    _scrollController.addListener(_onScroll);
-    initLocation();
-  }
-
-  Future<void> initLocation() async {
-    final location = await LocationService.getCurrentCity();
-    if (!mounted) return;
-    _updateLocationState(location);
-    await loadCategories();
-  }
-
-  void _updateLocationState(Map<String, String>? location) {
-    if (location == null) {
-      setState(() => city = TranslationService.translate('choose_location'));
-      return;
-    }
-    final cityValue = location['city'];
-    if (cityValue == null || cityValue.isEmpty) {
-      setState(() => city = TranslationService.translate('choose_location'));
-      return;
-    }
-    final countryCode = location['country'];
-    if (countryCode != null) {
-      TranslationService.setLanguageByCountry(countryCode);
-    }
-    setState(() {
-      city = cityValue;
-      country = countryCode ?? '';
-      state = location['state'] ?? '';
-    });
-  }
-
-  Future<void> loadCategories({bool refreshProducts = true}) async {
-    setState(() => isLoadingCategories = true);
-
-    final fetchedCategories = await EbaraDataService.fetchCategories(
-      idLanguage: TranslationService.getLanguageId(),
-    );
-
-    if (!mounted) return;
-
-    setState(() {
-      categories = fetchedCategories;
-      isLoadingCategories = false;
-    });
-
-    if (categories.isNotEmpty) {
-      if (refreshProducts) {
-        _selectFirstCategory();
-      } else {
-        final current = categories.firstWhere(
-          (cat) => cat['id'].toString() == selectedCategoryId.toString(),
-          orElse: () => categories.first,
-        );
-        setState(() {
-          selectedCategory = current['slug'] ?? '';
-        });
-      }
-    }
-  }
-
-  void _selectFirstCategory() {
-    final firstCategory = categories.first;
-    selectedCategory = firstCategory['slug'] ?? '';
-    selectedCategoryId = firstCategory['id'] ?? '';
-    loadProducts(selectedCategoryId);
-  }
-
-  Future<void> loadProducts(String categoryId) async {
-    if (categoryId.isEmpty) return;
-    _resetProductState();
-    final products = await _getProductsForCategory(categoryId);
-    if (!mounted) return;
-    setState(() {
-      allProducts = products;
-      searchQuery = '';
-      visibleProducts = products.take(_pageSize).toList();
-      isLoadingProducts = false;
-    });
-  }
-
-  Future<void> _performTechnicalSearch(Map<String, dynamic> filters) async {
-    _resetProductState();
-
-    final products = await EbaraDataService.searchProducts(
-      categoryId: selectedCategoryId,
-      application: filters['application'] ?? 'TODOS',
-      line: filters['line'] ?? 'TODOS',
-      frequency: int.tryParse(filters['frequency'].toString()) ?? 60,
-      flowRate: double.tryParse(filters['flow_rate'].toString()) ?? 0,
-      flowRateMeasure: filters['flow_rate_measure'] ?? 'm3/h',
-      heightGauge: double.tryParse(filters['height_gauge'].toString()) ?? 0,
-      heightGaugeMeasure: filters['height_gauge_measure'] ?? 'm',
-      idLanguage: TranslationService.getLanguageId(),
-    );
-
-    if (!mounted) return;
-
-    setState(() {
-      allProducts = EbaraDataService.groupProducts(products);
-      searchQuery = '';
-      visibleProducts = allProducts.take(_pageSize).toList();
-      isLoadingProducts = false;
-    });
-  }
-
-  Future<List<Map<String, dynamic>>> _getProductsForCategory(
-    String categoryId,
-  ) async {
-    if (_cacheByCategory.containsKey(categoryId)) {
-      return _cacheByCategory[categoryId]!;
-    }
-    final fetchedProducts = await EbaraDataService.searchProducts(
-      categoryId: categoryId,
-      idLanguage: TranslationService.getLanguageId(),
-    );
-    final groupedProducts = EbaraDataService.groupProducts(fetchedProducts);
-    _cacheByCategory[categoryId] = groupedProducts;
-    return groupedProducts;
-  }
-
-  void _resetProductState() {
-    setState(() {
-      isLoadingProducts = true;
-      isPaginating = false;
-      currentPage = 1;
-      visibleProducts.clear();
-    });
-    if (_scrollController.hasClients) {
-      _scrollController.jumpTo(0);
-    }
-  }
-
   void _onScroll() {
-    final isNearBottom =
-        _scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - _scrollThreshold;
-    if (isNearBottom && canPaginate) {
-      _loadMore();
+    final provider = context.read<HomeProvider>();
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      provider.loadMore();
     }
   }
 
-  void _loadMore() {
-    setState(() => isPaginating = true);
-    Future.delayed(_paginationDelay, () {
-      if (!mounted) return;
-      final nextProducts = _getNextPageProducts();
-      setState(() {
-        visibleProducts.addAll(nextProducts);
-        currentPage++;
-        isPaginating = false;
-      });
-    });
-  }
-
-  List<Map<String, dynamic>> _getNextPageProducts() {
-    return filteredAllProducts
-        .skip(currentPage * _pageSize)
-        .take(_pageSize)
-        .toList();
-  }
-
-  bool _matchesSearchQuery(Map<String, dynamic> product, String query) {
-    final name = (product['name'] ?? '').toString().toLowerCase();
-    final model = (product['model'] ?? '').toString().toLowerCase();
-    return name.contains(query) || model.contains(query);
-  }
-
-  void onSearchChanged(String value) {
-    _debounce?.cancel();
-    _debounce = Timer(_debounceDelay, () => _performSearch(value));
-  }
-
-  void _performSearch(String query) {
-    if (!mounted) return;
-    setState(() {
-      searchQuery = query;
-      currentPage = 1;
-      visibleProducts = filteredAllProducts.take(_pageSize).toList();
-    });
-  }
-
-  void openLocationSelector() {
+  void openLocationSelector(BuildContext context) {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -273,112 +64,88 @@ class HomePageState extends State<HomePage> {
       ),
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) =>
-          LocationSelectorSheet(onSelected: _onLocationSelected),
+      builder: (_) => LocationSelectorSheet(
+        onSelected: (city, state, country) async {
+          context.read<HomeProvider>().updateManualLocation(
+            city,
+            state,
+            country,
+          );
+          if (mounted) setState(() {});
+        },
+      ),
     );
-  }
-
-  void _onLocationSelected(
-    String newCity,
-    String newState,
-    String newCountry,
-  ) async {
-    TranslationService.setLanguageByCountry(newCountry);
-
-    EbaraDataService.clearCategoryCache();
-
-    setState(() {
-      city = newCity;
-      state = newState;
-      country = newCountry;
-    });
-
-    await loadCategories(refreshProducts: false);
-  }
-
-  void _onCategorySelected(Map<String, dynamic> category) {
-    final index = categories.indexOf(category);
-    if (index != -1) {
-      _pageController.animateToPage(
-        index,
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeInOut,
-      );
-    }
-  }
-
-  void _onPageChanged(int index) {
-    final category = categories[index];
-    setState(() {
-      selectedCategory = category['slug'] ?? '';
-      selectedCategoryId = category['id'] ?? '';
-    });
-
-    if (_itemScrollController.isAttached) {
-      _itemScrollController.scrollTo(
-        index: index,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-        alignment: 0.4,
-      );
-    }
-
-    loadProducts(selectedCategoryId);
   }
 
   @override
   Widget build(BuildContext context) {
+    final provider = context.watch<HomeProvider>();
+
     return Scaffold(
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _LocationHeader(city: city, onTap: openLocationSelector),
-          _SearchSection(
-            onSearchChanged: onSearchChanged,
-            selectedCategoryId: selectedCategoryId,
-            onFiltersApplied: _performTechnicalSearch,
+          _LocationHeader(
+            city: provider.city,
+            onTap: () => openLocationSelector(context),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            child: CustomSearchBar(
+              hintText: TranslationService.translate('search'),
+              selectedCategoryId: provider.selectedCategoryId,
+              onChanged: (val) {
+                _debounce?.cancel();
+                _debounce = Timer(const Duration(milliseconds: 400), () {
+                  provider.setSearchQuery(val);
+                });
+              },
+              onFiltersApplied: (filters) {},
+            ),
           ),
           _CategorySection(
-            isLoading: isLoadingCategories,
-            categories: categories,
-            selectedCategory: selectedCategory,
-            onCategorySelected: _onCategorySelected,
+            isLoading: provider.isLoadingCategories,
+            categories: provider.categories,
+            selectedCategory: provider.selectedCategory,
+            onCategorySelected: (cat) {
+              final index = provider.categories.indexOf(cat);
+              _pageController.animateToPage(
+                index,
+                duration: const Duration(milliseconds: 400),
+                curve: Curves.easeInOut,
+              );
+            },
             itemScrollController: _itemScrollController,
           ),
           const SizedBox(height: 8),
           Expanded(
-            child: isLoadingCategories
+            child: provider.isLoadingCategories
                 ? Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: _ProductLoadingSkeleton(),
                   )
                 : PageView.builder(
                     controller: _pageController,
-                    onPageChanged: _onPageChanged,
-                    itemCount: categories.length,
+                    itemCount: provider.categories.length,
+                    onPageChanged: (index) {
+                      provider.updateCategoryByIndex(index);
+                      if (_itemScrollController.isAttached) {
+                        _itemScrollController.scrollTo(
+                          index: index,
+                          duration: const Duration(milliseconds: 300),
+                          alignment: 0.4,
+                        );
+                      }
+                    },
                     itemBuilder: (context, index) {
-                      return AnimatedBuilder(
-                        animation: _pageController,
-                        builder: (context, child) {
-                          double value = 1.0;
-                          if (_pageController.position.haveDimensions) {
-                            value = _pageController.page! - index;
-                            value = (1 - (value.abs() * 0.05)).clamp(0.0, 1.0);
-                          }
-                          return Opacity(
-                            opacity: value,
-                            child: Transform.scale(scale: value, child: child),
-                          );
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          child: _ProductGrid(
-                            isLoading: isLoadingProducts,
-                            products: visibleProducts,
-                            isPaginating: isPaginating,
-                            selectedCategory: selectedCategory,
-                            scrollController: _scrollController,
-                          ),
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: _ProductGrid(
+                          isLoading: provider.isLoadingProducts,
+                          products: provider.visibleProducts,
+                          isPaginating: provider.isPaginating,
+                          selectedCategory: provider.selectedCategory,
+                          scrollController: _scrollController,
                         ),
                       );
                     },
@@ -394,6 +161,7 @@ class _LocationHeader extends StatelessWidget {
   final String city;
   final VoidCallback onTap;
   const _LocationHeader({required this.city, required this.onTap});
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -428,37 +196,13 @@ class _LocationHeader extends StatelessWidget {
   }
 }
 
-class _SearchSection extends StatelessWidget {
-  final ValueChanged<String> onSearchChanged;
-  final String selectedCategoryId;
-  final Function(Map<String, dynamic>) onFiltersApplied;
-
-  const _SearchSection({
-    required this.onSearchChanged,
-    required this.selectedCategoryId,
-    required this.onFiltersApplied,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      child: CustomSearchBar(
-        hintText: TranslationService.translate('search'),
-        onChanged: onSearchChanged,
-        selectedCategoryId: selectedCategoryId,
-        onFiltersApplied: onFiltersApplied,
-      ),
-    );
-  }
-}
-
 class _CategorySection extends StatelessWidget {
   final bool isLoading;
   final List<Map<String, dynamic>> categories;
   final String selectedCategory;
   final ValueChanged<Map<String, dynamic>> onCategorySelected;
   final ItemScrollController itemScrollController;
+
   const _CategorySection({
     required this.isLoading,
     required this.categories,
@@ -466,6 +210,7 @@ class _CategorySection extends StatelessWidget {
     required this.onCategorySelected,
     required this.itemScrollController,
   });
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -482,11 +227,20 @@ class _CategorySection extends StatelessWidget {
           height: 44,
           child: isLoading
               ? _CategoryLoadingSkeleton()
-              : _CategoryList(
-                  categories: categories,
-                  selectedCategory: selectedCategory,
-                  onCategorySelected: onCategorySelected,
+              : ScrollablePositionedList.builder(
                   itemScrollController: itemScrollController,
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  itemCount: categories.length,
+                  itemBuilder: (context, index) {
+                    final category = categories[index];
+                    return CategoryChip(
+                      label: category['title'] ?? '',
+                      icon: category['icon'],
+                      isSelected: category['slug'] == selectedCategory,
+                      onTap: () => onCategorySelected(category),
+                    );
+                  },
                 ),
         ),
       ],
@@ -506,45 +260,13 @@ class _CategoryLoadingSkeleton extends StatelessWidget {
   }
 }
 
-class _CategoryList extends StatelessWidget {
-  final List<Map<String, dynamic>> categories;
-  final String selectedCategory;
-  final ValueChanged<Map<String, dynamic>> onCategorySelected;
-  final ItemScrollController itemScrollController;
-  const _CategoryList({
-    required this.categories,
-    required this.selectedCategory,
-    required this.onCategorySelected,
-    required this.itemScrollController,
-  });
-  @override
-  Widget build(BuildContext context) {
-    return ScrollablePositionedList.builder(
-      itemScrollController: itemScrollController,
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      itemCount: categories.length,
-      itemBuilder: (context, index) {
-        final category = categories[index];
-        final slug = category['slug'] ?? '';
-        final isSelected = slug == selectedCategory;
-        return CategoryChip(
-          label: category['title'] ?? '',
-          icon: category['icon'],
-          isSelected: isSelected,
-          onTap: () => onCategorySelected(category),
-        );
-      },
-    );
-  }
-}
-
 class _ProductGrid extends StatelessWidget {
   final bool isLoading;
   final List<Map<String, dynamic>> products;
   final bool isPaginating;
   final String selectedCategory;
   final ScrollController scrollController;
+
   const _ProductGrid({
     required this.isLoading,
     required this.products,
@@ -552,10 +274,18 @@ class _ProductGrid extends StatelessWidget {
     required this.selectedCategory,
     required this.scrollController,
   });
+
   @override
   Widget build(BuildContext context) {
     if (isLoading) return _ProductLoadingSkeleton();
-    if (products.isEmpty) return _EmptyProductsView();
+    if (products.isEmpty) {
+      return Center(
+        child: Text(
+          TranslationService.translate('no_products_found'),
+          style: AppTextStyles.text4,
+        ),
+      );
+    }
     return ScrollConfiguration(
       behavior: NoScrollbarScrollBehavior(),
       child: GridView.builder(
@@ -570,10 +300,9 @@ class _ProductGrid extends StatelessWidget {
         itemCount: products.length + (isPaginating ? 2 : 0),
         itemBuilder: (context, index) {
           if (index >= products.length) return const ProductCardSkeleton();
-          final product = products[index];
           return ProductCard(
             category: TranslationService.translate(selectedCategory),
-            productData: product,
+            productData: products[index],
             onActionPressed: () {},
           );
         },
@@ -595,18 +324,6 @@ class _ProductLoadingSkeleton extends StatelessWidget {
         childAspectRatio: 0.99,
       ),
       itemBuilder: (_, index) => const ProductCardSkeleton(),
-    );
-  }
-}
-
-class _EmptyProductsView extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Text(
-        TranslationService.translate('no_products_found'),
-        style: AppTextStyles.text4,
-      ),
     );
   }
 }

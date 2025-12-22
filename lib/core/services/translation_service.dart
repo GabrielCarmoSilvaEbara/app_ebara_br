@@ -80,14 +80,39 @@ class TranslationService {
         'pt': 'BOMBAS CENTRÍFUGAS',
         'es': 'BOMBAS CENTRÍFUGAS',
       },
+      'centrifugal-pumps': {
+        'en': 'CENTRIFUGAL PUMPS',
+        'pt': 'BOMBAS CENTRÍFUGAS',
+        'es': 'BOMBAS CENTRÍFUGAS',
+      },
       'bombas-submersas': {
-        'en': 'SUBMERSIBLE PUMPS',
-        'pt': 'BOMBAS SUBMERSÍVEIS',
+        'en': 'DEEP WELL PUMPS',
+        'pt': 'BOMBAS SUBMERSAS',
+        'es': 'BOMBAS SUMERGIBLES',
+      },
+      'deep-well-pumps': {
+        'en': 'DEEP WELL PUMPS',
+        'pt': 'BOMBAS SUBMERSAS',
         'es': 'BOMBAS SUMERGIBLES',
       },
       'bombas-submersiveis': {
         'en': 'SUBMERSIBLE PUMPS',
         'pt': 'BOMBAS SUBMERSÍVEIS',
+        'es': 'BOMBAS SUMERGIBLES',
+      },
+      'submersible-pumps': {
+        'en': 'SUBMERSIBLE PUMPS',
+        'pt': 'BOMBAS SUBMERSÍVEIS',
+        'es': 'BOMBAS SUMERGIBLES',
+      },
+      'sistema-solar-ecaros-1': {
+        'en': 'Écaros Solar System',
+        'pt': 'Sistema Solar Écaros',
+        'es': 'BOMBAS SUMERGIBLES',
+      },
+      'ecaros-solar-system': {
+        'en': 'Écaros Solar System',
+        'pt': 'Sistema Solar Écaros',
         'es': 'BOMBAS SUMERGIBLES',
       },
       'filters': {'en': 'Filters', 'pt': 'Filtros', 'es': 'Filtros'},
