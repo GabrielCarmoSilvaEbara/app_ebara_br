@@ -12,9 +12,11 @@ import 'core/localization/app_localizations.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
   await Hive.initFlutter();
-  await Hive.openBox('api_cache');
-  await Hive.openBox('settings');
+
+  await _openBoxSafe('api_cache');
+  await _openBoxSafe('settings');
 
   runApp(
     MultiProvider(
@@ -26,6 +28,15 @@ void main() async {
       child: const MyApp(),
     ),
   );
+}
+
+Future<void> _openBoxSafe(String boxName) async {
+  try {
+    await Hive.openBox(boxName);
+  } catch (e) {
+    await Hive.deleteBoxFromDisk(boxName);
+    await Hive.openBox(boxName);
+  }
 }
 
 class MyApp extends StatelessWidget {

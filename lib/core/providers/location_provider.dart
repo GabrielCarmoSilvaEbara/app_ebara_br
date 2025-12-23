@@ -19,6 +19,8 @@ class LocationProvider with ChangeNotifier {
   Locale _currentLocale = const Locale('pt');
   Locale get currentLocale => _currentLocale;
 
+  LocationProvider();
+
   int get apiLanguageId {
     switch (_currentLocale.languageCode) {
       case 'en':
@@ -56,19 +58,24 @@ class LocationProvider with ChangeNotifier {
   }
 
   Future<void> initLocation() async {
-    final cachedLocation = _settingsBox.get('user_location');
+    try {
+      final cachedLocation = _settingsBox.get('user_location');
 
-    if (cachedLocation != null) {
-      final data = Map<String, dynamic>.from(cachedLocation);
-      updateUserLocation(
-        city: data['city'],
-        state: data['state'],
-        country: data['country'],
-        lat: data['lat'],
-        lon: data['lon'],
-        saveToCache: false,
-      );
-      return;
+      if (cachedLocation != null) {
+        final data = Map<String, dynamic>.from(cachedLocation);
+
+        _city = data['city'] ?? '';
+        _state = data['state'] ?? '';
+        _country = data['country'] ?? '';
+        _lat = (data['lat'] as num?)?.toDouble() ?? -23.5505;
+        _lon = (data['lon'] as num?)?.toDouble() ?? -46.6333;
+
+        _updateLocaleByCountry(_country);
+        notifyListeners();
+        return;
+      }
+    } catch (e) {
+      await _settingsBox.delete('user_location');
     }
 
     final location = await LocationService.getCurrentCity();

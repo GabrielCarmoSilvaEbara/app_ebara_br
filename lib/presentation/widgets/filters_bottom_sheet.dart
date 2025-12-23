@@ -18,80 +18,172 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
   String? _selectedApplication;
   String? _selectedModel;
   String? _selectedFrequency;
-  String _selectedFlowUnit = 'mh';
+  String? _selectedSystemType;
+  String? _selectedWellDiameter;
+
+  String _activationType = 'pressostato';
+
+  final List<String> _activationOptions = ['pressostato', 'inversor'];
+
+  String _selectedFlowUnit = 'm3/h';
   String _selectedHeadUnit = 'm';
 
   final TextEditingController _flowController = TextEditingController();
   final TextEditingController _headController = TextEditingController();
+  final TextEditingController _cableLengthController = TextEditingController();
+  final TextEditingController _bombsQuantityController = TextEditingController(
+    text: '1',
+  );
 
   List<String> _applications = [];
   List<String> _models = [];
   List<String> _frequencies = [];
-  List<String> _flowUnits = [];
-  List<String> _headUnits = [];
+
+  List<Map<String, dynamic>> _flowUnits = [];
+  List<Map<String, dynamic>> _headUnits = [];
+
+  List<Map<String, dynamic>> _systemTypes = [];
+  List<String> _wellDiameters = [];
 
   bool _isLoading = true;
+
+  bool get _isSolar => widget.categoryId == '26';
+  bool get _isSubmersible => widget.categoryId == '23';
+  bool get _isPressurizer =>
+      widget.categoryId == '27' ||
+      widget.categoryId == 'sistemas-de-pressurizacao-1';
 
   @override
   void initState() {
     super.initState();
     _loadFiltersData();
-    _flowController.addListener(() => setState(() {}));
-    _headController.addListener(() => setState(() {}));
+    _flowController.addListener(_updateState);
+    _headController.addListener(_updateState);
+    _bombsQuantityController.addListener(_updateState);
+    if (_isSolar) _cableLengthController.addListener(_updateState);
+  }
+
+  void _updateState() {
+    if (mounted) setState(() {});
   }
 
   bool get _isFormValid {
-    return _selectedApplication != null &&
+    final basicValid =
+        _selectedApplication != null &&
         _selectedModel != null &&
-        _selectedFrequency != null &&
         _flowController.text.isNotEmpty &&
         _headController.text.isNotEmpty;
+
+    if (_isPressurizer) {
+      if (_activationType == 'inversor') {
+        return basicValid && _bombsQuantityController.text.isNotEmpty;
+      }
+      return basicValid;
+    }
+
+    if (_isSolar) {
+      return basicValid;
+    }
+
+    return basicValid && _selectedFrequency != null;
   }
 
   Future<void> _loadFiltersData() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
+
     try {
-      final results = await Future.wait([
+      final baseFutures = [
         EbaraDataService.getApplicationsByCategory(widget.categoryId),
         EbaraDataService.getFrequencies(),
         EbaraDataService.getFlowRates(),
         EbaraDataService.getHeightGauges(),
-      ]);
+      ];
+
+      Future<List<Map<String, dynamic>>>? systemTypesFuture;
+      Future<List<String>>? wellDiametersFuture;
+
+      if (_isSolar) {
+        systemTypesFuture = EbaraDataService.getSystemTypes();
+      }
+
+      if (_isSolar || _isSubmersible) {
+        wellDiametersFuture = EbaraDataService.getWellDiameters();
+      }
+
+      final results = await Future.wait(baseFutures);
+
+      final systemTypes = systemTypesFuture != null
+          ? await systemTypesFuture
+          : <Map<String, dynamic>>[];
+      final wellDiametersRaw = wellDiametersFuture != null
+          ? await wellDiametersFuture
+          : <String>[];
 
       if (mounted) {
         setState(() {
           _applications = (results[0] as List)
               .map((e) => e['title'].toString())
               .toList();
-
           _frequencies = (results[1] as List)
               .map((e) => e['value'].toString())
               .toList();
 
           _flowUnits = (results[2] as List)
-              .map((e) => e['value'].toString())
+              .where((e) {
+                if (!_isSolar && e['value'].toString() == 'md') {
+                  return false;
+                }
+                return true;
+              })
+              .map(
+                (e) => {
+                  'value': e['value'].toString(),
+                  'title': e['label'].toString(),
+                },
+              )
               .toList();
 
           _headUnits = (results[3] as List)
-              .map((e) => e['value'].toString())
+              .map(
+                (e) => {
+                  'value': e['value'].toString(),
+                  'title': e['label'].toString(),
+                },
+              )
               .toList();
+
+          _systemTypes = systemTypes;
+
+          if (wellDiametersRaw.isNotEmpty) {
+            _wellDiameters = ['0', ...wellDiametersRaw];
+          } else {
+            _wellDiameters = [];
+          }
 
           if (_applications.isNotEmpty) {
             _selectedApplication = _applications.first;
-
             _fetchModels(_selectedApplication!);
           }
 
-          if (_frequencies.isNotEmpty) {
+          if (_frequencies.isNotEmpty && !_isSolar && !_isPressurizer) {
             _selectedFrequency = _frequencies.first;
           }
 
           if (_flowUnits.isNotEmpty) {
-            _selectedFlowUnit = _flowUnits.first;
+            _selectedFlowUnit = _flowUnits.first['value'];
           }
 
           if (_headUnits.isNotEmpty) {
-            _selectedHeadUnit = _headUnits.first;
+            _selectedHeadUnit = _headUnits.first['value'];
+          }
+
+          if (_systemTypes.isNotEmpty && _isSolar) {
+            _selectedSystemType = _systemTypes.first['value'].toString();
+          }
+
+          if (_wellDiameters.isNotEmpty && (_isSolar || _isSubmersible)) {
+            _selectedWellDiameter = _wellDiameters.first;
           }
 
           _isLoading = false;
@@ -104,22 +196,17 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
 
   Future<void> _fetchModels(String application) async {
     setState(() => _selectedModel = null);
-    try {
-      final data = await EbaraDataService.getLines(
-        widget.categoryId,
-        application: application,
-      );
-      if (mounted) {
-        setState(() {
-          _models = data.map((e) => e['title_product'].toString()).toList();
-
-          if (_models.isNotEmpty) {
-            _selectedModel = _models.first;
-          }
-        });
-      }
-    } catch (e) {
-      debugPrint("Erro ao buscar modelos: $e");
+    final data = await EbaraDataService.getLines(
+      widget.categoryId,
+      application: application,
+    );
+    if (mounted) {
+      setState(() {
+        _models = data.map((e) => e['title_product'].toString()).toList();
+        if (_models.isNotEmpty) {
+          _selectedModel = _models.first;
+        }
+      });
     }
   }
 
@@ -127,14 +214,19 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
   void dispose() {
     _flowController.dispose();
     _headController.dispose();
+    _cableLengthController.dispose();
+    _bombsQuantityController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
     return Container(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
+      padding: EdgeInsets.only(bottom: bottomInset),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.90,
       ),
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -146,22 +238,45 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
           _buildHeader(),
           Flexible(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               child: _isLoading ? _buildSkeleton() : _buildContent(),
             ),
           ),
+          if (!_isLoading)
+            Container(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 4,
+                    offset: Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 16),
+                  child: _buildSearchButton(),
+                ),
+              ),
+            ),
         ],
       ),
     );
   }
 
   Widget _buildContent() {
+    final l10n = AppLocalizations.of(context)!;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildDropdownField(
-          label: AppLocalizations.of(context)!.translate('applications'),
-          hint: AppLocalizations.of(context)!.translate('pick_one'),
+          label: l10n.translate('applications'),
+          hint: l10n.translate('pick_one'),
           value: _selectedApplication,
           items: _applications,
           onChanged: (val) {
@@ -172,34 +287,100 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
           },
         ),
         const SizedBox(height: 16),
+
+        if (_isSolar && _systemTypes.isNotEmpty) ...[
+          _buildDynamicDropdownField(
+            label: l10n.translate('system_type'),
+            hint: l10n.translate('pick_one'),
+            value: _selectedSystemType,
+            items: _systemTypes,
+            labelBuilder: (item) =>
+                l10n.translate(item['label']?.toString() ?? ''),
+            onChanged: (val) => setState(() => _selectedSystemType = val),
+          ),
+          const SizedBox(height: 16),
+        ],
+
         _buildDropdownField(
-          label: AppLocalizations.of(context)!.translate('models'),
-          hint: AppLocalizations.of(context)!.translate('pick_one'),
+          label: l10n.translate('models'),
+          hint: l10n.translate('pick_one'),
           value: _selectedModel,
           items: _models,
           onChanged: (val) => setState(() => _selectedModel = val),
         ),
         const SizedBox(height: 20),
-        _buildFrequencySection(),
-        const SizedBox(height: 20),
+
+        if (!_isSolar && !_isPressurizer) ...[
+          _buildFrequencySection(),
+          const SizedBox(height: 20),
+        ],
+
+        if ((_isSolar || _isSubmersible) && _wellDiameters.isNotEmpty) ...[
+          _buildDropdownField(
+            label: l10n.translate('well_diameter'),
+            hint: l10n.translate('pick_one'),
+            value: _selectedWellDiameter,
+            items: _wellDiameters,
+            itemLabelBuilder: (val) => val == '0' ? l10n.translate('all') : val,
+            onChanged: (val) => setState(() => _selectedWellDiameter = val),
+          ),
+          const SizedBox(height: 16),
+        ],
+
         _buildNumericField(
-          label: AppLocalizations.of(context)!.translate('flow'),
+          label: l10n.translate('flow'),
           controller: _flowController,
           unit: _selectedFlowUnit,
           units: _flowUnits,
           onUnitChanged: (val) => setState(() => _selectedFlowUnit = val!),
         ),
         const SizedBox(height: 16),
+
         _buildNumericField(
-          label: AppLocalizations.of(context)!.translate('manometric_head'),
+          label: l10n.translate('manometric_head'),
           controller: _headController,
           unit: _selectedHeadUnit,
           units: _headUnits,
           onUnitChanged: (val) => setState(() => _selectedHeadUnit = val!),
         ),
-        const SizedBox(height: 24),
-        _buildSearchButton(),
         const SizedBox(height: 16),
+
+        if (_isSolar) ...[
+          _buildSimpleNumericField(
+            label: l10n.translate('cable_length'),
+            controller: _cableLengthController,
+          ),
+          const SizedBox(height: 24),
+        ],
+
+        if (_isPressurizer) ...[
+          _buildDropdownField(
+            label: l10n.translate('activation_type'),
+            hint: l10n.translate('pick_one'),
+            value: _activationType,
+            items: _activationOptions,
+            itemLabelBuilder: (val) {
+              final key = val == 'pressostato'
+                  ? 'pressure_switch'
+                  : 'frequency_inverter';
+              return l10n.translate(key);
+            },
+            onChanged: (val) =>
+                setState(() => _activationType = val ?? 'pressostato'),
+          ),
+          const SizedBox(height: 24),
+
+          if (_activationType == 'inversor') ...[
+            _buildSimpleNumericField(
+              label: l10n.translate('pumps_quantity'),
+              controller: _bombsQuantityController,
+              isInteger: true,
+            ),
+            const SizedBox(height: 24),
+          ],
+        ],
+
+        const SizedBox(height: 10),
       ],
     );
   }
@@ -262,6 +443,7 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
     required String? value,
     required List<String> items,
     required ValueChanged<String?> onChanged,
+    String Function(String)? itemLabelBuilder,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -284,7 +466,58 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
                   .map(
                     (item) => DropdownMenuItem(
                       value: item,
-                      child: Text(item, style: AppTextStyles.text1),
+                      child: Text(
+                        itemLabelBuilder != null
+                            ? itemLabelBuilder(item)
+                            : item,
+                        style: AppTextStyles.text1,
+                      ),
+                    ),
+                  )
+                  .toList(),
+              onChanged: onChanged,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDynamicDropdownField({
+    required String label,
+    required String hint,
+    required String? value,
+    required List<Map<String, dynamic>> items,
+    required ValueChanged<String?> onChanged,
+    required String Function(Map<String, dynamic>) labelBuilder,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: AppTextStyles.text1.copyWith(fontSize: 14)),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            border: Border.all(color: AppColors.primary, width: 2),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              isExpanded: true,
+              value: items.any((i) => i['value'].toString() == value)
+                  ? value
+                  : null,
+              hint: Text(hint, style: AppTextStyles.text4),
+              icon: const Icon(Icons.unfold_more, color: AppColors.primary),
+              items: items
+                  .map(
+                    (item) => DropdownMenuItem(
+                      value: item['value'].toString(),
+                      child: Text(
+                        labelBuilder(item),
+                        style: AppTextStyles.text1,
+                      ),
                     ),
                   )
                   .toList(),
@@ -350,7 +583,7 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
     required String label,
     required TextEditingController controller,
     required String unit,
-    required List<String> units,
+    required List<Map<String, dynamic>> units,
     required ValueChanged<String?> onUnitChanged,
   }) {
     return Column(
@@ -371,6 +604,7 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
                   ),
+                  textInputAction: TextInputAction.next,
                   inputFormatters: [
                     FilteringTextInputFormatter.allow(RegExp(r'^\d*,?\d*')),
                   ],
@@ -396,9 +630,9 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
                     items: units
                         .map(
                           (u) => DropdownMenuItem(
-                            value: u,
+                            value: u['value'].toString(),
                             child: Text(
-                              u,
+                              u['title'].toString(),
                               style: AppTextStyles.text1.copyWith(fontSize: 14),
                             ),
                           ),
@@ -415,23 +649,77 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
     );
   }
 
+  Widget _buildSimpleNumericField({
+    required String label,
+    required TextEditingController controller,
+    bool isInteger = false,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: AppTextStyles.text1.copyWith(fontSize: 14)),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: AppColors.primary, width: 2),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: TextField(
+            controller: controller,
+            keyboardType: TextInputType.numberWithOptions(decimal: !isInteger),
+            textInputAction: TextInputAction.done,
+            inputFormatters: [
+              isInteger
+                  ? FilteringTextInputFormatter.digitsOnly
+                  : FilteringTextInputFormatter.allow(RegExp(r'^\d*,?\d*')),
+            ],
+            style: AppTextStyles.text1.copyWith(fontSize: 14),
+            decoration: const InputDecoration(
+              contentPadding: EdgeInsets.symmetric(horizontal: 16),
+              border: InputBorder.none,
+              hintText: '0,0',
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildSearchButton() {
-    final bool active = _isFormValid;
     return SizedBox(
       width: double.infinity,
       height: 50,
       child: ElevatedButton(
-        onPressed: active
+        onPressed: _isFormValid
             ? () {
-                Navigator.pop(context, {
+                final Map<String, dynamic> result = {
                   'application': _selectedApplication,
                   'line': _selectedModel,
-                  'frequency': _selectedFrequency,
                   'flow_rate': _flowController.text.replaceAll(',', '.'),
                   'flow_rate_measure': _selectedFlowUnit,
                   'height_gauge': _headController.text.replaceAll(',', '.'),
                   'height_gauge_measure': _selectedHeadUnit,
-                });
+                };
+
+                if (_isPressurizer) {
+                  result['activation'] = _activationType;
+                  if (_activationType == 'inversor') {
+                    result['bombs_quantity'] =
+                        int.tryParse(_bombsQuantityController.text) ?? 1;
+                  }
+                } else if (_isSolar) {
+                  result['types'] = _selectedSystemType;
+                  result['cable_lenght'] = _cableLengthController.text
+                      .replaceAll(',', '.');
+                } else {
+                  result['frequency'] = _selectedFrequency;
+                }
+
+                if (_isSolar || _isSubmersible) {
+                  result['well_diameter'] = _selectedWellDiameter;
+                }
+
+                Navigator.pop(context, result);
               }
             : null,
         style: ElevatedButton.styleFrom(

@@ -64,26 +64,53 @@ class EbaraDataService {
     String heightGaugeMeasure = 'm',
     int frequency = 60,
     int types = 0,
+    String? wellDiameter,
+    String? cableLength,
+    double sunExposure = 5.0,
+    String activation = 'pressostato',
+    int bombsQuantity = 1,
     String inverter = 'TODOS',
     int alignedEquipment = 0,
     int? idLanguage,
   }) async {
+    String endpoint = 'busca-bombas/search-bomb';
+    final bool isPressurizer =
+        categoryId == '27' || categoryId == 'sistemas-de-pressurizacao-1';
+
+    if (isPressurizer) {
+      endpoint = 'busca-bombas/search-bomb-pressurization';
+    }
+
+    final Map<String, dynamic> params = {
+      'application': application,
+      'line': line,
+      'flow_rate': flowRate,
+      'flow_rate_measure': flowRateMeasure,
+      'height_gauge': heightGauge,
+      'height_gauge_measure': heightGaugeMeasure,
+      'id_language': idLanguage ?? 1,
+    };
+
+    if (isPressurizer) {
+      params['activation'] = activation;
+      if (activation == 'inversor') {
+        params['bombs_quantity'] = bombsQuantity;
+      }
+    } else {
+      params['category'] = categoryId;
+      params['frequency'] = frequency;
+      params['types'] = types;
+      params['inverter'] = inverter;
+      params['aligned_equipment'] = alignedEquipment;
+      params['sun_exposure'] = sunExposure;
+
+      if (wellDiameter != null) params['well_diameter'] = wellDiameter;
+      if (cableLength != null) params['cable_lenght'] = cableLength;
+    }
+
     final response = await _api.get<List<ProductModel>>(
-      'busca-bombas/search-bomb',
-      queryParams: {
-        'category': categoryId,
-        'application': application,
-        'line': line,
-        'flow_rate': flowRate,
-        'flow_rate_measure': flowRateMeasure,
-        'height_gauge': heightGauge,
-        'height_gauge_measure': heightGaugeMeasure,
-        'frequency': frequency,
-        'types': types,
-        'inverter': inverter,
-        'aligned_equipment': alignedEquipment,
-        'id_language': idLanguage ?? 1,
-      },
+      endpoint,
+      queryParams: params,
       cacheDuration: const Duration(hours: 4),
       parser: (json) {
         if (json['status'] != true) return [];
@@ -263,6 +290,32 @@ class EbaraDataService {
         return (json['data'] as List)
             .map((e) => e as Map<String, dynamic>)
             .toList();
+      },
+    );
+    return response.dataOrNull ?? [];
+  }
+
+  static Future<List<Map<String, dynamic>>> getSystemTypes() async {
+    final response = await _api.get<List<Map<String, dynamic>>>(
+      'busca-bombas/get_types',
+      cacheDuration: const Duration(days: 30),
+      parser: (json) {
+        if (json['status'] != true) return [];
+        return (json['data'] as List)
+            .map((e) => e as Map<String, dynamic>)
+            .toList();
+      },
+    );
+    return response.dataOrNull ?? [];
+  }
+
+  static Future<List<String>> getWellDiameters() async {
+    final response = await _api.get<List<String>>(
+      'busca-bombas/diametros',
+      cacheDuration: const Duration(days: 30),
+      parser: (json) {
+        if (json['status'] != true) return [];
+        return (json['data'] as List).map((e) => e.toString()).toList();
       },
     );
     return response.dataOrNull ?? [];

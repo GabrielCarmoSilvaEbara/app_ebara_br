@@ -63,6 +63,17 @@ class HomePageState extends State<HomePage> {
     );
   }
 
+  void _scrollToCategory(int index) {
+    if (_itemScrollController.isAttached) {
+      _itemScrollController.scrollTo(
+        index: index,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+        alignment: 0.38,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final homeProvider = context.watch<HomeProvider>();
@@ -90,7 +101,9 @@ class HomePageState extends State<HomePage> {
                   homeProvider.setSearchQuery(val);
                 });
               },
-              onFiltersApplied: (filters) {},
+              onFiltersApplied: (filters) {
+                homeProvider.applyFilters(filters);
+              },
             ),
           ),
           _CategorySection(
@@ -99,6 +112,7 @@ class HomePageState extends State<HomePage> {
             selectedCategory: homeProvider.selectedCategory,
             onCategorySelected: (cat) {
               final index = homeProvider.categories.indexOf(cat);
+              _scrollToCategory(index);
               _pageController.animateToPage(
                 index,
                 duration: const Duration(milliseconds: 400),
@@ -119,13 +133,7 @@ class HomePageState extends State<HomePage> {
                     itemCount: homeProvider.categories.length,
                     onPageChanged: (index) {
                       homeProvider.updateCategoryByIndex(index);
-                      if (_itemScrollController.isAttached) {
-                        _itemScrollController.scrollTo(
-                          index: index,
-                          duration: const Duration(milliseconds: 300),
-                          alignment: 0.4,
-                        );
-                      }
+                      _scrollToCategory(index);
                     },
                     itemBuilder: (context, index) {
                       return Padding(
@@ -292,7 +300,6 @@ class _ProductGrid extends StatelessWidget {
         itemCount: products.length + (isPaginating ? 2 : 0),
         itemBuilder: (context, index) {
           if (index >= products.length) return const ProductCardSkeleton();
-          // CORREÇÃO: Usando o parâmetro 'product' corretamente
           return ProductCard(
             category: l10n.translate(selectedCategory),
             product: products[index],

@@ -21,7 +21,11 @@ class HomeProvider with ChangeNotifier {
   List<CategoryModel> _categories = [];
   List<ProductModel> _allProducts = [];
   List<ProductModel> _visibleProducts = [];
+
   final Map<String, List<ProductModel>> _cacheByCategory = {};
+  Map<String, dynamic>? _activeFilters;
+
+  double _sunExposure = 5.0;
 
   bool get isLoadingCategories => _isLoadingCategories;
   bool get isLoadingProducts => _isLoadingProducts;
@@ -44,48 +48,197 @@ class HomeProvider with ChangeNotifier {
   bool get hasMoreProducts =>
       _visibleProducts.length < filteredAllProducts.length;
 
+  void updateSunExposure(double value) {
+    if (_sunExposure != value) {
+      _sunExposure = value;
+      if (_selectedCategoryId == '26' || _selectedCategory.contains('solar')) {
+        loadProducts(_selectedCategoryId);
+      }
+    }
+  }
+
   Future<void> reloadData(int languageId) async {
     _currentLanguageId = languageId;
     _cacheByCategory.clear();
     _categories.clear();
+    _activeFilters = null;
     await loadCategories();
   }
 
   Future<void> loadCategories({bool refreshProducts = true}) async {
     _isLoadingCategories = true;
     notifyListeners();
+
+    final previousSelectedId = _selectedCategoryId;
+
     _categories = await EbaraDataService.fetchCategories(
       idLanguage: _currentLanguageId,
     );
+
     _isLoadingCategories = false;
+
     if (_categories.isNotEmpty) {
-      if (refreshProducts || _selectedCategoryId.isEmpty) {
-        _selectedCategory = _categories.first.slug;
-        _selectedCategoryId = _categories.first.id;
+      final bool exists = _categories.any((c) => c.id == previousSelectedId);
+
+      CategoryModel targetCategory;
+
+      if (exists && previousSelectedId.isNotEmpty) {
+        targetCategory = _categories.firstWhere(
+          (c) => c.id == previousSelectedId,
+        );
+      } else {
+        targetCategory = _categories.first;
+      }
+
+      _selectedCategoryId = targetCategory.id;
+      _selectedCategory = targetCategory.slug;
+
+      if (refreshProducts || !exists) {
         await loadProducts(_selectedCategoryId);
       }
     }
     notifyListeners();
   }
 
-  Future<void> loadProducts(String categoryId) async {
+  Future<void> loadProducts(
+    String categoryId, {
+    Map<String, dynamic>? filters,
+  }) async {
     _isLoadingProducts = true;
     _currentPage = 1;
     _visibleProducts.clear();
+
+    if (_selectedCategoryId != categoryId) {
+      _activeFilters = null;
+    }
+
+    if (filters != null) {
+      _activeFilters = filters;
+    }
+
+    _selectedCategoryId = categoryId;
+
+    final catIndex = _categories.indexWhere((c) => c.id == categoryId);
+    if (catIndex != -1) {
+      _selectedCategory = _categories[catIndex].slug;
+    }
+
     notifyListeners();
-    if (_cacheByCategory.containsKey(categoryId)) {
+
+    if (_activeFilters == null && _cacheByCategory.containsKey(categoryId)) {
       _allProducts = _cacheByCategory[categoryId]!;
     } else {
+      final searchParams = _prepareSearchParams(categoryId, _activeFilters);
+
       final fetched = await EbaraDataService.searchProducts(
         categoryId: categoryId,
         idLanguage: _currentLanguageId,
+        application: searchParams['application'],
+        line: searchParams['line'],
+        flowRate: searchParams['flowRate'],
+        flowRateMeasure: searchParams['flowRateMeasure'],
+        heightGauge: searchParams['heightGauge'],
+        heightGaugeMeasure: searchParams['heightGaugeMeasure'],
+        frequency: searchParams['frequency'],
+        types: searchParams['types'],
+        wellDiameter: searchParams['wellDiameter'],
+        cableLength: searchParams['cableLength'],
+        activation: searchParams['activation'],
+        bombsQuantity: searchParams['bombsQuantity'],
+        sunExposure: searchParams['sunExposure'] ?? _sunExposure,
       );
+
       _allProducts = EbaraDataService.groupProducts(fetched);
-      _cacheByCategory[categoryId] = _allProducts;
+
+      if (_activeFilters == null) {
+        _cacheByCategory[categoryId] = _allProducts;
+      }
     }
+
     _visibleProducts = filteredAllProducts.take(_pageSize).toList();
     _isLoadingProducts = false;
     notifyListeners();
+  }
+
+  Map<String, dynamic> _prepareSearchParams(
+    String categoryId,
+    Map<String, dynamic>? filters,
+  ) {
+    final params = <String, dynamic>{
+      'application': 'TODOS',
+      'line': 'TODOS',
+      'flowRate': 0.0,
+      'flowRateMeasure': 'm3/h',
+      'heightGauge': 0.0,
+      'heightGaugeMeasure': 'm',
+      'frequency': 60,
+      'types': 0,
+      'wellDiameter': null,
+      'cableLength': null,
+      'activation': 'pressostato',
+      'bombsQuantity': 1,
+      'sunExposure': _sunExposure,
+    };
+
+    if (filters == null) {
+      return params;
+    }
+
+    if (filters['application'] != null) {
+      params['application'] = filters['application'];
+    }
+
+    if (filters['line'] != null) {
+      params['line'] = filters['line'];
+    }
+
+    if (filters['flow_rate'] != null) {
+      params['flowRate'] =
+          double.tryParse(filters['flow_rate'].toString()) ?? 0.0;
+    }
+    if (filters['flow_rate_measure'] != null) {
+      params['flowRateMeasure'] = filters['flow_rate_measure'];
+    }
+
+    if (filters['height_gauge'] != null) {
+      params['heightGauge'] =
+          double.tryParse(filters['height_gauge'].toString()) ?? 0.0;
+    }
+    if (filters['height_gauge_measure'] != null) {
+      params['heightGaugeMeasure'] = filters['height_gauge_measure'];
+    }
+
+    if (filters['frequency'] != null) {
+      final freqStr = filters['frequency'].toString().replaceAll(
+        RegExp(r'[^0-9]'),
+        '',
+      );
+      params['frequency'] = int.tryParse(freqStr) ?? 60;
+    }
+
+    if (filters['types'] != null) {
+      params['types'] = int.tryParse(filters['types'].toString()) ?? 0;
+    }
+
+    if (filters['well_diameter'] != null) {
+      params['wellDiameter'] = filters['well_diameter'];
+    }
+
+    if (filters['cable_lenght'] != null) {
+      params['cableLength'] = filters['cable_lenght'];
+    }
+
+    if (filters['activation'] != null) {
+      params['activation'] = filters['activation'];
+    }
+    if (filters['bombs_quantity'] != null) {
+      params['bombsQuantity'] = filters['bombs_quantity'];
+    }
+    return params;
+  }
+
+  void applyFilters(Map<String, dynamic> filters) {
+    loadProducts(_selectedCategoryId, filters: filters);
   }
 
   void setSearchQuery(String query) {
@@ -112,6 +265,7 @@ class HomeProvider with ChangeNotifier {
   void updateCategoryByIndex(int index) {
     if (index < 0 || index >= _categories.length) return;
     final cat = _categories[index];
+    _activeFilters = null;
     _selectedCategory = cat.slug;
     _selectedCategoryId = cat.id;
     loadProducts(_selectedCategoryId);
