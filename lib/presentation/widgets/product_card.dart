@@ -1,33 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../core/models/product_model.dart';
 import '../theme/app_text_styles.dart';
 import '../pages/product_details_page.dart';
 import '../widgets/product_card_skeleton.dart';
 
 class ProductCard extends StatelessWidget {
   final String category;
-  final Map<String, dynamic> productData;
+  final ProductModel product;
   final VoidCallback onActionPressed;
 
   const ProductCard({
     super.key,
     required this.category,
-    required this.productData,
+    required this.product,
     required this.onActionPressed,
   });
-
-  String get _imageUrl => productData['image'] as String? ?? '';
-  String get _productName => productData['name'] as String? ?? '';
-  List<Map<String, dynamic>> get _variants =>
-      (productData['variants'] as List<dynamic>?)
-          ?.cast<Map<String, dynamic>>() ??
-      [];
-  bool get _hasImage => _imageUrl.isNotEmpty;
-  bool get _hasVariants => _variants.isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final hasVariants = product.variants.isNotEmpty;
 
     return Card(
       elevation: 0,
@@ -47,13 +40,16 @@ class ProductCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: _ProductImage(imageUrl: _imageUrl, hasImage: _hasImage),
+                child: _ProductImage(
+                  imageUrl: product.image,
+                  hasImage: product.image.isNotEmpty,
+                ),
               ),
               const SizedBox(height: 12),
               _CategoryLabel(category: category),
               _ProductFooter(
-                productName: _productName,
-                hasVariants: _hasVariants,
+                productName: product.name,
+                hasVariants: hasVariants,
                 colorScheme: colorScheme,
                 onActionPressed: onActionPressed,
               ),
@@ -65,13 +61,15 @@ class ProductCard extends StatelessWidget {
   }
 
   void _navigateToDetails(BuildContext context) {
-    if (_variants.isEmpty) return;
+    if (product.variants.isEmpty) return;
+
+    final variantsMap = product.variants.map((v) => v.toMap()).toList();
 
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) =>
-            ProductDetailsPage(category: category, variants: _variants),
+            ProductDetailsPage(category: category, variants: variantsMap),
       ),
     );
   }
@@ -193,13 +191,13 @@ class _ActionButton extends StatelessWidget {
 
 class AnimatedProductCard extends StatefulWidget {
   final String category;
-  final Map<String, dynamic> productData;
+  final ProductModel product;
   final VoidCallback onActionPressed;
 
   const AnimatedProductCard({
     super.key,
     required this.category,
-    required this.productData,
+    required this.product,
     required this.onActionPressed,
   });
 
@@ -255,10 +253,12 @@ class _AnimatedProductCardState extends State<AnimatedProductCard>
       onTapCancel: _handleTapCancel,
       child: ScaleTransition(
         scale: _scaleAnimation,
-        child: ProductCard(
-          category: widget.category,
-          productData: widget.productData,
-          onActionPressed: widget.onActionPressed,
+        child: RepaintBoundary(
+          child: ProductCard(
+            category: widget.category,
+            product: widget.product,
+            onActionPressed: widget.onActionPressed,
+          ),
         ),
       ),
     );

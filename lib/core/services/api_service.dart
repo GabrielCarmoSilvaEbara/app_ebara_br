@@ -10,6 +10,7 @@ class ApiService {
   final Duration retryDelay;
   final List<int> retryStatusCodes;
   final Box _cache = Hive.box('api_cache');
+  final http.Client _client = http.Client();
 
   ApiService({
     required this.baseUrl,
@@ -181,21 +182,21 @@ class ApiService {
   }) {
     switch (method) {
       case 'GET':
-        return http.get(uri, headers: headers);
+        return _client.get(uri, headers: headers);
       case 'POST':
-        return http.post(
+        return _client.post(
           uri,
           headers: headers,
           body: body != null ? json.encode(body) : null,
         );
       case 'PUT':
-        return http.put(
+        return _client.put(
           uri,
           headers: headers,
           body: body != null ? json.encode(body) : null,
         );
       case 'DELETE':
-        return http.delete(
+        return _client.delete(
           uri,
           headers: headers,
           body: body != null ? json.encode(body) : null,

@@ -1,10 +1,12 @@
-import 'dart:convert';
 import 'package:geolocator/geolocator.dart';
-import 'package:http/http.dart' as http;
+import '../services/api_service.dart';
 
 class LocationService {
-  static const userAgent = 'app-ebara/1.0 (contato@seudominio.com)';
-  static const baseUrl = 'https://nominatim.openstreetmap.org';
+  static final ApiService _api = ApiService(
+    baseUrl: 'https://nominatim.openstreetmap.org',
+    defaultHeaders: {'User-Agent': 'app-ebara/1.0 (contato@seudominio.com)'},
+  );
+
   static const minQueryLength = 3;
   static const searchLimit = 10;
 
@@ -23,7 +25,13 @@ class LocationService {
       final locationData = await reverseGeocode(position);
       if (locationData.isEmpty) return null;
 
-      return parseLocationData(locationData);
+      final parsedData = parseLocationData(locationData);
+
+      return {
+        ...parsedData,
+        'lat': position.latitude.toString(),
+        'lon': position.longitude.toString(),
+      };
     } catch (e) {
       return null;
     }
@@ -63,17 +71,19 @@ class LocationService {
   }
 
   static Future<Map<String, dynamic>> reverseGeocode(Position position) async {
-    final uri = Uri.parse(
-      '$baseUrl/reverse?lat=${position.latitude}&lon=${position.longitude}&format=json&addressdetails=1',
+    final response = await _api.get<Map<String, dynamic>>(
+      'reverse',
+      queryParams: {
+        'lat': position.latitude,
+        'lon': position.longitude,
+        'format': 'json',
+        'addressdetails': '1',
+      },
+      cacheDuration: const Duration(days: 7),
+      parser: (json) => json as Map<String, dynamic>,
     );
 
-    final response = await http.get(uri, headers: {'User-Agent': userAgent});
-
-    if (response.statusCode != 200) {
-      return {};
-    }
-
-    return json.decode(response.body) as Map<String, dynamic>;
+    return response.dataOrNull ?? {};
   }
 
   static Map<String, String> parseLocationData(Map<String, dynamic> data) {
@@ -110,20 +120,24 @@ class LocationService {
       throw ArgumentError('Query must be at least $minQueryLength characters');
     }
 
-    final uri = Uri.parse(
-      '$baseUrl/search?q=$query&format=json&addressdetails=1&limit=$searchLimit&extratags=0',
+    final response = await _api.get<List<dynamic>>(
+      'search',
+      queryParams: {
+        'q': query,
+        'format': 'json',
+        'addressdetails': '1',
+        'limit': searchLimit,
+        'extratags': '0',
+      },
+      cacheDuration: const Duration(days: 30),
+      parser: (json) => json as List<dynamic>,
     );
 
-    final response = await http.get(uri, headers: {'User-Agent': userAgent});
-
-    if (response.statusCode != 200) {
-      throw Exception(
-        'Failed to search cities. Status: ${response.statusCode}',
-      );
+    if (!response.isSuccess) {
+      throw Exception('Falha ao buscar cidades');
     }
 
-    final data = json.decode(response.body) as List<dynamic>;
-    return parseCitySearchResults(data);
+    return parseCitySearchResults(response.dataOrNull ?? []);
   }
 
   static List<Map<String, String>> parseCitySearchResults(List data) {
@@ -141,6 +155,8 @@ class LocationService {
             'city': city,
             'state': address['state'] as String? ?? '',
             'country': address['country'] as String? ?? '',
+            'lat': item['lat'],
+            'lon': item['lon'],
           };
         })
         .where((item) => item['city']!.isNotEmpty)

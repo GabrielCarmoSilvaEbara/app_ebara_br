@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../../core/services/location_service.dart';
-import '../../core/services/translation_service.dart';
+import '../../core/localization/app_localizations.dart';
 
 class LocationSelectorSheet extends StatefulWidget {
   final Function(String city, String state, String country) onSelected;
@@ -51,7 +51,9 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
 
     if (query.length < _minQueryLength) {
       setState(
-        () => _error = TranslationService.translate('error_min_letters'),
+        () => _error = AppLocalizations.of(
+          context,
+        )!.translate('error_min_letters'),
       );
       return;
     }
@@ -71,7 +73,9 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
     } catch (e) {
       if (mounted) {
         setState(
-          () => _error = TranslationService.translate('error_fetching_cities'),
+          () => _error = AppLocalizations.of(
+            context,
+          )!.translate('error_fetching_cities'),
         );
       }
     } finally {
@@ -187,7 +191,7 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
           Icon(Icons.location_on, color: AppColors.primary, size: 24),
           const SizedBox(width: 12),
           Text(
-            TranslationService.translate('select_location'),
+            AppLocalizations.of(context)!.translate('select_location'),
             style: AppTextStyles.text.copyWith(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -210,7 +214,7 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
         }
       },
       decoration: InputDecoration(
-        hintText: TranslationService.translate('enter_city_name'),
+        hintText: AppLocalizations.of(context)!.translate('enter_city_name'),
         hintStyle: AppTextStyles.text4,
         prefixIcon: const Icon(Icons.search, color: AppColors.primary),
         suffixIcon: _controller.text.isNotEmpty
@@ -309,7 +313,7 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
                   const Icon(Icons.search, size: 22),
                   const SizedBox(width: 10),
                   Text(
-                    TranslationService.translate('search_button'),
+                    AppLocalizations.of(context)!.translate('search_button'),
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -347,7 +351,7 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
         Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: Text(
-            TranslationService.translate('results'),
+            AppLocalizations.of(context)!.translate('results'),
             style: AppTextStyles.text1.copyWith(
               fontSize: 15,
               fontWeight: FontWeight.w600,
@@ -371,7 +375,7 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
               Icon(Icons.history, size: 18, color: Colors.grey.shade600),
               const SizedBox(width: 8),
               Text(
-                TranslationService.translate('recent'),
+                AppLocalizations.of(context)!.translate('recent'),
                 style: AppTextStyles.text1.copyWith(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,

@@ -2,7 +2,12 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:provider/provider.dart';
+import '../../core/providers/home_provider.dart';
+import '../../core/providers/location_provider.dart';
 import 'home_page.dart';
+import 'location_page.dart';
+import '../../core/localization/app_localizations.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -14,32 +19,85 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen> {
   bool _startAnimation = false;
 
+  final Completer<void> _apiDataCompleter = Completer<void>();
+  final Completer<void> _textAnimationCompleter = Completer<void>();
+
   @override
   void initState() {
     super.initState();
+
+    _loadResources();
+
     Future.delayed(const Duration(milliseconds: 300), () {
       if (mounted) setState(() => _startAnimation = true);
     });
 
-    _startAppInitialization();
+    _handleTransition();
   }
 
-  void _startAppInitialization() {
-    Timer(const Duration(seconds: 4), () {
+  void _loadResources() async {
+    try {
+      final locProv = context.read<LocationProvider>();
+      final homeProv = context.read<HomeProvider>();
+
+      await locProv.initLocation();
+
       if (mounted) {
-        Navigator.of(context).pushReplacement(
-          PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) =>
-                const HomePage(),
-            transitionsBuilder:
-                (context, animation, secondaryAnimation, child) {
-                  return FadeTransition(opacity: animation, child: child);
-                },
-            transitionDuration: const Duration(milliseconds: 800),
-          ),
-        );
+        await homeProv.reloadData(locProv.apiLanguageId);
       }
-    });
+    } catch (_) {
+    } finally {
+      if (!_apiDataCompleter.isCompleted) _apiDataCompleter.complete();
+    }
+  }
+
+  Future<void> _handleTransition() async {
+    try {
+      await Future.wait([
+        _apiDataCompleter.future,
+        _textAnimationCompleter.future,
+      ]).timeout(const Duration(seconds: 5));
+    } catch (e) {
+    } finally {
+      if (mounted) {
+        _decideNextPage();
+      }
+    }
+  }
+
+  void _decideNextPage() {
+    final locationProvider = context.read<LocationProvider>();
+    final String chooseLocationText = AppLocalizations.of(
+      context,
+    )!.translate('choose_location');
+
+    if (locationProvider.city == chooseLocationText ||
+        locationProvider.city.isEmpty) {
+      _navigateToPage(const LocationPage(isInitialSelection: true));
+    } else {
+      _navigateToPage(const HomePage());
+    }
+  }
+
+  void _navigateToPage(Widget page) {
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => page,
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        transitionDuration: const Duration(milliseconds: 800),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    if (!_apiDataCompleter.isCompleted) _apiDataCompleter.complete();
+    if (!_textAnimationCompleter.isCompleted) {
+      _textAnimationCompleter.complete();
+    }
+    super.dispose();
   }
 
   @override
@@ -79,9 +137,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 ),
               ),
             ),
-
             const SizedBox(height: 30),
-
             if (_startAnimation)
               SizedBox(
                 height: 40,
@@ -108,6 +164,11 @@ class _SplashScreenState extends State<SplashScreen> {
                       ),
                     ],
                     isRepeatingAnimation: false,
+                    onFinished: () {
+                      if (!_textAnimationCompleter.isCompleted) {
+                        _textAnimationCompleter.complete();
+                      }
+                    },
                   ),
                 ),
               ),

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/ebara_data_service.dart';
-import '../services/translation_service.dart';
 
 class ProductDetailsProvider with ChangeNotifier {
   int _currentIndex = 0;
@@ -19,18 +18,22 @@ class ProductDetailsProvider with ChangeNotifier {
   List<Map<String, dynamic>> get applications => _applications;
   List<Map<String, dynamic>> get files => _files;
 
-  Future<void> loadProductData(String productId) async {
+  Future<void> loadProductData(String productId, int languageId) async {
     _currentIndex = 0;
     _comparisonBaseIndex = 0;
     _isLoading = true;
     notifyListeners();
 
-    final langId = TranslationService.getLanguageId();
-
     final results = await Future.wait([
-      EbaraDataService.getProductDescriptions(productId, idLanguage: langId),
-      EbaraDataService.getProductApplications(productId, idLanguage: langId),
-      EbaraDataService.getProductFiles(productId, idLanguage: langId),
+      EbaraDataService.getProductDescriptions(
+        productId,
+        idLanguage: languageId,
+      ),
+      EbaraDataService.getProductApplications(
+        productId,
+        idLanguage: languageId,
+      ),
+      EbaraDataService.getProductFiles(productId, idLanguage: languageId),
     ]);
 
     _descriptions = results[0] as Map<String, dynamic>?;

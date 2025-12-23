@@ -3,15 +3,18 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import '../../core/providers/home_provider.dart';
-import '../../core/services/translation_service.dart';
+import '../../core/providers/location_provider.dart';
+import '../../core/localization/app_localizations.dart';
+import '../../core/models/product_model.dart';
+import '../../core/models/category_model.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/category_chip.dart';
 import '../widgets/category_chip_skeleton.dart';
 import '../widgets/custom_search_bar.dart';
-import '../widgets/location_selector_sheet.dart';
 import '../widgets/product_card.dart';
 import '../widgets/product_card_skeleton.dart';
+import 'location_page.dart';
 
 class NoScrollbarScrollBehavior extends ScrollBehavior {
   @override
@@ -34,9 +37,6 @@ class HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<HomeProvider>().initialize();
-    });
     _scrollController.addListener(_onScroll);
   }
 
@@ -57,58 +57,48 @@ class HomePageState extends State<HomePage> {
   }
 
   void openLocationSelector(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => LocationSelectorSheet(
-        onSelected: (city, state, country) async {
-          context.read<HomeProvider>().updateManualLocation(
-            city,
-            state,
-            country,
-          );
-          if (mounted) setState(() {});
-        },
-      ),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const LocationPage()),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<HomeProvider>();
+    final homeProvider = context.watch<HomeProvider>();
+    final locationProvider = context.watch<LocationProvider>();
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _LocationHeader(
-            city: provider.city,
+            city: locationProvider.city.isEmpty
+                ? l10n.translate('choose_location')
+                : locationProvider.city,
             onTap: () => openLocationSelector(context),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             child: CustomSearchBar(
-              hintText: TranslationService.translate('search'),
-              selectedCategoryId: provider.selectedCategoryId,
+              hintText: l10n.translate('search'),
+              selectedCategoryId: homeProvider.selectedCategoryId,
               onChanged: (val) {
                 _debounce?.cancel();
                 _debounce = Timer(const Duration(milliseconds: 400), () {
-                  provider.setSearchQuery(val);
+                  homeProvider.setSearchQuery(val);
                 });
               },
               onFiltersApplied: (filters) {},
             ),
           ),
           _CategorySection(
-            isLoading: provider.isLoadingCategories,
-            categories: provider.categories,
-            selectedCategory: provider.selectedCategory,
+            isLoading: homeProvider.isLoadingCategories,
+            categories: homeProvider.categories,
+            selectedCategory: homeProvider.selectedCategory,
             onCategorySelected: (cat) {
-              final index = provider.categories.indexOf(cat);
+              final index = homeProvider.categories.indexOf(cat);
               _pageController.animateToPage(
                 index,
                 duration: const Duration(milliseconds: 400),
@@ -119,16 +109,16 @@ class HomePageState extends State<HomePage> {
           ),
           const SizedBox(height: 8),
           Expanded(
-            child: provider.isLoadingCategories
+            child: homeProvider.isLoadingCategories
                 ? Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: _ProductLoadingSkeleton(),
                   )
                 : PageView.builder(
                     controller: _pageController,
-                    itemCount: provider.categories.length,
+                    itemCount: homeProvider.categories.length,
                     onPageChanged: (index) {
-                      provider.updateCategoryByIndex(index);
+                      homeProvider.updateCategoryByIndex(index);
                       if (_itemScrollController.isAttached) {
                         _itemScrollController.scrollTo(
                           index: index,
@@ -141,10 +131,10 @@ class HomePageState extends State<HomePage> {
                       return Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 20),
                         child: _ProductGrid(
-                          isLoading: provider.isLoadingProducts,
-                          products: provider.visibleProducts,
-                          isPaginating: provider.isPaginating,
-                          selectedCategory: provider.selectedCategory,
+                          isLoading: homeProvider.isLoadingProducts,
+                          products: homeProvider.visibleProducts,
+                          isPaginating: homeProvider.isPaginating,
+                          selectedCategory: homeProvider.selectedCategory,
                           scrollController: _scrollController,
                         ),
                       );
@@ -182,7 +172,7 @@ class _LocationHeader extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    TranslationService.translate('location'),
+                    AppLocalizations.of(context)!.translate('location'),
                     style: AppTextStyles.text4,
                   ),
                   Text(city, style: AppTextStyles.text),
@@ -198,9 +188,9 @@ class _LocationHeader extends StatelessWidget {
 
 class _CategorySection extends StatelessWidget {
   final bool isLoading;
-  final List<Map<String, dynamic>> categories;
+  final List<CategoryModel> categories;
   final String selectedCategory;
-  final ValueChanged<Map<String, dynamic>> onCategorySelected;
+  final ValueChanged<CategoryModel> onCategorySelected;
   final ItemScrollController itemScrollController;
 
   const _CategorySection({
@@ -219,7 +209,7 @@ class _CategorySection extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.only(left: 20, bottom: 8),
           child: Text(
-            TranslationService.translate('select_category'),
+            AppLocalizations.of(context)!.translate('select_category'),
             style: AppTextStyles.text,
           ),
         ),
@@ -235,9 +225,9 @@ class _CategorySection extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final category = categories[index];
                     return CategoryChip(
-                      label: category['title'] ?? '',
-                      icon: category['icon'],
-                      isSelected: category['slug'] == selectedCategory,
+                      label: category.title,
+                      icon: category.icon ?? Icons.category,
+                      isSelected: category.slug == selectedCategory,
                       onTap: () => onCategorySelected(category),
                     );
                   },
@@ -262,7 +252,7 @@ class _CategoryLoadingSkeleton extends StatelessWidget {
 
 class _ProductGrid extends StatelessWidget {
   final bool isLoading;
-  final List<Map<String, dynamic>> products;
+  final List<ProductModel> products;
   final bool isPaginating;
   final String selectedCategory;
   final ScrollController scrollController;
@@ -277,11 +267,13 @@ class _ProductGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     if (isLoading) return _ProductLoadingSkeleton();
     if (products.isEmpty) {
       return Center(
         child: Text(
-          TranslationService.translate('no_products_found'),
+          l10n.translate('no_products_found'),
           style: AppTextStyles.text4,
         ),
       );
@@ -300,9 +292,10 @@ class _ProductGrid extends StatelessWidget {
         itemCount: products.length + (isPaginating ? 2 : 0),
         itemBuilder: (context, index) {
           if (index >= products.length) return const ProductCardSkeleton();
+          // CORREÇÃO: Usando o parâmetro 'product' corretamente
           return ProductCard(
-            category: TranslationService.translate(selectedCategory),
-            productData: products[index],
+            category: l10n.translate(selectedCategory),
+            product: products[index],
             onActionPressed: () {},
           );
         },

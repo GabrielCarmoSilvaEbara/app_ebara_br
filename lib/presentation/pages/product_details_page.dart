@@ -3,12 +3,13 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/providers/product_details_provider.dart';
-import '../../core/services/translation_service.dart';
 import '../../core/utils/parse_util.dart';
 import '../../core/utils/file_type_util.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/files_skeleton.dart';
+import '../../core/providers/location_provider.dart';
+import '../../core/localization/app_localizations.dart';
 
 class ProductDetailsPage extends StatefulWidget {
   final String category;
@@ -31,12 +32,13 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   void initState() {
     super.initState();
     final provider = context.read<ProductDetailsProvider>();
-    final id = widget.variants.first['id_product'].toString();
+    final locProvider = context.read<LocationProvider>();
+    final id = widget.variants.first['id_product'];
 
     _pageController = PageController(initialPage: provider.currentIndex);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      provider.loadProductData(id);
+      provider.loadProductData(id, locProvider.apiLanguageId);
     });
   }
 
@@ -109,7 +111,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
           ),
           Expanded(
             child: Text(
-              TranslationService.translate(widget.category).toUpperCase(),
+              AppLocalizations.of(
+                context,
+              )!.translate(widget.category).toUpperCase(),
               textAlign: TextAlign.center,
               style: AppTextStyles.text1.copyWith(
                 color: AppColors.primary,
@@ -259,23 +263,31 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
           if (provider.isLoading)
             const FilesSkeleton()
           else ...[
-            _SectionTitle(TranslationService.translate("Aplicações")),
+            _SectionTitle(
+              AppLocalizations.of(context)!.translate("Aplicações"),
+            ),
             const SizedBox(height: 15),
             _ApplicationIcons(apps: provider.applications),
-            _SectionTitle(TranslationService.translate("Ficha Técnica")),
+            _SectionTitle(
+              AppLocalizations.of(context)!.translate("Ficha Técnica"),
+            ),
             const SizedBox(height: 15),
             _TechnicalSpecs(data: variantData),
             if (provider.descriptions != null) ...[
               _CollapsibleSection(
-                title: TranslationService.translate("Características"),
+                title: AppLocalizations.of(
+                  context,
+                )!.translate("Características"),
                 items: provider.descriptions!['description'] as List<String>,
               ),
               _CollapsibleSection(
-                title: TranslationService.translate("Especificações"),
+                title: AppLocalizations.of(
+                  context,
+                )!.translate("Especificações"),
                 items: provider.descriptions!['specifications'] as List<String>,
               ),
               _CollapsibleSection(
-                title: TranslationService.translate("Opções"),
+                title: AppLocalizations.of(context)!.translate("Opções"),
                 items: provider.descriptions!['options'] as List<String>,
               ),
             ],
@@ -400,7 +412,7 @@ class _FilesSection extends StatelessWidget {
       child: ExpansionTile(
         tilePadding: EdgeInsets.zero,
         title: Text(
-          TranslationService.translate("Documentos"),
+          AppLocalizations.of(context)!.translate("Documentos"),
           style: AppTextStyles.text1.copyWith(
             color: AppColors.primary,
             fontWeight: FontWeight.bold,
@@ -414,7 +426,9 @@ class _FilesSection extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 10),
               child: Text(
-                TranslationService.translate("Nenhum documento disponível"),
+                AppLocalizations.of(
+                  context,
+                )!.translate("Nenhum documento disponível"),
                 style: AppTextStyles.text4.copyWith(color: Colors.grey),
               ),
             )
@@ -453,7 +467,7 @@ class _ComparisonSheet extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           Text(
-            TranslationService.translate('technical_comparison'),
+            AppLocalizations.of(context)!.translate('technical_comparison'),
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
           ),
           const SizedBox(height: 20),
@@ -461,19 +475,21 @@ class _ComparisonSheet extends StatelessWidget {
             child: ListView(
               children: [
                 _CompareCard(
-                  label: TranslationService.translate('power'),
+                  label: AppLocalizations.of(context)!.translate('power'),
                   baseValue: base['power'],
                   currentValue: current['power'],
                   unit: "CV",
                 ),
                 _CompareCard(
-                  label: TranslationService.translate('max_pressure'),
+                  label: AppLocalizations.of(
+                    context,
+                  )!.translate('max_pressure'),
                   baseValue: base['mca_max'],
                   currentValue: current['mca_max'],
                   unit: "MCA",
                 ),
                 _CompareCard(
-                  label: TranslationService.translate('max_flow'),
+                  label: AppLocalizations.of(context)!.translate('max_flow'),
                   baseValue: base['rate_max'],
                   currentValue: current['rate_max'],
                   unit: "m³/h",
@@ -608,23 +624,23 @@ class _TechnicalSpecs extends StatelessWidget {
     return Column(
       children: [
         _TechTile(
-          label: TranslationService.translate('power'),
+          label: AppLocalizations.of(context)!.translate('power'),
           value: "${ParseUtil.formatValue(data['power'])} CV",
         ),
         _TechTile(
-          label: TranslationService.translate('rotation'),
+          label: AppLocalizations.of(context)!.translate('rotation'),
           value: "${data['rpm'] ?? '---'} RPM",
         ),
         _TechTile(
-          label: TranslationService.translate('max_pressure'),
+          label: AppLocalizations.of(context)!.translate('max_pressure'),
           value: "${ParseUtil.formatValue(data['mca_max'])} MCA",
         ),
         _TechTile(
-          label: TranslationService.translate('max_flow'),
+          label: AppLocalizations.of(context)!.translate('max_flow'),
           value: "${ParseUtil.formatValue(data['rate_max'])} m³/h",
         ),
         _TechTile(
-          label: TranslationService.translate('frequency'),
+          label: AppLocalizations.of(context)!.translate('frequency'),
           value: "${data['frequency'] ?? '---'} Hz",
         ),
       ],
