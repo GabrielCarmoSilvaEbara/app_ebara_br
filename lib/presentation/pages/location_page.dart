@@ -119,7 +119,7 @@ class _LocationPageState extends State<LocationPage> {
                         ),
                         const Icon(
                           Icons.location_on,
-                          color: Colors.amber,
+                          color: AppColors.primary,
                           size: 45,
                         ),
                       ],
@@ -259,6 +259,11 @@ class _LocationPageState extends State<LocationPage> {
                 onTap: provider.isLoading
                     ? null
                     : () async {
+                        final isInitial = widget.isInitialSelection;
+                        final homeProvider = context.read<HomeProvider>();
+                        final apiLanguageId = provider.apiLanguageId;
+                        final navigator = Navigator.of(context);
+
                         provider.setGpsLoading(true);
                         final loc = await LocationService.getCurrentCity();
                         if (loc != null) {
@@ -270,15 +275,17 @@ class _LocationPageState extends State<LocationPage> {
                             lon: double.tryParse(loc['lon'] ?? '') ?? 0,
                             saveToCache: true,
                           );
-                          if (mounted) {
-                            context.read<HomeProvider>().reloadData(
-                              provider.apiLanguageId,
-                            );
-                            if (widget.isInitialSelection) {
-                              Navigator.pushReplacementNamed(context, '/home');
-                            } else {
-                              Navigator.pop(context);
-                            }
+                          if (!mounted) {
+                            provider.setGpsLoading(false);
+                            return;
+                          }
+
+                          homeProvider.reloadData(apiLanguageId);
+
+                          if (isInitial) {
+                            navigator.pushReplacementNamed('/home');
+                          } else {
+                            navigator.pop();
                           }
                         }
                         provider.setGpsLoading(false);

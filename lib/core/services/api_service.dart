@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:hive_flutter/hive_flutter.dart';
 
@@ -45,7 +46,7 @@ class ApiService {
           const Duration(hours: 24).inMilliseconds;
 
       try {
-        final decoded = json.decode(rawData);
+        final decoded = await compute(jsonDecode, rawData);
         final data = parser != null ? parser(decoded) : decoded as T;
         cachedResponse = ApiResponse.success(data, 200);
 
@@ -123,7 +124,7 @@ class ApiService {
           continue;
         }
 
-        final apiResponse = _handleResponse<T>(response, parser);
+        final apiResponse = await _handleResponse<T>(response, parser);
 
         if (method == 'GET' && apiResponse.isSuccess) {
           final cacheData = {
@@ -206,13 +207,13 @@ class ApiService {
     }
   }
 
-  ApiResponse<T> _handleResponse<T>(
+  Future<ApiResponse<T>> _handleResponse<T>(
     http.Response response,
     T Function(dynamic)? parser,
-  ) {
+  ) async {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       try {
-        final decoded = json.decode(response.body);
+        final decoded = await compute(jsonDecode, response.body);
         final data = parser != null ? parser(decoded) : decoded as T;
         return ApiResponse.success(data, response.statusCode);
       } catch (e) {

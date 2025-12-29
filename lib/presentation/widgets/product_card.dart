@@ -4,6 +4,7 @@ import '../../core/models/product_model.dart';
 import '../theme/app_text_styles.dart';
 import '../pages/product_details_page.dart';
 import '../widgets/product_card_skeleton.dart';
+import 'image_viewer.dart';
 
 class ProductCard extends StatelessWidget {
   final String category;
@@ -43,15 +44,15 @@ class ProductCard extends StatelessWidget {
                 child: _ProductImage(
                   imageUrl: product.image,
                   hasImage: product.image.isNotEmpty,
+                  heroTag: product.id,
                 ),
               ),
               const SizedBox(height: 12),
               _CategoryLabel(category: category),
               _ProductFooter(
-                productName: product.name,
+                product: product,
                 hasVariants: hasVariants,
                 colorScheme: colorScheme,
-                onActionPressed: onActionPressed,
               ),
             ],
           ),
@@ -78,19 +79,27 @@ class ProductCard extends StatelessWidget {
 class _ProductImage extends StatelessWidget {
   final String imageUrl;
   final bool hasImage;
+  final String heroTag;
 
-  const _ProductImage({required this.imageUrl, required this.hasImage});
+  const _ProductImage({
+    required this.imageUrl,
+    required this.hasImage,
+    required this.heroTag,
+  });
 
   @override
   Widget build(BuildContext context) {
     if (!hasImage) return const _ErrorIcon();
 
     return Center(
-      child: CachedNetworkImage(
-        imageUrl: imageUrl,
-        fit: BoxFit.contain,
-        placeholder: (context, url) => const ProductCardSkeleton(),
-        errorWidget: (context, url, error) => const _ErrorIcon(),
+      child: Hero(
+        tag: heroTag,
+        child: CachedNetworkImage(
+          imageUrl: imageUrl,
+          fit: BoxFit.contain,
+          placeholder: (context, url) => const ProductCardSkeleton(),
+          errorWidget: (context, url, error) => const _ErrorIcon(),
+        ),
       ),
     );
   }
@@ -122,16 +131,14 @@ class _CategoryLabel extends StatelessWidget {
 }
 
 class _ProductFooter extends StatelessWidget {
-  final String productName;
+  final ProductModel product;
   final bool hasVariants;
   final ColorScheme colorScheme;
-  final VoidCallback onActionPressed;
 
   const _ProductFooter({
-    required this.productName,
+    required this.product,
     required this.hasVariants,
     required this.colorScheme,
-    required this.onActionPressed,
   });
 
   @override
@@ -140,35 +147,45 @@ class _ProductFooter extends StatelessWidget {
       children: [
         Expanded(
           child: Text(
-            productName,
+            product.name,
             style: AppTextStyles.text,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
         ),
         const SizedBox(width: 6),
-        _ActionButton(
-          hasVariants: hasVariants,
+        _ZoomButton(
+          imageUrl: product.image,
+          heroTag: product.id,
           colorScheme: colorScheme,
-          onPressed: onActionPressed,
         ),
       ],
     );
   }
 }
 
-class _ActionButton extends StatelessWidget {
-  final bool hasVariants;
+class _ZoomButton extends StatelessWidget {
+  final String imageUrl;
+  final String heroTag;
   final ColorScheme colorScheme;
-  final VoidCallback onPressed;
 
-  const _ActionButton({
-    required this.hasVariants,
+  const _ZoomButton({
+    required this.imageUrl,
+    required this.heroTag,
     required this.colorScheme,
-    required this.onPressed,
   });
 
-  IconData get _icon => hasVariants ? Icons.layers_outlined : Icons.search;
+  void _openZoom(BuildContext context) {
+    if (imageUrl.isEmpty) return;
+
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            ImageViewer(imageUrl: imageUrl, heroTag: heroTag),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -176,13 +193,13 @@ class _ActionButton extends StatelessWidget {
       color: colorScheme.primary,
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
-        onTap: onPressed,
+        onTap: () => _openZoom(context),
         borderRadius: BorderRadius.circular(8),
         child: Container(
           width: 26,
           height: 26,
           alignment: Alignment.center,
-          child: Icon(_icon, size: 18, color: colorScheme.onPrimary),
+          child: Icon(Icons.zoom_in, size: 18, color: colorScheme.onPrimary),
         ),
       ),
     );

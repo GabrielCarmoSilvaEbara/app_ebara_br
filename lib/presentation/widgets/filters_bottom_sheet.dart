@@ -57,14 +57,6 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
   void initState() {
     super.initState();
     _loadFiltersData();
-    _flowController.addListener(_updateState);
-    _headController.addListener(_updateState);
-    _bombsQuantityController.addListener(_updateState);
-    if (_isSolar) _cableLengthController.addListener(_updateState);
-  }
-
-  void _updateState() {
-    if (mounted) setState(() {});
   }
 
   bool get _isFormValid {
@@ -689,52 +681,62 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
     return SizedBox(
       width: double.infinity,
       height: 50,
-      child: ElevatedButton(
-        onPressed: _isFormValid
-            ? () {
-                final Map<String, dynamic> result = {
-                  'application': _selectedApplication,
-                  'line': _selectedModel,
-                  'flow_rate': _flowController.text.replaceAll(',', '.'),
-                  'flow_rate_measure': _selectedFlowUnit,
-                  'height_gauge': _headController.text.replaceAll(',', '.'),
-                  'height_gauge_measure': _selectedHeadUnit,
-                };
+      child: AnimatedBuilder(
+        animation: Listenable.merge([
+          _flowController,
+          _headController,
+          _cableLengthController,
+          _bombsQuantityController,
+        ]),
+        builder: (context, child) {
+          return ElevatedButton(
+            onPressed: _isFormValid
+                ? () {
+                    final Map<String, dynamic> result = {
+                      'application': _selectedApplication,
+                      'line': _selectedModel,
+                      'flow_rate': _flowController.text.replaceAll(',', '.'),
+                      'flow_rate_measure': _selectedFlowUnit,
+                      'height_gauge': _headController.text.replaceAll(',', '.'),
+                      'height_gauge_measure': _selectedHeadUnit,
+                    };
 
-                if (_isPressurizer) {
-                  result['activation'] = _activationType;
-                  if (_activationType == 'inversor') {
-                    result['bombs_quantity'] =
-                        int.tryParse(_bombsQuantityController.text) ?? 1;
+                    if (_isPressurizer) {
+                      result['activation'] = _activationType;
+                      if (_activationType == 'inversor') {
+                        result['bombs_quantity'] =
+                            int.tryParse(_bombsQuantityController.text) ?? 1;
+                      }
+                    } else if (_isSolar) {
+                      result['types'] = _selectedSystemType;
+                      result['cable_lenght'] = _cableLengthController.text
+                          .replaceAll(',', '.');
+                    } else {
+                      result['frequency'] = _selectedFrequency;
+                    }
+
+                    if (_isSolar || _isSubmersible) {
+                      result['well_diameter'] = _selectedWellDiameter;
+                    }
+
+                    Navigator.pop(context, result);
                   }
-                } else if (_isSolar) {
-                  result['types'] = _selectedSystemType;
-                  result['cable_lenght'] = _cableLengthController.text
-                      .replaceAll(',', '.');
-                } else {
-                  result['frequency'] = _selectedFrequency;
-                }
-
-                if (_isSolar || _isSubmersible) {
-                  result['well_diameter'] = _selectedWellDiameter;
-                }
-
-                Navigator.pop(context, result);
-              }
-            : null,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
-          disabledBackgroundColor: Colors.grey[300],
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          elevation: 0,
-        ),
-        child: Text(
-          AppLocalizations.of(context)!.translate('search'),
-          style: AppTextStyles.text2.copyWith(fontSize: 16),
-        ),
+                : null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              disabledBackgroundColor: Colors.grey[300],
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              elevation: 0,
+            ),
+            child: Text(
+              AppLocalizations.of(context)!.translate('search'),
+              style: AppTextStyles.text2.copyWith(fontSize: 16),
+            ),
+          );
+        },
       ),
     );
   }

@@ -58,6 +58,7 @@ class _SplashScreenState extends State<SplashScreen> {
         _textAnimationCompleter.future,
       ]).timeout(const Duration(seconds: 5));
     } catch (e) {
+      //
     } finally {
       if (mounted) {
         _decideNextPage();

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/providers/product_details_provider.dart';
 import '../../core/utils/parse_util.dart';
 import '../../core/utils/file_type_util.dart';
@@ -10,6 +11,7 @@ import '../theme/app_text_styles.dart';
 import '../widgets/files_skeleton.dart';
 import '../../core/providers/location_provider.dart';
 import '../../core/localization/app_localizations.dart';
+import '../widgets/image_viewer.dart';
 
 class ProductDetailsPage extends StatefulWidget {
   final String category;
@@ -146,15 +148,18 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     final String? ecommerceLink = variant['ecommerce_link'];
     final bool isEcommerceEnabled =
         ecommerceLink != null && ecommerceLink.isNotEmpty;
+    final String imageUrl = variant['image'] ?? '';
+    final String heroTag = variant['id'] ?? 'product_hero';
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Stack(
         children: [
           _ProductImage(
-            imageUrl: variant['image'],
+            imageUrl: imageUrl,
             index: provider.currentIndex,
             height: 220,
+            heroTag: heroTag,
           ),
           Positioned(
             top: 10,
@@ -211,6 +216,37 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                   color: AppColors.primary.withValues(
                     alpha: isBase ? 1.0 : 0.4,
                   ),
+                  size: 20,
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 10,
+            right: 10,
+            child: GestureDetector(
+              onTap: () {
+                Navigator.of(context).push(
+                  PageRouteBuilder(
+                    opaque: false,
+                    pageBuilder: (context, animation, secondaryAnimation) =>
+                        ImageViewer(imageUrl: imageUrl, heroTag: heroTag),
+                  ),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    width: 1.5,
+                  ),
+                ),
+                child: Icon(
+                  Icons.zoom_in,
+                  color: AppColors.primary.withValues(alpha: 0.8),
                   size: 20,
                 ),
               ),
@@ -370,6 +406,9 @@ class _ApplicationIcons extends StatelessWidget {
 
           return Tooltip(
             message: app['application_name'] ?? '',
+            triggerMode: TooltipTriggerMode.tap,
+            showDuration: const Duration(seconds: 3),
+            waitDuration: Duration.zero,
             child: Container(
               padding: const EdgeInsets.all(8),
               width: 48,
@@ -383,10 +422,10 @@ class _ApplicationIcons extends StatelessWidget {
                 ),
               ),
               child: iconFile.isNotEmpty
-                  ? Image.network(
-                      fullUrl,
+                  ? CachedNetworkImage(
+                      imageUrl: fullUrl,
                       fit: BoxFit.contain,
-                      errorBuilder: (c, e, s) => Icon(
+                      errorWidget: (c, e, s) => Icon(
                         Icons.image_not_supported_outlined,
                         size: 20,
                         color: AppColors.primary.withValues(alpha: 0.3),
@@ -423,13 +462,24 @@ class _FilesSection extends StatelessWidget {
         collapsedIconColor: AppColors.primary,
         children: [
           if (files.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              child: Text(
-                AppLocalizations.of(
-                  context,
-                )!.translate("Nenhum documento disponível"),
-                style: AppTextStyles.text4.copyWith(color: Colors.grey),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.folder_off_outlined,
+                    size: 40,
+                    color: Colors.grey.withValues(alpha: 0.5),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    AppLocalizations.of(
+                      context,
+                    )!.translate("Nenhum documento disponível"),
+                    style: AppTextStyles.text4.copyWith(color: Colors.grey),
+                  ),
+                ],
               ),
             )
           else
@@ -781,10 +831,13 @@ class _ProductImage extends StatelessWidget {
   final String imageUrl;
   final int index;
   final double height;
+  final String heroTag;
+
   const _ProductImage({
     required this.imageUrl,
     required this.index,
     required this.height,
+    required this.heroTag,
   });
 
   @override
@@ -793,12 +846,28 @@ class _ProductImage extends StatelessWidget {
       duration: const Duration(milliseconds: 500),
       transitionBuilder: (child, anim) =>
           FadeTransition(opacity: anim, child: child),
-      child: Container(
+      child: SizedBox(
         key: ValueKey<int>(index),
         height: height,
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 40),
-        child: Image.network(imageUrl, fit: BoxFit.contain),
+        child: InteractiveViewer(
+          maxScale: 4.0,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: Hero(
+              tag: heroTag,
+              child: CachedNetworkImage(
+                imageUrl: imageUrl,
+                fit: BoxFit.contain,
+                errorWidget: (context, url, error) => const Icon(
+                  Icons.image_not_supported,
+                  size: 60,
+                  color: Colors.grey,
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

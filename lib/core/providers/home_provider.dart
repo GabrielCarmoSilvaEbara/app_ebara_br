@@ -20,6 +20,7 @@ class HomeProvider with ChangeNotifier {
   int _currentPage = 1;
   List<CategoryModel> _categories = [];
   List<ProductModel> _allProducts = [];
+  List<ProductModel> _filteredProducts = [];
   List<ProductModel> _visibleProducts = [];
 
   final Map<String, List<ProductModel>> _cacheByCategory = {};
@@ -35,18 +36,10 @@ class HomeProvider with ChangeNotifier {
   List<CategoryModel> get categories => _categories;
   List<ProductModel> get visibleProducts => _visibleProducts;
 
-  List<ProductModel> get filteredAllProducts {
-    if (_searchQuery.isEmpty) return _allProducts;
-    final query = _searchQuery.toLowerCase();
-    return _allProducts.where((product) {
-      final name = product.name.toLowerCase();
-      final model = product.model.toLowerCase();
-      return name.contains(query) || model.contains(query);
-    }).toList();
-  }
+  List<ProductModel> get filteredAllProducts => _filteredProducts;
 
   bool get hasMoreProducts =>
-      _visibleProducts.length < filteredAllProducts.length;
+      _visibleProducts.length < _filteredProducts.length;
 
   void updateSunExposure(double value) {
     if (_sunExposure != value) {
@@ -155,9 +148,23 @@ class HomeProvider with ChangeNotifier {
       }
     }
 
-    _visibleProducts = filteredAllProducts.take(_pageSize).toList();
+    _updateFilteredProducts();
+    _visibleProducts = _filteredProducts.take(_pageSize).toList();
     _isLoadingProducts = false;
     notifyListeners();
+  }
+
+  void _updateFilteredProducts() {
+    if (_searchQuery.isEmpty) {
+      _filteredProducts = List.from(_allProducts);
+    } else {
+      final query = _searchQuery.toLowerCase();
+      _filteredProducts = _allProducts.where((product) {
+        final name = product.name.toLowerCase();
+        final model = product.model.toLowerCase();
+        return name.contains(query) || model.contains(query);
+      }).toList();
+    }
   }
 
   Map<String, dynamic> _prepareSearchParams(
@@ -244,7 +251,8 @@ class HomeProvider with ChangeNotifier {
   void setSearchQuery(String query) {
     _searchQuery = query;
     _currentPage = 1;
-    _visibleProducts = filteredAllProducts.take(_pageSize).toList();
+    _updateFilteredProducts();
+    _visibleProducts = _filteredProducts.take(_pageSize).toList();
     notifyListeners();
   }
 
@@ -252,7 +260,7 @@ class HomeProvider with ChangeNotifier {
     if (_isPaginating || !hasMoreProducts) return;
     _isPaginating = true;
     notifyListeners();
-    final next = filteredAllProducts
+    final next = _filteredProducts
         .skip(_currentPage * _pageSize)
         .take(_pageSize)
         .toList();
