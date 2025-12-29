@@ -69,6 +69,31 @@ class AppLocalizations {
       'ecaros-solar-system': 'Écaros Solar System',
       'ecaros-solar-system-1': 'Écaros Solar System',
       'sistema-solar-ecaros-1': 'Écaros Solar System',
+      'welcome': 'Welcome',
+      'login_desc': 'Log in to save your preferences or continue as a guest.',
+      'enter_google': 'Sign in with Google',
+      'continue_guest': 'Continue as Guest',
+      'login_error': 'Error logging in with Google',
+      'want_login': 'Do you want to log in?',
+      'my_account': 'My Account',
+      'guest_modal_desc':
+          'Log in with Google to save your preferences and access exclusive features.',
+      'user': 'User',
+      'connect_error': 'Error connecting with Google',
+      'back_login': 'Back to Login Screen',
+      'logout': 'Logout',
+      'favorites': 'Favorites',
+      'login_to_favorite': 'Log in to save to favorites',
+      'login_to_download': 'Log in to download files',
+      'exclusive_feature': 'Exclusive Feature',
+      'history': 'History',
+      'recent_products': 'Recent Products',
+      'no_recent_products': 'No products viewed recently',
+      'clear': 'Clear',
+      'share_text': 'Check out this product: {name} - Model: {model}.',
+      'loading_product': 'Loading product...',
+      'product_not_found': 'Product not found',
+      'dark_mode': 'Dark Mode',
     },
     'pt': {
       'location': 'Localização',
@@ -125,6 +150,32 @@ class AppLocalizations {
       'ecaros-solar-system': 'Sistema Solar Écaros',
       'ecaros-solar-system-1': 'Sistema Solar Écaros',
       'sistema-solar-ecaros-1': 'Sistema Solar Écaros',
+      'welcome': 'Bem-vindo',
+      'login_desc':
+          'Faça login para salvar suas preferências ou continue como visitante.',
+      'enter_google': 'Entrar com Google',
+      'continue_guest': 'Continuar como Visitante',
+      'login_error': 'Erro ao realizar login com Google',
+      'want_login': 'Deseja fazer login?',
+      'my_account': 'Minha Conta',
+      'guest_modal_desc':
+          'Faça login com Google para salvar suas preferências e acessar recursos exclusivos.',
+      'user': 'Usuário',
+      'connect_error': 'Erro ao conectar com Google',
+      'back_login': 'Voltar para Tela de Login',
+      'logout': 'Sair da Conta',
+      'favorites': 'Favoritos',
+      'login_to_favorite': 'Faça login para salvar nos favoritos',
+      'login_to_download': 'Faça login para baixar arquivos',
+      'exclusive_feature': 'Recurso Exclusivo',
+      'history': 'Histórico',
+      'recent_products': 'Produtos Recentes',
+      'no_recent_products': 'Nenhum produto visto recentemente',
+      'clear': 'Limpar',
+      'share_text': 'Confira este produto: {name} - Modelo: {model}.',
+      'loading_product': 'Carregando produto...',
+      'product_not_found': 'Produto não encontrado',
+      'dark_mode': 'Modo Escuro',
     },
     'es': {
       'location': 'Ubicación',
@@ -181,31 +232,63 @@ class AppLocalizations {
       'ecaros-solar-system': 'Sistema Solar Écaros',
       'ecaros-solar-system-1': 'Sistema Solar Écaros',
       'sistema-solar-ecaros-1': 'Sistema Solar Écaros',
+      'welcome': 'Bienvenido',
+      'login_desc':
+          'Inicia sesión para guardar tus preferencias o continúa como invitado.',
+      'enter_google': 'Entrar con Google',
+      'continue_guest': 'Continuar como Invitado',
+      'login_error': 'Error al iniciar sesión con Google',
+      'want_login': '¿Deseas iniciar sesión?',
+      'my_account': 'Mi Cuenta',
+      'guest_modal_desc':
+          'Inicia sesión con Google para guardar tus preferencias y acceder a funciones exclusivas.',
+      'user': 'Usuario',
+      'connect_error': 'Error al conectar con Google',
+      'back_login': 'Volver a inicio de sesión',
+      'logout': 'Cerrar sesión',
+      'favorites': 'Favoritos',
+      'login_to_favorite': 'Inicia sesión para guardar en favoritos',
+      'login_to_download': 'Inicia sesión para descargar archivos',
+      'exclusive_feature': 'Función Exclusiva',
+      'history': 'Historial',
+      'recent_products': 'Productos Recientes',
+      'no_recent_products': 'No hay productos vistos recientemente',
+      'clear': 'Limpiar',
+      'share_text': 'Mira este producto: {name} - Modelo: {model}.',
+      'loading_product': 'Cargando producto...',
+      'product_not_found': 'Producto no encontrado',
+      'dark_mode': 'Modo Oscuro',
     },
   };
 
-  String translate(String key) {
+  String translate(String key, {Map<String, String>? params}) {
+    String value;
     if (key == 'bombas-centrifugas' || key == 'centrifugal-pumps') {
-      return locale.languageCode == 'pt' || locale.languageCode == 'es'
+      value = locale.languageCode == 'pt' || locale.languageCode == 'es'
           ? 'BOMBAS CENTRÍFUGAS'
           : 'CENTRIFUGAL PUMPS';
-    }
-    if (key == 'bombas-submersas' || key == 'deep-well-pumps') {
-      return locale.languageCode == 'pt'
+    } else if (key == 'bombas-submersas' || key == 'deep-well-pumps') {
+      value = locale.languageCode == 'pt'
           ? 'BOMBAS SUBMERSAS'
           : locale.languageCode == 'es'
           ? 'BOMBAS SUMERGIBLES'
           : 'DEEP WELL PUMPS';
-    }
-    if (key == 'bombas-submersiveis' || key == 'submersible-pumps') {
-      return locale.languageCode == 'pt'
+    } else if (key == 'bombas-submersiveis' || key == 'submersible-pumps') {
+      value = locale.languageCode == 'pt'
           ? 'BOMBAS SUBMERSÍVEIS'
           : locale.languageCode == 'es'
           ? 'BOMBAS SUMERGIBLES'
           : 'SUBMERSIBLE PUMPS';
+    } else {
+      value = _localizedValues[locale.languageCode]?[key] ?? key;
     }
 
-    return _localizedValues[locale.languageCode]?[key] ?? key;
+    if (params != null) {
+      params.forEach((k, v) {
+        value = value.replaceAll('{$k}', v);
+      });
+    }
+    return value;
   }
 }
 

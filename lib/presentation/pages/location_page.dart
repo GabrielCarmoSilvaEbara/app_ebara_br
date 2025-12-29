@@ -6,6 +6,7 @@ import '../../core/providers/location_provider.dart';
 import '../../core/providers/home_provider.dart';
 import '../../core/services/location_service.dart';
 import '../../core/localization/app_localizations.dart';
+import '../../core/providers/auth_provider.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 
@@ -347,7 +348,13 @@ class _LocationPageState extends State<LocationPage> {
                     );
 
                     if (widget.isInitialSelection) {
-                      Navigator.pushReplacementNamed(context, '/home');
+                      final authProvider = context.read<AuthProvider>();
+
+                      if (authProvider.status == AuthStatus.unauthenticated) {
+                        Navigator.pushReplacementNamed(context, '/login');
+                      } else {
+                        Navigator.pushReplacementNamed(context, '/home');
+                      }
                     } else {
                       Navigator.pop(context);
                     }

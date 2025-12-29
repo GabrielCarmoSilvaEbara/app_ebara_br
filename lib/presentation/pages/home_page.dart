@@ -2,11 +2,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/providers/home_provider.dart';
 import '../../core/providers/location_provider.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/models/product_model.dart';
 import '../../core/models/category_model.dart';
+import '../../core/providers/auth_provider.dart';
+import '../../core/providers/history_provider.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/category_chip.dart';
@@ -14,6 +17,8 @@ import '../widgets/category_chip_skeleton.dart';
 import '../widgets/custom_search_bar.dart';
 import '../widgets/product_card.dart';
 import '../widgets/product_card_skeleton.dart';
+import '../widgets/auth_modal_sheet.dart';
+import 'product_details_page.dart';
 import 'location_page.dart';
 
 class NoScrollbarScrollBehavior extends ScrollBehavior {
@@ -74,21 +79,131 @@ class HomePageState extends State<HomePage> {
     }
   }
 
+  void _showHistoryModal(BuildContext context) {
+    final authProvider = context.read<AuthProvider>();
+
+    if (authProvider.status != AuthStatus.authenticated) {
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: Colors.transparent,
+        builder: (context) => const AuthModalSheet(),
+      );
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => const _HistoryModalSheet(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final homeProvider = context.watch<HomeProvider>();
     final locationProvider = context.watch<LocationProvider>();
     final l10n = AppLocalizations.of(context)!;
+    final authProvider = context.watch<AuthProvider>();
 
     return Scaffold(
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _LocationHeader(
-            city: locationProvider.city.isEmpty
-                ? l10n.translate('choose_location')
-                : locationProvider.city,
-            onTap: () => openLocationSelector(context),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 50, 20, 0),
+            child: SizedBox(
+              width: double.infinity,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Positioned(
+                    left: 0,
+                    child: GestureDetector(
+                      onTap: () => _showHistoryModal(context),
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                        ),
+                        child: Icon(Icons.history, color: AppColors.primary),
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => openLocationSelector(context),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.location_on,
+                              size: 14,
+                              color: AppColors.textPrimary,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              l10n.translate('location'),
+                              style: AppTextStyles.text4,
+                            ),
+                          ],
+                        ),
+                        Text(
+                          locationProvider.city.isEmpty
+                              ? l10n.translate('choose_location')
+                              : locationProvider.city,
+                          style: AppTextStyles.text,
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Positioned(
+                    right: 0,
+                    child: GestureDetector(
+                      onTap: () => _showAuthModal(context),
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                        ),
+                        child: authProvider.user?.photoURL != null
+                            ? ClipOval(
+                                child: CachedNetworkImage(
+                                  imageUrl: authProvider.user!.photoURL!,
+                                  fit: BoxFit.cover,
+                                  placeholder: (context, url) => const Padding(
+                                    padding: EdgeInsets.all(10.0),
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                  errorWidget: (context, url, error) => Icon(
+                                    Icons.person,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              )
+                            : Icon(
+                                Icons.person,
+                                color:
+                                    authProvider.status ==
+                                        AuthStatus.authenticated
+                                    ? AppColors.primary
+                                    : Colors.grey,
+                              ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -153,42 +268,128 @@ class HomePageState extends State<HomePage> {
       ),
     );
   }
+
+  void _showAuthModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const AuthModalSheet(),
+    );
+  }
 }
 
-class _LocationHeader extends StatelessWidget {
-  final String city;
-  final VoidCallback onTap;
-  const _LocationHeader({required this.city, required this.onTap});
+class _HistoryModalSheet extends StatelessWidget {
+  const _HistoryModalSheet();
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 50, 20, 0),
-      child: Center(
-        child: GestureDetector(
-          onTap: onTap,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
+    final historyProvider = context.watch<HistoryProvider>();
+    final l10n = AppLocalizations.of(context)!;
+    final list = historyProvider.history;
+
+    return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.7,
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Icon(
-                Icons.location_on,
-                size: 24,
-                color: AppColors.textPrimary,
+              Text(
+                l10n.translate('recent_products'),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-              const SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    AppLocalizations.of(context)!.translate('location'),
-                    style: AppTextStyles.text4,
+              if (list.isNotEmpty)
+                TextButton(
+                  onPressed: () => historyProvider.clearHistory(),
+                  child: Text(
+                    l10n.translate('clear'),
+                    style: const TextStyle(color: Colors.red),
                   ),
-                  Text(city, style: AppTextStyles.text),
-                ],
-              ),
+                ),
             ],
           ),
-        ),
+          const SizedBox(height: 10),
+          if (list.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(40.0),
+              child: Center(
+                child: Text(
+                  l10n.translate('no_recent_products'),
+                  style: const TextStyle(color: Colors.grey),
+                ),
+              ),
+            )
+          else
+            Flexible(
+              child: ListView.separated(
+                itemCount: list.length,
+                padding: const EdgeInsets.only(bottom: 20),
+                separatorBuilder: (context, _) => const Divider(height: 1),
+                itemBuilder: (context, index) {
+                  final item = list[index];
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: item['image'] != null && item['image'].isNotEmpty
+                          ? CachedNetworkImage(
+                              imageUrl: item['image'],
+                              fit: BoxFit.contain,
+                              errorWidget: (c, e, s) =>
+                                  const Icon(Icons.image_not_supported),
+                            )
+                          : const Icon(Icons.image),
+                    ),
+                    title: Text(
+                      item['name'] ?? '',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      item['model'] ?? '',
+                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      final category = item['history_category'] ?? '';
+                      final rawVariants = item['variants'] as List;
+                      final variants = rawVariants
+                          .map((e) => Map<String, dynamic>.from(e))
+                          .toList();
+
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ProductDetailsPage(
+                            category: category,
+                            variants: variants,
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+        ],
       ),
     );
   }

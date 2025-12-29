@@ -5,9 +5,11 @@ import 'package:shimmer/shimmer.dart';
 import 'package:provider/provider.dart';
 import '../../core/providers/home_provider.dart';
 import '../../core/providers/location_provider.dart';
-import 'home_page.dart';
-import 'location_page.dart';
 import '../../core/localization/app_localizations.dart';
+import '../../core/providers/auth_provider.dart';
+import 'home_page.dart';
+import 'login_page.dart';
+import 'location_page.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -68,6 +70,8 @@ class _SplashScreenState extends State<SplashScreen> {
 
   void _decideNextPage() {
     final locationProvider = context.read<LocationProvider>();
+    final authProvider = context.read<AuthProvider>();
+
     final String chooseLocationText = AppLocalizations.of(
       context,
     )!.translate('choose_location');
@@ -76,7 +80,12 @@ class _SplashScreenState extends State<SplashScreen> {
         locationProvider.city.isEmpty) {
       _navigateToPage(const LocationPage(isInitialSelection: true));
     } else {
-      _navigateToPage(const HomePage());
+      if (authProvider.status == AuthStatus.authenticated ||
+          authProvider.status == AuthStatus.guest) {
+        _navigateToPage(const HomePage());
+      } else {
+        _navigateToPage(const LoginPage());
+      }
     }
   }
 

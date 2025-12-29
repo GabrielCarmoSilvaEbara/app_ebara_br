@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../core/providers/product_details_provider.dart';
 import '../../core/utils/parse_util.dart';
 import '../../core/utils/file_type_util.dart';
@@ -11,6 +12,9 @@ import '../theme/app_text_styles.dart';
 import '../widgets/files_skeleton.dart';
 import '../../core/providers/location_provider.dart';
 import '../../core/localization/app_localizations.dart';
+import '../../core/providers/auth_provider.dart';
+import '../../core/providers/history_provider.dart';
+import '../widgets/auth_modal_sheet.dart';
 import '../widgets/image_viewer.dart';
 
 class ProductDetailsPage extends StatefulWidget {
@@ -35,12 +39,19 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     super.initState();
     final provider = context.read<ProductDetailsProvider>();
     final locProvider = context.read<LocationProvider>();
+    final historyProvider = context.read<HistoryProvider>();
     final id = widget.variants.first['id_product'];
 
     _pageController = PageController(initialPage: provider.currentIndex);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       provider.loadProductData(id, locProvider.apiLanguageId);
+
+      final productMap = {
+        ...widget.variants.first,
+        'variants': widget.variants,
+      };
+      historyProvider.addToHistory(productMap, widget.category);
     });
   }
 
@@ -61,12 +72,27 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     );
   }
 
+  void _shareProduct(Map<String, dynamic> variant) {
+    final l10n = AppLocalizations.of(context)!;
+    final String name = variant['name'] ?? '';
+    final String model = variant['model'] ?? '';
+    final String link = variant['ecommerce_link'] ?? 'https://ebara.com.br';
+
+    final text = l10n.translate(
+      'share_text',
+      params: {'name': name, 'model': model},
+    );
+
+    SharePlus.instance.share(ShareParams(text: '$text $link'));
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<ProductDetailsProvider>();
+    final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundSecondary,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
@@ -223,6 +249,29 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
           ),
           Positioned(
             bottom: 10,
+            left: 10,
+            child: GestureDetector(
+              onTap: () => _shareProduct(variant),
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    width: 1.5,
+                  ),
+                ),
+                child: Icon(
+                  Icons.share,
+                  color: AppColors.primary.withValues(alpha: 0.8),
+                  size: 20,
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 10,
             right: 10,
             child: GestureDetector(
               onTap: () {
@@ -261,12 +310,15 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     Map<String, dynamic> variantData,
     ProductDetailsProvider provider,
   ) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Container(
       padding: const EdgeInsets.fromLTRB(25, 30, 25, 120),
       width: double.infinity,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(40)),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -279,18 +331,15 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                   variantData['name'],
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.text.copyWith(
-                    fontSize: 19,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: theme.textTheme.displayMedium?.copyWith(fontSize: 19),
                 ),
               ),
               const SizedBox(width: 10),
               Text(
                 variantData['model'],
-                style: AppTextStyles.text3.copyWith(
+                style: theme.textTheme.labelMedium?.copyWith(
                   fontSize: 13,
-                  color: Colors.grey[600],
+                  color: isDark ? Colors.grey : Colors.grey[600],
                 ),
               ),
             ],
@@ -336,10 +385,11 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   }
 
   Widget _buildBottomControls(ProductDetailsProvider provider) {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.1),
@@ -446,15 +496,15 @@ class _FilesSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Theme(
-      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      data: theme.copyWith(dividerColor: Colors.transparent),
       child: ExpansionTile(
         tilePadding: EdgeInsets.zero,
         title: Text(
           AppLocalizations.of(context)!.translate("Documentos"),
-          style: AppTextStyles.text1.copyWith(
+          style: theme.textTheme.displayMedium?.copyWith(
             color: AppColors.primary,
-            fontWeight: FontWeight.bold,
             fontSize: 12,
           ),
         ),
@@ -498,12 +548,13 @@ class _ComparisonSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
       height: MediaQuery.of(context).size.height * 0.6,
       padding: const EdgeInsets.all(25),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
       ),
       child: Column(
         children: [
@@ -615,8 +666,22 @@ class _FileLinkItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return GestureDetector(
       onTap: () async {
+        final authProvider = context.read<AuthProvider>();
+
+        if (authProvider.status != AuthStatus.authenticated) {
+          showModalBottomSheet(
+            context: context,
+            backgroundColor: Colors.transparent,
+            builder: (context) => const AuthModalSheet(),
+          );
+          return;
+        }
+
         final Uri uri = Uri.parse(file['full_url']);
         if (await canLaunchUrl(uri)) {
           await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -626,7 +691,7 @@ class _FileLinkItem extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isDark ? theme.colorScheme.surfaceContainer : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
         ),
@@ -641,7 +706,7 @@ class _FileLinkItem extends StatelessWidget {
               child: Text(
                 file['name'],
                 overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.text4.copyWith(
+                style: theme.textTheme.labelSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -705,11 +770,16 @@ class _TechTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.backgroundSecondary,
+        color: isDark
+            ? theme.colorScheme.surfaceContainer
+            : AppColors.backgroundSecondary,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -717,15 +787,14 @@ class _TechTile extends StatelessWidget {
         children: [
           Text(
             label,
-            style: AppTextStyles.text1.copyWith(
+            style: theme.textTheme.displayMedium?.copyWith(
               color: AppColors.primary,
               fontSize: 13,
-              fontWeight: FontWeight.bold,
             ),
           ),
           Text(
             value,
-            style: AppTextStyles.text4.copyWith(
+            style: theme.textTheme.labelSmall?.copyWith(
               fontWeight: FontWeight.bold,
               fontSize: 13,
             ),
@@ -743,16 +812,18 @@ class _CollapsibleSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     if (items.isEmpty) return const SizedBox.shrink();
     return Theme(
-      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      data: theme.copyWith(dividerColor: Colors.transparent),
       child: ExpansionTile(
         tilePadding: EdgeInsets.zero,
         title: Text(
           title,
-          style: AppTextStyles.text1.copyWith(
+          style: theme.textTheme.displayMedium?.copyWith(
             color: AppColors.primary,
-            fontWeight: FontWeight.bold,
             fontSize: 12,
           ),
         ),
@@ -765,12 +836,14 @@ class _CollapsibleSection extends StatelessWidget {
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: AppColors.backgroundSecondary,
+                color: isDark
+                    ? theme.colorScheme.surfaceContainer
+                    : AppColors.backgroundSecondary,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
                 text,
-                style: AppTextStyles.text4.copyWith(
+                style: theme.textTheme.labelSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                   fontSize: 13,
                   color: AppColors.primary,
@@ -791,11 +864,11 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Text(
       title,
-      style: AppTextStyles.text1.copyWith(
+      style: theme.textTheme.displayMedium?.copyWith(
         color: AppColors.primary,
-        fontWeight: FontWeight.bold,
         fontSize: 12,
       ),
     );
@@ -887,16 +960,21 @@ class _CompareCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final val1 = ParseUtil.formatValue(baseValue);
     final val2 = ParseUtil.formatValue(currentValue);
     final isDiff = val1 != val2;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isDiff
             ? AppColors.primary.withValues(alpha: 0.05)
-            : AppColors.backgroundSecondary,
+            : (isDark
+                  ? theme.colorScheme.surfaceContainer
+                  : AppColors.backgroundSecondary),
         borderRadius: BorderRadius.circular(15),
         border: isDiff
             ? Border.all(color: AppColors.primary.withValues(alpha: 0.2))
@@ -924,7 +1002,9 @@ class _CompareCard extends StatelessWidget {
                 "$val2 $unit",
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: isDiff ? AppColors.primary : Colors.black,
+                  color: isDiff
+                      ? AppColors.primary
+                      : (isDark ? Colors.white : Colors.black),
                   fontSize: 13,
                 ),
               ),
