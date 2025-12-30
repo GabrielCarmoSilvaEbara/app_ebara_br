@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
-import '../theme/app_text_styles.dart';
 import '../../core/services/location_service.dart';
 import '../../core/localization/app_localizations.dart';
 
@@ -48,13 +47,10 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
 
   Future<void> _search() async {
     final query = _controller.text.trim();
+    final l10n = AppLocalizations.of(context)!;
 
     if (query.length < _minQueryLength) {
-      setState(
-        () => _error = AppLocalizations.of(
-          context,
-        )!.translate('error_min_letters'),
-      );
+      setState(() => _error = l10n.translate('error_min_letters'));
       return;
     }
 
@@ -72,11 +68,7 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
       }
     } catch (e) {
       if (mounted) {
-        setState(
-          () => _error = AppLocalizations.of(
-            context,
-          )!.translate('error_fetching_cities'),
-        );
+        setState(() => _error = l10n.translate('error_fetching_cities'));
       }
     } finally {
       if (mounted) {
@@ -107,10 +99,12 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
     final keyboardHeight = mediaQuery.viewInsets.bottom;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.scaffoldBackgroundColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         boxShadow: [
           BoxShadow(
@@ -124,7 +118,7 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
         mainAxisSize: MainAxisSize.min,
         children: [
           _buildHandle(),
-          _buildHeader(),
+          _buildHeader(theme),
           Flexible(
             child: SingleChildScrollView(
               controller: _scrollController,
@@ -132,7 +126,7 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _buildSearchField(),
+                  _buildSearchField(theme, isDark),
                   if (_error != null) _buildError(),
                   const SizedBox(height: 16),
                   AnimatedSwitcher(
@@ -150,7 +144,7 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
                             ),
                           );
                         },
-                    child: _buildContent(),
+                    child: _buildContent(theme, isDark),
                   ),
                   const SizedBox(height: 20),
                 ],
@@ -179,30 +173,27 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(ThemeData theme) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+        border: Border(bottom: BorderSide(color: theme.dividerColor)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.location_on, color: AppColors.primary, size: 24),
+          const Icon(Icons.location_on, color: AppColors.primary, size: 24),
           const SizedBox(width: 12),
           Text(
             AppLocalizations.of(context)!.translate('select_location'),
-            style: AppTextStyles.text.copyWith(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-            ),
+            style: theme.textTheme.displayLarge?.copyWith(fontSize: 18),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSearchField() {
+  Widget _buildSearchField(ThemeData theme, bool isDark) {
     return TextField(
       controller: _controller,
       focusNode: _focusNode,
@@ -213,9 +204,10 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
           setState(() => _error = null);
         }
       },
+      style: theme.textTheme.displayMedium?.copyWith(fontSize: 16),
       decoration: InputDecoration(
         hintText: AppLocalizations.of(context)!.translate('enter_city_name'),
-        hintStyle: AppTextStyles.text4,
+        hintStyle: theme.textTheme.labelMedium?.copyWith(color: Colors.grey),
         prefixIcon: const Icon(Icons.search, color: AppColors.primary),
         suffixIcon: _controller.text.isNotEmpty
             ? IconButton(
@@ -230,14 +222,17 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
               )
             : null,
         filled: true,
-        fillColor: Colors.grey.shade50,
+        fillColor: isDark ? theme.cardColor : Colors.grey.shade50,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 14,
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300, width: 1.5),
+          borderSide: BorderSide(
+            color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+            width: 1.5,
+          ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -271,10 +266,7 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
           Expanded(
             child: Text(
               _error!,
-              style: AppTextStyles.text4.copyWith(
-                color: Colors.red.shade700,
-                fontSize: 13,
-              ),
+              style: TextStyle(color: Colors.red.shade700, fontSize: 13),
             ),
           ),
         ],
@@ -326,25 +318,25 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildContent(ThemeData theme, bool isDark) {
     if (_cities.isNotEmpty) {
       return Container(
         key: const ValueKey('cityList'),
-        child: _buildCityList(),
+        child: _buildCityList(theme, isDark),
       );
     }
 
     if (_recent.isNotEmpty && !_loading) {
       return Container(
         key: const ValueKey('recentList'),
-        child: _buildRecent(),
+        child: _buildRecent(theme, isDark),
       );
     }
 
     return const SizedBox.shrink(key: ValueKey('empty'));
   }
 
-  Widget _buildCityList() {
+  Widget _buildCityList(ThemeData theme, bool isDark) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -352,19 +344,18 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
           padding: const EdgeInsets.only(bottom: 12),
           child: Text(
             AppLocalizations.of(context)!.translate('results'),
-            style: AppTextStyles.text1.copyWith(
+            style: theme.textTheme.displayMedium?.copyWith(
               fontSize: 15,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade700,
+              color: isDark ? Colors.white70 : Colors.grey.shade700,
             ),
           ),
         ),
-        ..._cities.map((city) => _buildCityTile(city)),
+        ..._cities.map((city) => _buildCityTile(city, theme, isDark)),
       ],
     );
   }
 
-  Widget _buildRecent() {
+  Widget _buildRecent(ThemeData theme, bool isDark) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -372,25 +363,35 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
           padding: const EdgeInsets.only(bottom: 12),
           child: Row(
             children: [
-              Icon(Icons.history, size: 18, color: Colors.grey.shade600),
+              Icon(
+                Icons.history,
+                size: 18,
+                color: isDark ? Colors.white70 : Colors.grey.shade600,
+              ),
               const SizedBox(width: 8),
               Text(
                 AppLocalizations.of(context)!.translate('recent'),
-                style: AppTextStyles.text1.copyWith(
+                style: theme.textTheme.displayMedium?.copyWith(
                   fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey.shade700,
+                  color: isDark ? Colors.white70 : Colors.grey.shade700,
                 ),
               ),
             ],
           ),
         ),
-        ..._recent.map((city) => _buildCityTile(city, isRecent: true)),
+        ..._recent.map(
+          (city) => _buildCityTile(city, theme, isDark, isRecent: true),
+        ),
       ],
     );
   }
 
-  Widget _buildCityTile(Map<String, String> city, {bool isRecent = false}) {
+  Widget _buildCityTile(
+    Map<String, String> city,
+    ThemeData theme,
+    bool isDark, {
+    bool isRecent = false,
+  }) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -400,9 +401,11 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
           margin: const EdgeInsets.only(bottom: 8),
           decoration: BoxDecoration(
-            color: Colors.grey.shade50,
+            color: isDark ? theme.cardColor : Colors.grey.shade50,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade200),
+            border: Border.all(
+              color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+            ),
           ),
           child: Row(
             children: [
@@ -410,13 +413,15 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: isRecent
-                      ? Colors.grey.shade200
+                      ? (isDark ? Colors.grey.shade800 : Colors.grey.shade200)
                       : AppColors.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
                   isRecent ? Icons.history : Icons.location_on,
-                  color: isRecent ? Colors.grey.shade600 : AppColors.primary,
+                  color: isRecent
+                      ? (isDark ? Colors.white70 : Colors.grey.shade600)
+                      : AppColors.primary,
                   size: 20,
                 ),
               ),
@@ -427,25 +432,28 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
                   children: [
                     Text(
                       city['city']!,
-                      style: AppTextStyles.text.copyWith(
+                      style: theme.textTheme.displayMedium?.copyWith(
                         fontSize: 15,
-                        fontWeight: FontWeight.w600,
                       ),
                     ),
                     if (_buildCitySubtitle(city).isNotEmpty) ...[
                       const SizedBox(height: 2),
                       Text(
                         _buildCitySubtitle(city),
-                        style: AppTextStyles.text4.copyWith(
+                        style: theme.textTheme.labelMedium?.copyWith(
                           fontSize: 13,
-                          color: Colors.grey.shade600,
+                          color: isDark ? Colors.white60 : Colors.grey.shade600,
                         ),
                       ),
                     ],
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right, color: Colors.grey.shade400, size: 20),
+              Icon(
+                Icons.chevron_right,
+                color: isDark ? Colors.white30 : Colors.grey.shade400,
+                size: 20,
+              ),
             ],
           ),
         ),

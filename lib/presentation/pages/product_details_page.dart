@@ -8,12 +8,12 @@ import '../../core/providers/product_details_provider.dart';
 import '../../core/utils/parse_util.dart';
 import '../../core/utils/file_type_util.dart';
 import '../theme/app_colors.dart';
-import '../theme/app_text_styles.dart';
 import '../widgets/files_skeleton.dart';
 import '../../core/providers/location_provider.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/providers/history_provider.dart';
+import '../../core/services/analytics_service.dart';
 import '../widgets/auth_modal_sheet.dart';
 import '../widgets/image_viewer.dart';
 
@@ -40,18 +40,22 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     final provider = context.read<ProductDetailsProvider>();
     final locProvider = context.read<LocationProvider>();
     final historyProvider = context.read<HistoryProvider>();
-    final id = widget.variants.first['id_product'];
+    final product = widget.variants.first;
+    final id = product['id_product'];
 
     _pageController = PageController(initialPage: provider.currentIndex);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       provider.loadProductData(id, locProvider.apiLanguageId);
 
-      final productMap = {
-        ...widget.variants.first,
-        'variants': widget.variants,
-      };
+      final productMap = {...product, 'variants': widget.variants};
       historyProvider.addToHistory(productMap, widget.category);
+
+      AnalyticsService.logViewProduct(
+        product['id_product'],
+        product['name'],
+        widget.category,
+      );
     });
   }
 
@@ -128,6 +132,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   }
 
   Widget _buildHeader(ProductDetailsProvider provider) {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       child: Row(
@@ -143,11 +148,10 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                 context,
               )!.translate(widget.category).toUpperCase(),
               textAlign: TextAlign.center,
-              style: AppTextStyles.text1.copyWith(
+              style: theme.textTheme.displayMedium?.copyWith(
                 color: AppColors.primary,
                 letterSpacing: 1.2,
                 fontSize: 13,
-                fontWeight: FontWeight.bold,
               ),
             ),
           ),
@@ -311,13 +315,12 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     ProductDetailsProvider provider,
   ) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(25, 30, 25, 120),
       width: double.infinity,
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
+        color: theme.cardColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
       ),
       child: Column(
@@ -331,16 +334,13 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                   variantData['name'],
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.displayMedium?.copyWith(fontSize: 19),
+                  style: theme.textTheme.displayLarge?.copyWith(fontSize: 19),
                 ),
               ),
               const SizedBox(width: 10),
               Text(
                 variantData['model'],
-                style: theme.textTheme.labelMedium?.copyWith(
-                  fontSize: 13,
-                  color: isDark ? Colors.grey : Colors.grey[600],
-                ),
+                style: theme.textTheme.labelMedium?.copyWith(fontSize: 13),
               ),
             ],
           ),
@@ -376,7 +376,10 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                 items: provider.descriptions!['options'] as List<String>,
               ),
             ],
-            _FilesSection(files: provider.files),
+            _FilesSection(
+              files: provider.files,
+              productName: variantData['name'],
+            ),
           ],
           const SizedBox(height: 30),
         ],
@@ -389,7 +392,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 20),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
+        color: theme.cardColor,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.1),
@@ -413,14 +416,21 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
             onTap: widget.variants.length > 1
                 ? () {
                     HapticFeedback.mediumImpact();
+
+                    final base = widget.variants[provider.comparisonBaseIndex];
+                    final current = widget.variants[provider.currentIndex];
+
+                    AnalyticsService.logCompareProducts(
+                      base['id_product'],
+                      current['id_product'],
+                    );
+
                     showModalBottomSheet(
                       context: context,
                       backgroundColor: Colors.transparent,
                       isScrollControlled: true,
-                      builder: (context) => _ComparisonSheet(
-                        base: widget.variants[provider.comparisonBaseIndex],
-                        current: widget.variants[provider.currentIndex],
-                      ),
+                      builder: (context) =>
+                          _ComparisonSheet(base: base, current: current),
                     );
                   }
                 : null,
@@ -492,7 +502,9 @@ class _ApplicationIcons extends StatelessWidget {
 
 class _FilesSection extends StatelessWidget {
   final List<Map<String, dynamic>> files;
-  const _FilesSection({required this.files});
+  final String productName;
+
+  const _FilesSection({required this.files, required this.productName});
 
   @override
   Widget build(BuildContext context) {
@@ -527,13 +539,17 @@ class _FilesSection extends StatelessWidget {
                     AppLocalizations.of(
                       context,
                     )!.translate("Nenhum documento disponível"),
-                    style: AppTextStyles.text4.copyWith(color: Colors.grey),
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: Colors.grey,
+                    ),
                   ),
                 ],
               ),
             )
           else
-            ...files.map((file) => _FileLinkItem(file: file)),
+            ...files.map(
+              (file) => _FileLinkItem(file: file, productName: productName),
+            ),
           const SizedBox(height: 10),
         ],
       ),
@@ -553,7 +569,7 @@ class _ComparisonSheet extends StatelessWidget {
       height: MediaQuery.of(context).size.height * 0.6,
       padding: const EdgeInsets.all(25),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
+        color: theme.cardColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
       ),
       child: Column(
@@ -569,7 +585,7 @@ class _ComparisonSheet extends StatelessWidget {
           const SizedBox(height: 20),
           Text(
             AppLocalizations.of(context)!.translate('technical_comparison'),
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            style: theme.textTheme.displayLarge?.copyWith(fontSize: 18),
           ),
           const SizedBox(height: 20),
           Expanded(
@@ -616,6 +632,9 @@ class _NavigationButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(15),
@@ -625,7 +644,7 @@ class _NavigationButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: isEnabled
               ? AppColors.primary.withValues(alpha: 0.1)
-              : Colors.grey[100],
+              : (isDark ? Colors.grey.shade800 : Colors.grey.shade100),
           borderRadius: BorderRadius.circular(15),
         ),
         child: Icon(
@@ -662,7 +681,9 @@ class _ComparisonButton extends StatelessWidget {
 
 class _FileLinkItem extends StatelessWidget {
   final Map<String, dynamic> file;
-  const _FileLinkItem({required this.file});
+  final String productName;
+
+  const _FileLinkItem({required this.file, required this.productName});
 
   @override
   Widget build(BuildContext context) {
@@ -681,6 +702,8 @@ class _FileLinkItem extends StatelessWidget {
           );
           return;
         }
+
+        AnalyticsService.logDownloadDocument(file['name'], productName);
 
         final Uri uri = Uri.parse(file['full_url']);
         if (await canLaunchUrl(uri)) {

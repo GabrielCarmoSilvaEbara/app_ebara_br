@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/models/product_model.dart';
-import '../theme/app_text_styles.dart';
 import '../pages/product_details_page.dart';
 import '../widgets/product_card_skeleton.dart';
 import 'image_viewer.dart';
@@ -20,17 +19,21 @@ class ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final hasVariants = product.variants.isNotEmpty;
 
     return Card(
       elevation: 0,
+      color: theme.cardColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: colorScheme.secondary.withValues(alpha: 0.5),
-          width: 1,
-        ),
+        side: isDark
+            ? BorderSide.none
+            : BorderSide(
+                color: theme.colorScheme.secondary.withValues(alpha: 0.5),
+                width: 1,
+              ),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
@@ -52,7 +55,7 @@ class ProductCard extends StatelessWidget {
               _ProductFooter(
                 product: product,
                 hasVariants: hasVariants,
-                colorScheme: colorScheme,
+                theme: theme,
               ),
             ],
           ),
@@ -97,6 +100,8 @@ class _ProductImage extends StatelessWidget {
         child: CachedNetworkImage(
           imageUrl: imageUrl,
           fit: BoxFit.contain,
+          memCacheWidth: 500,
+          maxWidthDiskCache: 500,
           placeholder: (context, url) => const ProductCardSkeleton(),
           errorWidget: (context, url, error) => const _ErrorIcon(),
         ),
@@ -123,7 +128,7 @@ class _CategoryLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       category,
-      style: AppTextStyles.text3,
+      style: Theme.of(context).textTheme.labelMedium,
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
     );
@@ -133,12 +138,12 @@ class _CategoryLabel extends StatelessWidget {
 class _ProductFooter extends StatelessWidget {
   final ProductModel product;
   final bool hasVariants;
-  final ColorScheme colorScheme;
+  final ThemeData theme;
 
   const _ProductFooter({
     required this.product,
     required this.hasVariants,
-    required this.colorScheme,
+    required this.theme,
   });
 
   @override
@@ -148,17 +153,13 @@ class _ProductFooter extends StatelessWidget {
         Expanded(
           child: Text(
             product.name,
-            style: AppTextStyles.text,
+            style: theme.textTheme.displayLarge?.copyWith(fontSize: 16),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
         ),
         const SizedBox(width: 6),
-        _ZoomButton(
-          imageUrl: product.image,
-          heroTag: product.id,
-          colorScheme: colorScheme,
-        ),
+        _ZoomButton(imageUrl: product.image, heroTag: product.id, theme: theme),
       ],
     );
   }
@@ -167,12 +168,12 @@ class _ProductFooter extends StatelessWidget {
 class _ZoomButton extends StatelessWidget {
   final String imageUrl;
   final String heroTag;
-  final ColorScheme colorScheme;
+  final ThemeData theme;
 
   const _ZoomButton({
     required this.imageUrl,
     required this.heroTag,
-    required this.colorScheme,
+    required this.theme,
   });
 
   void _openZoom(BuildContext context) {
@@ -190,7 +191,7 @@ class _ZoomButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: colorScheme.primary,
+      color: theme.primaryColor,
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         onTap: () => _openZoom(context),
@@ -199,82 +200,10 @@ class _ZoomButton extends StatelessWidget {
           width: 26,
           height: 26,
           alignment: Alignment.center,
-          child: Icon(Icons.zoom_in, size: 18, color: colorScheme.onPrimary),
-        ),
-      ),
-    );
-  }
-}
-
-class AnimatedProductCard extends StatefulWidget {
-  final String category;
-  final ProductModel product;
-  final VoidCallback onActionPressed;
-
-  const AnimatedProductCard({
-    super.key,
-    required this.category,
-    required this.product,
-    required this.onActionPressed,
-  });
-
-  @override
-  State<AnimatedProductCard> createState() => _AnimatedProductCardState();
-}
-
-class _AnimatedProductCardState extends State<AnimatedProductCard>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _scaleAnimation;
-  bool isPressed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 150),
-      vsync: this,
-    );
-    _scaleAnimation = Tween<double>(
-      begin: 1.0,
-      end: 0.95,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _handleTapDown(TapDownDetails details) {
-    setState(() => isPressed = true);
-    _controller.forward();
-  }
-
-  void _handleTapUp(TapUpDetails details) {
-    setState(() => isPressed = false);
-    _controller.reverse();
-  }
-
-  void _handleTapCancel() {
-    setState(() => isPressed = false);
-    _controller.reverse();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: _handleTapDown,
-      onTapUp: _handleTapUp,
-      onTapCancel: _handleTapCancel,
-      child: ScaleTransition(
-        scale: _scaleAnimation,
-        child: RepaintBoundary(
-          child: ProductCard(
-            category: widget.category,
-            product: widget.product,
-            onActionPressed: widget.onActionPressed,
+          child: Icon(
+            Icons.zoom_in,
+            size: 18,
+            color: theme.colorScheme.onPrimary,
           ),
         ),
       ),

@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import '../services/analytics_service.dart';
 
 enum AuthStatus { initial, authenticated, guest, unauthenticated }
 
@@ -19,8 +20,18 @@ class AuthProvider with ChangeNotifier {
 
   String? get photoUrl => _user?.photoURL;
 
-  AuthProvider() {
-    _checkCurrentUser();
+  AuthProvider();
+
+  Future<void> init() async {
+    await Future.delayed(Duration.zero);
+
+    if (!kIsWeb) {
+      try {
+        await _googleSignIn.initialize();
+      } catch (_) {}
+    }
+
+    await _checkCurrentUser();
   }
 
   Future<void> _checkCurrentUser() async {
@@ -47,24 +58,12 @@ class AuthProvider with ChangeNotifier {
         final GoogleAuthProvider googleProvider = GoogleAuthProvider();
         userCredential = await _auth.signInWithPopup(googleProvider);
       } else {
-        GoogleSignInAccount? googleUser;
-
-        try {
-          googleUser = await _googleSignIn.authenticate();
-        } catch (error) {
-          if (error.toString().contains('init') ||
-              error.toString().contains('Bad state')) {
-            await _googleSignIn.initialize();
-            googleUser = await _googleSignIn.authenticate();
-          } else {
-            return;
-          }
-        }
-
-        final GoogleSignInAuthentication googleAuth = googleUser.authentication;
+        final GoogleSignInAccount googleUser = await _googleSignIn
+            .authenticate();
+        final GoogleSignInAuthentication googleAuth =
+            await googleUser.authentication;
 
         final AuthCredential credential = GoogleAuthProvider.credential(
-          accessToken: null,
           idToken: googleAuth.idToken,
         );
 
@@ -74,6 +73,9 @@ class AuthProvider with ChangeNotifier {
       _user = userCredential.user;
       await _settingsBox.put('is_guest', false);
       _status = AuthStatus.authenticated;
+
+      await AnalyticsService.logLogin('google');
+
       notifyListeners();
     } catch (e) {
       rethrow;
@@ -83,12 +85,17 @@ class AuthProvider with ChangeNotifier {
   Future<void> continueAsGuest() async {
     await _settingsBox.put('is_guest', true);
     _status = AuthStatus.guest;
+
+    await AnalyticsService.logLogin('guest');
+
     notifyListeners();
   }
 
   Future<void> signOut() async {
     if (!kIsWeb) {
-      await _googleSignIn.signOut();
+      try {
+        await _googleSignIn.signOut();
+      } catch (_) {}
     }
     await _auth.signOut();
 

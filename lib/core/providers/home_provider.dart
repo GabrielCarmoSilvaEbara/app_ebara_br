@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../services/ebara_data_service.dart';
 import '../models/category_model.dart';
 import '../models/product_model.dart';
+import '../services/analytics_service.dart';
 
 class HomeProvider with ChangeNotifier {
   static const int _pageSize = 10;
@@ -27,6 +28,7 @@ class HomeProvider with ChangeNotifier {
   Map<String, dynamic>? _activeFilters;
 
   double _sunExposure = 5.0;
+  bool _hasError = false;
 
   bool get isLoadingCategories => _isLoadingCategories;
   bool get isLoadingProducts => _isLoadingProducts;
@@ -40,6 +42,8 @@ class HomeProvider with ChangeNotifier {
 
   bool get hasMoreProducts =>
       _visibleProducts.length < _filteredProducts.length;
+
+  bool get hasError => _hasError;
 
   void updateSunExposure(double value) {
     if (_sunExposure != value) {
@@ -107,6 +111,13 @@ class HomeProvider with ChangeNotifier {
 
     if (filters != null) {
       _activeFilters = filters;
+
+      AnalyticsService.logSearchFilters(
+        flowRate: double.tryParse(filters['flow_rate'].toString()) ?? 0,
+        head: double.tryParse(filters['height_gauge'].toString()) ?? 0,
+        application: filters['application']?.toString() ?? 'TODOS',
+        categoryId: categoryId,
+      );
     }
 
     _selectedCategoryId = categoryId;
@@ -120,31 +131,40 @@ class HomeProvider with ChangeNotifier {
 
     if (_activeFilters == null && _cacheByCategory.containsKey(categoryId)) {
       _allProducts = _cacheByCategory[categoryId]!;
+      _hasError = false;
     } else {
-      final searchParams = _prepareSearchParams(categoryId, _activeFilters);
+      try {
+        final searchParams = _prepareSearchParams(categoryId, _activeFilters);
 
-      final fetched = await EbaraDataService.searchProducts(
-        categoryId: categoryId,
-        idLanguage: _currentLanguageId,
-        application: searchParams['application'],
-        line: searchParams['line'],
-        flowRate: searchParams['flowRate'],
-        flowRateMeasure: searchParams['flowRateMeasure'],
-        heightGauge: searchParams['heightGauge'],
-        heightGaugeMeasure: searchParams['heightGaugeMeasure'],
-        frequency: searchParams['frequency'],
-        types: searchParams['types'],
-        wellDiameter: searchParams['wellDiameter'],
-        cableLength: searchParams['cableLength'],
-        activation: searchParams['activation'],
-        bombsQuantity: searchParams['bombsQuantity'],
-        sunExposure: searchParams['sunExposure'] ?? _sunExposure,
-      );
+        final fetched = await EbaraDataService.searchProducts(
+          categoryId: categoryId,
+          idLanguage: _currentLanguageId,
+          application: searchParams['application'],
+          line: searchParams['line'],
+          flowRate: searchParams['flowRate'],
+          flowRateMeasure: searchParams['flowRateMeasure'],
+          heightGauge: searchParams['heightGauge'],
+          heightGaugeMeasure: searchParams['heightGaugeMeasure'],
+          frequency: searchParams['frequency'],
+          types: searchParams['types'],
+          wellDiameter: searchParams['wellDiameter'],
+          cableLength: searchParams['cableLength'],
+          activation: searchParams['activation'],
+          bombsQuantity: searchParams['bombsQuantity'],
+          sunExposure: searchParams['sunExposure'] ?? _sunExposure,
+        );
 
-      _allProducts = EbaraDataService.groupProducts(fetched);
+        _allProducts = EbaraDataService.groupProducts(fetched);
 
-      if (_activeFilters == null) {
-        _cacheByCategory[categoryId] = _allProducts;
+        if (_activeFilters == null) {
+          _cacheByCategory[categoryId] = _allProducts;
+        }
+        _hasError = false;
+      } catch (e) {
+        _hasError = true;
+        _isLoadingProducts = false;
+        notifyListeners();
+        return;
       }
     }
 

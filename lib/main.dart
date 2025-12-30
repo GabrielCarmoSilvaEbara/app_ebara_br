@@ -1,26 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'core/providers/auth_provider.dart';
-import 'presentation/pages/login_page.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'presentation/theme/app_theme.dart';
 import 'presentation/pages/home_page.dart';
 import 'presentation/pages/splash_screen.dart';
+import 'presentation/pages/login_page.dart';
+import 'core/providers/auth_provider.dart';
 import 'core/providers/home_provider.dart';
 import 'core/providers/product_details_provider.dart';
 import 'core/providers/location_provider.dart';
 import 'core/providers/history_provider.dart';
 import 'core/providers/theme_provider.dart';
+import 'core/providers/connectivity_provider.dart';
 import 'core/localization/app_localizations.dart';
 import 'core/services/ebara_data_service.dart';
 import 'presentation/pages/product_details_page.dart';
+import 'presentation/widgets/offline_banner.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await Hive.initFlutter();
+  await _openBoxSafe('settings');
 
   await Firebase.initializeApp(
     options: const FirebaseOptions(
@@ -33,17 +36,6 @@ void main() async {
     ),
   );
 
-  await Hive.initFlutter();
-  await _openBoxSafe('api_cache');
-  await _openBoxSafe('settings');
-
-  if (!kIsWeb) {
-    await GoogleSignIn.instance.initialize(
-      clientId:
-          '493727106261-70e218fvoquodhjvs1l0g59hpk5ltcu5.apps.googleusercontent.com',
-    );
-  }
-
   runApp(
     MultiProvider(
       providers: [
@@ -53,6 +45,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => LocationProvider()),
         ChangeNotifierProvider(create: (_) => HistoryProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => ConnectivityProvider()),
       ],
       child: const MyApp(),
     ),
@@ -74,13 +67,10 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final locationProvider = context.watch<LocationProvider>();
-    final authProvider = context.watch<AuthProvider>();
     final themeProvider = context.watch<ThemeProvider>();
     final locale = locationProvider.currentLocale;
 
-    final themeMode =
-        (authProvider.status == AuthStatus.authenticated &&
-            themeProvider.isDarkMode)
+    final themeMode = themeProvider.isDarkMode
         ? ThemeMode.dark
         : ThemeMode.light;
 
@@ -103,6 +93,9 @@ class MyApp extends StatelessWidget {
         Locale('es', ''),
       ],
       initialRoute: '/',
+      builder: (context, child) {
+        return OfflineBannerWrapper(child: child!);
+      },
       onGenerateRoute: (settings) {
         if (settings.name?.startsWith('/product/') == true) {
           final uri = Uri.parse(settings.name!);

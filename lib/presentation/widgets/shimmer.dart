@@ -29,6 +29,10 @@ class _ShimmerState extends State<Shimmer> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final baseColor = isDark ? Colors.grey.shade800 : Colors.grey.shade300;
+    final highlightColor = isDark ? Colors.grey.shade700 : Colors.grey.shade100;
+
     return AnimatedBuilder(
       animation: _controller,
       child: widget.child,
@@ -41,11 +45,7 @@ class _ShimmerState extends State<Shimmer> with SingleTickerProviderStateMixin {
             return LinearGradient(
               begin: Alignment(-1 + shimmerPosition, -1),
               end: Alignment(1 + shimmerPosition, 1),
-              colors: [
-                Colors.grey.shade300,
-                Colors.grey.shade100,
-                Colors.grey.shade300,
-              ],
+              colors: [baseColor, highlightColor, baseColor],
               stops: const [0.35, 0.5, 0.65],
             ).createShader(rect);
           },

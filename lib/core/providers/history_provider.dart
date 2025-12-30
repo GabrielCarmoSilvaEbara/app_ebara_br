@@ -8,7 +8,9 @@ class HistoryProvider with ChangeNotifier {
 
   List<Map<String, dynamic>> get history => _history;
 
-  HistoryProvider() {
+  HistoryProvider();
+
+  Future<void> init() async {
     _loadHistory();
   }
 

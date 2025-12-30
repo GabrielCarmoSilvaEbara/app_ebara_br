@@ -6,7 +6,11 @@ class FilesSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final baseColor = Colors.grey.shade300;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    final baseColor = isDark ? Colors.grey.shade800 : Colors.grey.shade300;
+    final cardColor = theme.cardColor;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
@@ -17,7 +21,7 @@ class FilesSkeleton extends StatelessWidget {
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: cardColor,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(

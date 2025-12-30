@@ -63,8 +63,10 @@ class _ImageViewerState extends State<ImageViewer>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      backgroundColor: AppColors.backgroundSecondary,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: Stack(
         children: [
           Center(

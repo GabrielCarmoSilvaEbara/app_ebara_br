@@ -9,16 +9,14 @@ import '../../core/localization/app_localizations.dart';
 import '../../core/models/product_model.dart';
 import '../../core/models/category_model.dart';
 import '../../core/providers/auth_provider.dart';
-import '../../core/providers/history_provider.dart';
+import '../../core/providers/theme_provider.dart';
 import '../theme/app_colors.dart';
-import '../theme/app_text_styles.dart';
 import '../widgets/category_chip.dart';
 import '../widgets/category_chip_skeleton.dart';
 import '../widgets/custom_search_bar.dart';
 import '../widgets/product_card.dart';
 import '../widgets/product_card_skeleton.dart';
 import '../widgets/auth_modal_sheet.dart';
-import 'product_details_page.dart';
 import 'location_page.dart';
 
 class NoScrollbarScrollBehavior extends ScrollBehavior {
@@ -55,8 +53,9 @@ class HomePageState extends State<HomePage> {
 
   void _onScroll() {
     final provider = context.read<HomeProvider>();
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 200) {
+    if (_scrollController.hasClients &&
+        _scrollController.position.pixels >=
+            _scrollController.position.maxScrollExtent - 200) {
       provider.loadMore();
     }
   }
@@ -79,23 +78,12 @@ class HomePageState extends State<HomePage> {
     }
   }
 
-  void _showHistoryModal(BuildContext context) {
-    final authProvider = context.read<AuthProvider>();
-
-    if (authProvider.status != AuthStatus.authenticated) {
-      showModalBottomSheet(
-        context: context,
-        backgroundColor: Colors.transparent,
-        builder: (context) => const AuthModalSheet(),
-      );
-      return;
-    }
-
+  void _showAuthModal(BuildContext context) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) => const _HistoryModalSheet(),
+      builder: (context) => const AuthModalSheet(),
     );
   }
 
@@ -105,6 +93,8 @@ class HomePageState extends State<HomePage> {
     final locationProvider = context.watch<LocationProvider>();
     final l10n = AppLocalizations.of(context)!;
     final authProvider = context.watch<AuthProvider>();
+    final themeProvider = context.watch<ThemeProvider>();
+    final theme = Theme.of(context);
 
     return Scaffold(
       body: Column(
@@ -120,15 +110,29 @@ class HomePageState extends State<HomePage> {
                   Positioned(
                     left: 0,
                     child: GestureDetector(
-                      onTap: () => _showHistoryModal(context),
+                      onTap: () =>
+                          themeProvider.toggleTheme(!themeProvider.isDarkMode),
                       child: Container(
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: AppColors.primary.withValues(alpha: 0.1),
+                          color: theme.cardColor,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.05),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
-                        child: Icon(Icons.history, color: AppColors.primary),
+                        child: Icon(
+                          themeProvider.isDarkMode
+                              ? Icons.nightlight_round
+                              : Icons.wb_sunny,
+                          color: AppColors.primary,
+                          size: 22,
+                        ),
                       ),
                     ),
                   ),
@@ -143,12 +147,12 @@ class HomePageState extends State<HomePage> {
                             const Icon(
                               Icons.location_on,
                               size: 14,
-                              color: AppColors.textPrimary,
+                              color: AppColors.primary,
                             ),
                             const SizedBox(width: 4),
                             Text(
                               l10n.translate('location'),
-                              style: AppTextStyles.text4,
+                              style: theme.textTheme.labelSmall,
                             ),
                           ],
                         ),
@@ -156,7 +160,9 @@ class HomePageState extends State<HomePage> {
                           locationProvider.city.isEmpty
                               ? l10n.translate('choose_location')
                               : locationProvider.city,
-                          style: AppTextStyles.text,
+                          style: theme.textTheme.displayLarge?.copyWith(
+                            fontSize: 20,
+                          ),
                           textAlign: TextAlign.center,
                         ),
                       ],
@@ -255,140 +261,24 @@ class HomePageState extends State<HomePage> {
                         padding: const EdgeInsets.symmetric(horizontal: 20),
                         child: _ProductGrid(
                           isLoading: homeProvider.isLoadingProducts,
+                          hasError: homeProvider.hasError,
                           products: homeProvider.visibleProducts,
                           isPaginating: homeProvider.isPaginating,
                           selectedCategory: homeProvider.selectedCategory,
                           scrollController: _scrollController,
-                        ),
-                      );
-                    },
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showAuthModal(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => const AuthModalSheet(),
-    );
-  }
-}
-
-class _HistoryModalSheet extends StatelessWidget {
-  const _HistoryModalSheet();
-
-  @override
-  Widget build(BuildContext context) {
-    final historyProvider = context.watch<HistoryProvider>();
-    final l10n = AppLocalizations.of(context)!;
-    final list = historyProvider.history;
-
-    return Container(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.7,
-      ),
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                l10n.translate('recent_products'),
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              if (list.isNotEmpty)
-                TextButton(
-                  onPressed: () => historyProvider.clearHistory(),
-                  child: Text(
-                    l10n.translate('clear'),
-                    style: const TextStyle(color: Colors.red),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          if (list.isEmpty)
-            Padding(
-              padding: const EdgeInsets.all(40.0),
-              child: Center(
-                child: Text(
-                  l10n.translate('no_recent_products'),
-                  style: const TextStyle(color: Colors.grey),
-                ),
-              ),
-            )
-          else
-            Flexible(
-              child: ListView.separated(
-                itemCount: list.length,
-                padding: const EdgeInsets.only(bottom: 20),
-                separatorBuilder: (context, _) => const Divider(height: 1),
-                itemBuilder: (context, index) {
-                  final item = list[index];
-                  return ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: item['image'] != null && item['image'].isNotEmpty
-                          ? CachedNetworkImage(
-                              imageUrl: item['image'],
-                              fit: BoxFit.contain,
-                              errorWidget: (c, e, s) =>
-                                  const Icon(Icons.image_not_supported),
-                            )
-                          : const Icon(Icons.image),
-                    ),
-                    title: Text(
-                      item['name'] ?? '',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    subtitle: Text(
-                      item['model'] ?? '',
-                      style: const TextStyle(color: Colors.grey, fontSize: 12),
-                    ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      final category = item['history_category'] ?? '';
-                      final rawVariants = item['variants'] as List;
-                      final variants = rawVariants
-                          .map((e) => Map<String, dynamic>.from(e))
-                          .toList();
-
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ProductDetailsPage(
-                            category: category,
-                            variants: variants,
+                          onRetry: () => homeProvider.loadProducts(
+                            homeProvider.selectedCategoryId,
                           ),
+                          onRefresh: () async {
+                            await homeProvider.loadProducts(
+                              homeProvider.selectedCategoryId,
+                            );
+                          },
                         ),
                       );
                     },
-                  );
-                },
-              ),
-            ),
+                  ),
+          ),
         ],
       ),
     );
@@ -412,6 +302,7 @@ class _CategorySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -419,7 +310,7 @@ class _CategorySection extends StatelessWidget {
           padding: const EdgeInsets.only(left: 20, bottom: 8),
           child: Text(
             AppLocalizations.of(context)!.translate('select_category'),
-            style: AppTextStyles.text,
+            style: theme.textTheme.displayLarge?.copyWith(fontSize: 20),
           ),
         ),
         SizedBox(
@@ -461,46 +352,94 @@ class _CategoryLoadingSkeleton extends StatelessWidget {
 
 class _ProductGrid extends StatelessWidget {
   final bool isLoading;
+  final bool hasError;
   final List<ProductModel> products;
   final bool isPaginating;
   final String selectedCategory;
   final ScrollController scrollController;
+  final VoidCallback onRetry;
+  final Future<void> Function() onRefresh;
 
   const _ProductGrid({
     required this.isLoading,
+    required this.hasError,
     required this.products,
     required this.isPaginating,
     required this.selectedCategory,
     required this.scrollController,
+    required this.onRetry,
+    required this.onRefresh,
   });
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     if (isLoading) return _ProductLoadingSkeleton();
-    if (products.isEmpty) {
+
+    if (hasError) {
       return Center(
-        child: Text(
-          l10n.translate('no_products_found'),
-          style: AppTextStyles.text4,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.wifi_off, size: 60, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            Text(
+              l10n.translate('connect_error'),
+              style: theme.textTheme.labelMedium,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: onRetry,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
+              child: Text(l10n.translate('try_again')),
+            ),
+          ],
         ),
       );
     }
-    return ScrollConfiguration(
-      behavior: NoScrollbarScrollBehavior(),
+
+    if (products.isEmpty) {
+      return RefreshIndicator(
+        onRefresh: onRefresh,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height * 0.6,
+            child: Center(
+              child: Text(
+                l10n.translate('no_products_found'),
+                style: theme.textTheme.labelMedium,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      color: AppColors.primary,
+      backgroundColor: theme.cardColor,
       child: GridView.builder(
         controller: scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.zero,
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
+        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: 220,
+          childAspectRatio: 0.85,
           crossAxisSpacing: 10,
           mainAxisSpacing: 10,
-          childAspectRatio: 0.99,
         ),
         itemCount: products.length + (isPaginating ? 2 : 0),
         itemBuilder: (context, index) {
-          if (index >= products.length) return const ProductCardSkeleton();
+          if (index >= products.length) {
+            return const ProductCardSkeleton();
+          }
           return ProductCard(
             category: l10n.translate(selectedCategory),
             product: products[index],
@@ -518,11 +457,11 @@ class _ProductLoadingSkeleton extends StatelessWidget {
     return GridView.builder(
       itemCount: 6,
       padding: EdgeInsets.zero,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 220,
+        childAspectRatio: 0.85,
         crossAxisSpacing: 10,
         mainAxisSpacing: 10,
-        childAspectRatio: 0.99,
       ),
       itemBuilder: (_, index) => const ProductCardSkeleton(),
     );

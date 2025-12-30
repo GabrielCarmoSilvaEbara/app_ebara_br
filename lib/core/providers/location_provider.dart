@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../services/location_service.dart';
+import '../services/analytics_service.dart';
 
 class LocationProvider with ChangeNotifier {
   final Box _settingsBox = Hive.box('settings');
@@ -71,6 +72,11 @@ class LocationProvider with ChangeNotifier {
         _lon = (data['lon'] as num?)?.toDouble() ?? -46.6333;
 
         _updateLocaleByCountry(_country);
+
+        if (_city.isNotEmpty) {
+          AnalyticsService.setUserLocation(_city, _state);
+        }
+
         notifyListeners();
         return;
       }
@@ -136,6 +142,8 @@ class LocationProvider with ChangeNotifier {
         'lon': lon,
       });
     }
+
+    AnalyticsService.setUserLocation(city, state);
 
     notifyListeners();
   }

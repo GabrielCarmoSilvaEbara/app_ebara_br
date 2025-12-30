@@ -8,7 +8,6 @@ import '../../core/services/location_service.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/providers/auth_provider.dart';
 import '../theme/app_colors.dart';
-import '../theme/app_text_styles.dart';
 
 class LocationPage extends StatefulWidget {
   final bool isInitialSelection;
@@ -61,6 +60,12 @@ class _LocationPageState extends State<LocationPage> {
     final provider = context.watch<LocationProvider>();
     final currentPos = coords.LatLng(provider.previewLat, provider.previewLon);
     final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    final tileUrl = isDark
+        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+        : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -80,8 +85,7 @@ class _LocationPageState extends State<LocationPage> {
             ),
             children: [
               TileLayer(
-                urlTemplate:
-                    'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+                urlTemplate: tileUrl,
                 subdomains: const ['a', 'b', 'c', 'd'],
                 userAgentPackageName: 'com.ebara.app',
               ),
@@ -99,7 +103,7 @@ class _LocationPageState extends State<LocationPage> {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: theme.cardColor,
                             borderRadius: BorderRadius.circular(8),
                             boxShadow: const [
                               BoxShadow(color: Colors.black12, blurRadius: 4),
@@ -112,7 +116,7 @@ class _LocationPageState extends State<LocationPage> {
                                 : (provider.city.isEmpty
                                       ? "São Paulo"
                                       : provider.city),
-                            style: AppTextStyles.text4.copyWith(
+                            style: theme.textTheme.labelMedium?.copyWith(
                               fontWeight: FontWeight.bold,
                               fontSize: 10,
                             ),
@@ -134,53 +138,66 @@ class _LocationPageState extends State<LocationPage> {
             child: Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 25, 20, 10),
+                  padding: const EdgeInsets.fromLTRB(20, 60, 20, 10),
                   child: Row(
                     children: [
                       if (!widget.isInitialSelection) ...[
                         IconButton.filled(
                           onPressed: () => Navigator.pop(context),
-                          icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+                          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
                           style: IconButton.styleFrom(
                             backgroundColor: AppColors.primary,
-                            minimumSize: const Size(45, 45),
+                            minimumSize: const Size(55, 55),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(15),
+                            ),
                           ),
                         ),
                         const SizedBox(width: 12),
                       ],
                       Expanded(
                         child: Container(
-                          height: 45,
+                          height: 55,
                           decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
+                            color: theme.cardColor,
+                            borderRadius: BorderRadius.circular(15),
                             boxShadow: const [
                               BoxShadow(color: Colors.black12, blurRadius: 10),
                             ],
                           ),
-                          child: TextField(
-                            controller: _searchController,
-                            enabled:
-                                !provider.isGpsLoading && !provider.isLoading,
-                            onSubmitted: (val) async {
-                              await provider.search(val);
-                              if (provider.results.isNotEmpty) {
-                                _moveToCity(
-                                  provider.previewLat,
-                                  provider.previewLon,
-                                );
-                                _pageController.jumpToPage(0);
-                              }
-                            },
-                            decoration: InputDecoration(
-                              hintText: l10n.translate('search'),
-                              prefixIcon: const Icon(
-                                Icons.search,
-                                color: AppColors.primary,
+                          child: Center(
+                            child: TextField(
+                              controller: _searchController,
+                              enabled:
+                                  !provider.isGpsLoading && !provider.isLoading,
+                              textAlignVertical: TextAlignVertical.center,
+                              onSubmitted: (val) async {
+                                await provider.search(val);
+                                if (provider.results.isNotEmpty) {
+                                  _moveToCity(
+                                    provider.previewLat,
+                                    provider.previewLon,
+                                  );
+                                  _pageController.jumpToPage(0);
+                                }
+                              },
+                              style: theme.textTheme.displayMedium?.copyWith(
+                                fontSize: 16,
                               ),
-                              border: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(
-                                vertical: 10,
+                              decoration: InputDecoration(
+                                hintText: l10n.translate('search'),
+                                hintStyle: theme.textTheme.labelMedium
+                                    ?.copyWith(color: Colors.grey),
+                                prefixIcon: const Icon(
+                                  Icons.search,
+                                  color: AppColors.primary,
+                                ),
+                                border: InputBorder.none,
+                                isCollapsed: true,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 14,
+                                ),
                               ),
                             ),
                           ),
@@ -191,7 +208,7 @@ class _LocationPageState extends State<LocationPage> {
                 ),
                 const Spacer(),
                 if (provider.results.isNotEmpty)
-                  _buildBottomCard(provider, context),
+                  _buildBottomCard(provider, context, theme),
               ],
             ),
           ),
@@ -200,13 +217,17 @@ class _LocationPageState extends State<LocationPage> {
     );
   }
 
-  Widget _buildBottomCard(LocationProvider provider, BuildContext context) {
+  Widget _buildBottomCard(
+    LocationProvider provider,
+    BuildContext context,
+    ThemeData theme,
+  ) {
     final l10n = AppLocalizations.of(context)!;
     return Container(
       margin: const EdgeInsets.all(20),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(30),
         boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 20)],
       ),
@@ -229,10 +250,15 @@ class _LocationPageState extends State<LocationPage> {
                 final item = provider.results[i];
                 return Column(
                   children: [
-                    Text(item['city'], style: AppTextStyles.text),
+                    Text(
+                      item['city'],
+                      style: theme.textTheme.displayLarge?.copyWith(
+                        fontSize: 18,
+                      ),
+                    ),
                     Text(
                       "${item['state']}, ${item['country']}",
-                      style: AppTextStyles.text4,
+                      style: theme.textTheme.labelMedium,
                     ),
                   ],
                 );
@@ -255,6 +281,7 @@ class _LocationPageState extends State<LocationPage> {
                         }
                       }
                     : null,
+                theme,
               ),
               GestureDetector(
                 onTap: provider.isLoading
@@ -325,6 +352,7 @@ class _LocationPageState extends State<LocationPage> {
                         }
                       }
                     : null,
+                theme,
               ),
             ],
           ),
@@ -393,7 +421,8 @@ class _LocationPageState extends State<LocationPage> {
 class _NavBtn extends StatelessWidget {
   final IconData icon;
   final VoidCallback? onTap;
-  const _NavBtn(this.icon, this.onTap);
+  final ThemeData theme;
+  const _NavBtn(this.icon, this.onTap, this.theme);
 
   @override
   Widget build(BuildContext context) {
@@ -403,11 +432,14 @@ class _NavBtn extends StatelessWidget {
       style: IconButton.styleFrom(
         backgroundColor: onTap != null
             ? AppColors.primary.withValues(alpha: 0.1)
-            : Colors.grey.shade100,
+            : (theme.brightness == Brightness.dark
+                  ? Colors.grey.shade800
+                  : Colors.grey.shade100),
         foregroundColor: onTap != null
             ? AppColors.primary
-            : Colors.grey.shade300,
+            : Colors.grey.shade400,
         minimumSize: const Size(55, 55),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       ),
     );
   }

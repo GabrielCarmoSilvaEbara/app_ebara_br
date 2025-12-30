@@ -3,10 +3,14 @@ import 'dart:async';
 import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:provider/provider.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import '../../core/providers/home_provider.dart';
 import '../../core/providers/location_provider.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/providers/auth_provider.dart';
+import '../../core/providers/history_provider.dart';
+import '../../core/providers/theme_provider.dart';
+import '../../core/providers/connectivity_provider.dart';
 import 'home_page.dart';
 import 'login_page.dart';
 import 'location_page.dart';
@@ -28,7 +32,9 @@ class _SplashScreenState extends State<SplashScreen> {
   void initState() {
     super.initState();
 
-    _loadResources();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadResources();
+    });
 
     Future.delayed(const Duration(milliseconds: 300), () {
       if (mounted) setState(() => _startAnimation = true);
@@ -41,8 +47,19 @@ class _SplashScreenState extends State<SplashScreen> {
     try {
       final locProv = context.read<LocationProvider>();
       final homeProv = context.read<HomeProvider>();
+      final authProv = context.read<AuthProvider>();
+      final historyProv = context.read<HistoryProvider>();
+      final themeProv = context.read<ThemeProvider>();
+      final connProv = context.read<ConnectivityProvider>();
 
-      await locProv.initLocation();
+      await Future.wait([
+        authProv.init(),
+        historyProv.init(),
+        themeProv.init(),
+        connProv.init(),
+        locProv.initLocation(),
+        _initHeavyServices(),
+      ]);
 
       if (mounted) {
         await homeProv.reloadData(locProv.apiLanguageId);
@@ -50,6 +67,15 @@ class _SplashScreenState extends State<SplashScreen> {
     } catch (_) {
     } finally {
       if (!_apiDataCompleter.isCompleted) _apiDataCompleter.complete();
+    }
+  }
+
+  Future<void> _initHeavyServices() async {
+    try {
+      await Hive.openBox('api_cache');
+    } catch (e) {
+      await Hive.deleteBoxFromDisk('api_cache');
+      await Hive.openBox('api_cache');
     }
   }
 
@@ -125,63 +151,77 @@ class _SplashScreenState extends State<SplashScreen> {
             radius: 1.0,
           ),
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Stack(
           children: [
-            AnimatedScale(
-              scale: _startAnimation ? 1.0 : 0.7,
-              duration: const Duration(milliseconds: 1000),
-              curve: Curves.easeOutBack,
-              child: AnimatedOpacity(
-                opacity: _startAnimation ? 1.0 : 0.0,
-                duration: const Duration(milliseconds: 800),
-                child: Shimmer.fromColors(
-                  baseColor: Colors.white,
-                  highlightColor: Colors.white.withAlpha(120),
-                  period: const Duration(seconds: 2),
-                  child: Image.asset(
-                    'assets/images/logo.png',
-                    height: 140,
-                    width: 131,
+            Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  AnimatedScale(
+                    scale: _startAnimation ? 1.0 : 0.7,
+                    duration: const Duration(milliseconds: 1000),
+                    curve: Curves.easeOutBack,
+                    child: AnimatedOpacity(
+                      opacity: _startAnimation ? 1.0 : 0.0,
+                      duration: const Duration(milliseconds: 800),
+                      child: Shimmer.fromColors(
+                        baseColor: Colors.white,
+                        highlightColor: Colors.white.withAlpha(120),
+                        period: const Duration(seconds: 2),
+                        child: Image.asset(
+                          'assets/images/logo.png',
+                          height: 140,
+                          width: 131,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 30),
+                  if (_startAnimation)
+                    SizedBox(
+                      height: 40,
+                      child: DefaultTextStyle(
+                        style: const TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: 3,
+                          shadows: [
+                            Shadow(
+                              blurRadius: 10,
+                              color: Colors.black26,
+                              offset: Offset(2, 2),
+                            ),
+                          ],
+                        ),
+                        child: AnimatedTextKit(
+                          animatedTexts: [
+                            TypewriterAnimatedText(
+                              'Pump Selector',
+                              speed: const Duration(milliseconds: 150),
+                              cursor: '',
+                            ),
+                          ],
+                          isRepeatingAnimation: false,
+                          onFinished: () {
+                            if (!_textAnimationCompleter.isCompleted) {
+                              _textAnimationCompleter.complete();
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
-            const SizedBox(height: 30),
-            if (_startAnimation)
-              SizedBox(
-                height: 40,
-                child: DefaultTextStyle(
-                  style: const TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    letterSpacing: 3,
-                    shadows: [
-                      Shadow(
-                        blurRadius: 10,
-                        color: Colors.black26,
-                        offset: Offset(2, 2),
-                      ),
-                    ],
-                  ),
-                  child: AnimatedTextKit(
-                    animatedTexts: [
-                      TypewriterAnimatedText(
-                        'Pump Selector',
-                        speed: const Duration(milliseconds: 150),
-                        cursor: '',
-                      ),
-                    ],
-                    isRepeatingAnimation: false,
-                    onFinished: () {
-                      if (!_textAnimationCompleter.isCompleted) {
-                        _textAnimationCompleter.complete();
-                      }
-                    },
-                  ),
-                ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 40,
+              child: Center(
+                child: Image.asset('assets/images/eeps.png', height: 40),
               ),
+            ),
           ],
         ),
       ),

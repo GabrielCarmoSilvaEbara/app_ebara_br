@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
-import '../theme/app_text_styles.dart';
 import '../../core/services/ebara_data_service.dart';
 import '../../core/localization/app_localizations.dart';
+import 'app_form_fields.dart';
 
 class FiltersBottomSheet extends StatefulWidget {
   final String categoryId;
@@ -214,36 +213,37 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final theme = Theme.of(context);
 
     return Container(
       padding: EdgeInsets.only(bottom: bottomInset),
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.90,
       ),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      decoration: BoxDecoration(
+        color: theme.scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _buildHeader(),
+          _buildHeader(theme),
           Flexible(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              child: _isLoading ? _buildSkeleton() : _buildContent(),
+              child: _isLoading ? _buildSkeleton(theme) : _buildContent(theme),
             ),
           ),
           if (!_isLoading)
             Container(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-              decoration: const BoxDecoration(
-                color: Colors.white,
+              decoration: BoxDecoration(
+                color: theme.scaffoldBackgroundColor,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black12,
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 4,
-                    offset: Offset(0, -2),
+                    offset: const Offset(0, -2),
                   ),
                 ],
               ),
@@ -251,7 +251,7 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
                 top: false,
                 child: Padding(
                   padding: const EdgeInsets.only(top: 16),
-                  child: _buildSearchButton(),
+                  child: _buildSearchButton(theme),
                 ),
               ),
             ),
@@ -260,17 +260,29 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildContent(ThemeData theme) {
     final l10n = AppLocalizations.of(context)!;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildDropdownField(
+        AppDropdown<String>(
           label: l10n.translate('applications'),
           hint: l10n.translate('pick_one'),
           value: _selectedApplication,
-          items: _applications,
+          items: _applications
+              .map(
+                (e) => DropdownMenuItem(
+                  value: e,
+                  child: Text(
+                    e,
+                    style: theme.textTheme.displayMedium?.copyWith(
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              )
+              .toList(),
           onChanged: (val) {
             if (val != null) {
               setState(() => _selectedApplication = val);
@@ -281,64 +293,97 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
         const SizedBox(height: 16),
 
         if (_isSolar && _systemTypes.isNotEmpty) ...[
-          _buildDynamicDropdownField(
+          AppDropdown<String>(
             label: l10n.translate('system_type'),
             hint: l10n.translate('pick_one'),
             value: _selectedSystemType,
-            items: _systemTypes,
-            labelBuilder: (item) =>
-                l10n.translate(item['label']?.toString() ?? ''),
+            items: _systemTypes
+                .map(
+                  (item) => DropdownMenuItem(
+                    value: item['value'].toString(),
+                    child: Text(
+                      l10n.translate(item['label']?.toString() ?? ''),
+                      style: theme.textTheme.displayMedium?.copyWith(
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                )
+                .toList(),
             onChanged: (val) => setState(() => _selectedSystemType = val),
           ),
           const SizedBox(height: 16),
         ],
 
-        _buildDropdownField(
+        AppDropdown<String>(
           label: l10n.translate('models'),
           hint: l10n.translate('pick_one'),
           value: _selectedModel,
-          items: _models,
+          items: _models
+              .map(
+                (e) => DropdownMenuItem(
+                  value: e,
+                  child: Text(
+                    e,
+                    style: theme.textTheme.displayMedium?.copyWith(
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              )
+              .toList(),
           onChanged: (val) => setState(() => _selectedModel = val),
         ),
         const SizedBox(height: 20),
 
         if (!_isSolar && !_isPressurizer) ...[
-          _buildFrequencySection(),
+          _buildFrequencySection(theme),
           const SizedBox(height: 20),
         ],
 
         if ((_isSolar || _isSubmersible) && _wellDiameters.isNotEmpty) ...[
-          _buildDropdownField(
+          AppDropdown<String>(
             label: l10n.translate('well_diameter'),
             hint: l10n.translate('pick_one'),
             value: _selectedWellDiameter,
-            items: _wellDiameters,
-            itemLabelBuilder: (val) => val == '0' ? l10n.translate('all') : val,
+            items: _wellDiameters
+                .map(
+                  (val) => DropdownMenuItem(
+                    value: val,
+                    child: Text(
+                      val == '0' ? l10n.translate('all') : val,
+                      style: theme.textTheme.displayMedium?.copyWith(
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                )
+                .toList(),
             onChanged: (val) => setState(() => _selectedWellDiameter = val),
           ),
           const SizedBox(height: 16),
         ],
 
-        _buildNumericField(
+        AppNumericDropdown(
           label: l10n.translate('flow'),
           controller: _flowController,
-          unit: _selectedFlowUnit,
-          units: _flowUnits,
+          unitValue: _selectedFlowUnit,
+          unitItems: _flowUnits,
           onUnitChanged: (val) => setState(() => _selectedFlowUnit = val!),
         ),
         const SizedBox(height: 16),
 
-        _buildNumericField(
+        AppNumericDropdown(
           label: l10n.translate('manometric_head'),
           controller: _headController,
-          unit: _selectedHeadUnit,
-          units: _headUnits,
+          unitValue: _selectedHeadUnit,
+          unitItems: _headUnits,
           onUnitChanged: (val) => setState(() => _selectedHeadUnit = val!),
         ),
         const SizedBox(height: 16),
 
         if (_isSolar) ...[
-          _buildSimpleNumericField(
+          AppTextField(
             label: l10n.translate('cable_length'),
             controller: _cableLengthController,
           ),
@@ -346,24 +391,34 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
         ],
 
         if (_isPressurizer) ...[
-          _buildDropdownField(
+          AppDropdown<String>(
             label: l10n.translate('activation_type'),
             hint: l10n.translate('pick_one'),
             value: _activationType,
-            items: _activationOptions,
-            itemLabelBuilder: (val) {
-              final key = val == 'pressostato'
-                  ? 'pressure_switch'
-                  : 'frequency_inverter';
-              return l10n.translate(key);
-            },
+            items: _activationOptions
+                .map(
+                  (val) => DropdownMenuItem(
+                    value: val,
+                    child: Text(
+                      l10n.translate(
+                        val == 'pressostato'
+                            ? 'pressure_switch'
+                            : 'frequency_inverter',
+                      ),
+                      style: theme.textTheme.displayMedium?.copyWith(
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                )
+                .toList(),
             onChanged: (val) =>
                 setState(() => _activationType = val ?? 'pressostato'),
           ),
           const SizedBox(height: 24),
 
           if (_activationType == 'inversor') ...[
-            _buildSimpleNumericField(
+            AppTextField(
               label: l10n.translate('pumps_quantity'),
               controller: _bombsQuantityController,
               isInteger: true,
@@ -377,7 +432,14 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
     );
   }
 
-  Widget _buildSkeleton() {
+  Widget _buildSkeleton(ThemeData theme) {
+    final baseColor = theme.brightness == Brightness.dark
+        ? Colors.grey.shade800
+        : Colors.grey.shade200;
+    final containerColor = theme.brightness == Brightness.dark
+        ? Colors.grey.shade700
+        : Colors.grey.shade100;
+
     return Column(
       children: List.generate(
         4,
@@ -386,13 +448,13 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(width: 100, height: 14, color: Colors.grey[200]),
+              Container(width: 100, height: 14, color: baseColor),
               const SizedBox(height: 10),
               Container(
                 width: double.infinity,
                 height: 50,
                 decoration: BoxDecoration(
-                  color: Colors.grey[100],
+                  color: containerColor,
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
@@ -403,11 +465,11 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(ThemeData theme) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+        border: Border(bottom: BorderSide(color: theme.dividerColor)),
       ),
       child: Column(
         children: [
@@ -422,112 +484,20 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
           const SizedBox(height: 12),
           Text(
             AppLocalizations.of(context)!.translate('filters'),
-            style: AppTextStyles.text,
+            style: theme.textTheme.displayLarge?.copyWith(fontSize: 20),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildDropdownField({
-    required String label,
-    required String hint,
-    required String? value,
-    required List<String> items,
-    required ValueChanged<String?> onChanged,
-    String Function(String)? itemLabelBuilder,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: AppTextStyles.text1.copyWith(fontSize: 14)),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            border: Border.all(color: AppColors.primary, width: 2),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              isExpanded: true,
-              value: items.contains(value) ? value : null,
-              hint: Text(hint, style: AppTextStyles.text4),
-              icon: const Icon(Icons.unfold_more, color: AppColors.primary),
-              items: items
-                  .map(
-                    (item) => DropdownMenuItem(
-                      value: item,
-                      child: Text(
-                        itemLabelBuilder != null
-                            ? itemLabelBuilder(item)
-                            : item,
-                        style: AppTextStyles.text1,
-                      ),
-                    ),
-                  )
-                  .toList(),
-              onChanged: onChanged,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDynamicDropdownField({
-    required String label,
-    required String hint,
-    required String? value,
-    required List<Map<String, dynamic>> items,
-    required ValueChanged<String?> onChanged,
-    required String Function(Map<String, dynamic>) labelBuilder,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: AppTextStyles.text1.copyWith(fontSize: 14)),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            border: Border.all(color: AppColors.primary, width: 2),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              isExpanded: true,
-              value: items.any((i) => i['value'].toString() == value)
-                  ? value
-                  : null,
-              hint: Text(hint, style: AppTextStyles.text4),
-              icon: const Icon(Icons.unfold_more, color: AppColors.primary),
-              items: items
-                  .map(
-                    (item) => DropdownMenuItem(
-                      value: item['value'].toString(),
-                      child: Text(
-                        labelBuilder(item),
-                        style: AppTextStyles.text1,
-                      ),
-                    ),
-                  )
-                  .toList(),
-              onChanged: onChanged,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFrequencySection() {
+  Widget _buildFrequencySection(ThemeData theme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           AppLocalizations.of(context)!.translate('frequency'),
-          style: AppTextStyles.text1.copyWith(fontSize: 14),
+          style: theme.textTheme.displayMedium?.copyWith(fontSize: 14),
         ),
         const SizedBox(height: 12),
         SingleChildScrollView(
@@ -537,7 +507,7 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
                 .map(
                   (f) => Padding(
                     padding: const EdgeInsets.only(right: 12),
-                    child: _buildFrequencyButton(f),
+                    child: _buildFrequencyButton(f, theme),
                   ),
                 )
                 .toList(),
@@ -547,21 +517,21 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
     );
   }
 
-  Widget _buildFrequencyButton(String freq) {
+  Widget _buildFrequencyButton(String freq, ThemeData theme) {
     final isSel = _selectedFrequency == freq;
     return InkWell(
       onTap: () => setState(() => _selectedFrequency = freq),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
         decoration: BoxDecoration(
-          color: isSel ? AppColors.primary : Colors.white,
+          color: isSel ? AppColors.primary : theme.cardColor,
           border: Border.all(color: AppColors.primary, width: 2),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Center(
           child: Text(
             "${freq}Hz",
-            style: AppTextStyles.text1.copyWith(
+            style: theme.textTheme.displayMedium?.copyWith(
               color: isSel ? Colors.white : AppColors.primary,
               fontSize: 14,
             ),
@@ -571,113 +541,7 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
     );
   }
 
-  Widget _buildNumericField({
-    required String label,
-    required TextEditingController controller,
-    required String unit,
-    required List<Map<String, dynamic>> units,
-    required ValueChanged<String?> onUnitChanged,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: AppTextStyles.text1.copyWith(fontSize: 14)),
-        const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: AppColors.primary, width: 2),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: controller,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  textInputAction: TextInputAction.next,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'^\d*,?\d*')),
-                  ],
-                  style: AppTextStyles.text1.copyWith(fontSize: 14),
-                  decoration: const InputDecoration(
-                    contentPadding: EdgeInsets.symmetric(horizontal: 16),
-                    border: InputBorder.none,
-                    hintText: '0,0',
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  border: Border(
-                    left: BorderSide(color: AppColors.primary, width: 2),
-                  ),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: unit,
-                    isDense: true,
-                    items: units
-                        .map(
-                          (u) => DropdownMenuItem(
-                            value: u['value'].toString(),
-                            child: Text(
-                              u['title'].toString(),
-                              style: AppTextStyles.text1.copyWith(fontSize: 14),
-                            ),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: onUnitChanged,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSimpleNumericField({
-    required String label,
-    required TextEditingController controller,
-    bool isInteger = false,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: AppTextStyles.text1.copyWith(fontSize: 14)),
-        const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: AppColors.primary, width: 2),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: TextField(
-            controller: controller,
-            keyboardType: TextInputType.numberWithOptions(decimal: !isInteger),
-            textInputAction: TextInputAction.done,
-            inputFormatters: [
-              isInteger
-                  ? FilteringTextInputFormatter.digitsOnly
-                  : FilteringTextInputFormatter.allow(RegExp(r'^\d*,?\d*')),
-            ],
-            style: AppTextStyles.text1.copyWith(fontSize: 14),
-            decoration: const InputDecoration(
-              contentPadding: EdgeInsets.symmetric(horizontal: 16),
-              border: InputBorder.none,
-              hintText: '0,0',
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSearchButton() {
+  Widget _buildSearchButton(ThemeData theme) {
     return SizedBox(
       width: double.infinity,
       height: 50,
@@ -725,7 +589,7 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
-              disabledBackgroundColor: Colors.grey[300],
+              disabledBackgroundColor: theme.disabledColor,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -733,7 +597,10 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
             ),
             child: Text(
               AppLocalizations.of(context)!.translate('search'),
-              style: AppTextStyles.text2.copyWith(fontSize: 16),
+              style: theme.textTheme.labelLarge?.copyWith(
+                fontSize: 16,
+                color: _isFormValid ? Colors.white : null,
+              ),
             ),
           );
         },

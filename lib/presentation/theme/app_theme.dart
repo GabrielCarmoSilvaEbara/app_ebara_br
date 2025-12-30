@@ -10,7 +10,9 @@ class AppTheme {
       brightness: Brightness.light,
       primaryColor: AppColors.primary,
       scaffoldBackgroundColor: AppColors.backgroundSecondary,
-      colorScheme: ColorScheme(
+      dividerColor: Colors.grey.shade200,
+      cardColor: AppColors.backgroundCard,
+      colorScheme: const ColorScheme(
         brightness: Brightness.light,
         primary: AppColors.primary,
         onPrimary: AppColors.textSecondaryDecoration,
@@ -23,11 +25,21 @@ class AppTheme {
         surfaceContainer: AppColors.background,
       ),
       textTheme: TextTheme(
-        displayLarge: AppTextStyles.text,
-        displayMedium: AppTextStyles.text1,
-        labelLarge: AppTextStyles.text2,
-        labelMedium: AppTextStyles.text3,
-        labelSmall: AppTextStyles.text4,
+        displayLarge: AppTextStyles.displayLarge.copyWith(
+          color: AppColors.textPrimary,
+        ),
+        displayMedium: AppTextStyles.displayMedium.copyWith(
+          color: AppColors.textPrimary,
+        ),
+        labelLarge: AppTextStyles.labelLarge.copyWith(
+          color: AppColors.textSecondaryDecoration,
+        ),
+        labelMedium: AppTextStyles.labelMedium.copyWith(
+          color: AppColors.textSecondary,
+        ),
+        labelSmall: AppTextStyles.labelSmall.copyWith(
+          color: AppColors.textDecoration,
+        ),
       ),
     );
   }
@@ -40,24 +52,27 @@ class AppTheme {
       primaryColor: AppColors.primary,
       scaffoldBackgroundColor: const Color(0xFF121212),
       cardColor: const Color(0xFF1E1E1E),
-      colorScheme: ColorScheme(
+      dividerColor: Colors.grey.shade800,
+      colorScheme: const ColorScheme(
         brightness: Brightness.dark,
         primary: AppColors.primary,
         onPrimary: Colors.white,
-        secondary: const Color(0xFF1E1E1E),
+        secondary: Color(0xFF1E1E1E),
         onSecondary: Colors.white,
         error: Colors.redAccent,
         onError: Colors.black,
-        surface: const Color(0xFF1E1E1E),
+        surface: Color(0xFF1E1E1E),
         onSurface: Colors.white,
-        surfaceContainer: const Color(0xFF2C2C2C),
+        surfaceContainer: Color(0xFF2C2C2C),
       ),
       textTheme: TextTheme(
-        displayLarge: AppTextStyles.text.copyWith(color: Colors.white),
-        displayMedium: AppTextStyles.text1.copyWith(color: Colors.white),
-        labelLarge: AppTextStyles.text2.copyWith(color: Colors.white70),
-        labelMedium: AppTextStyles.text3.copyWith(color: Colors.white70),
-        labelSmall: AppTextStyles.text4.copyWith(color: Colors.white60),
+        displayLarge: AppTextStyles.displayLarge.copyWith(color: Colors.white),
+        displayMedium: AppTextStyles.displayMedium.copyWith(
+          color: Colors.white,
+        ),
+        labelLarge: AppTextStyles.labelLarge.copyWith(color: Colors.white70),
+        labelMedium: AppTextStyles.labelMedium.copyWith(color: Colors.white70),
+        labelSmall: AppTextStyles.labelSmall.copyWith(color: Colors.white60),
       ),
       iconTheme: const IconThemeData(color: Colors.white),
       appBarTheme: const AppBarTheme(
