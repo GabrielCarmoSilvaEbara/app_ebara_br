@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../core/extensions/context_extensions.dart';
 import '../theme/app_colors.dart';
 import '../../core/services/ebara_data_service.dart';
-import '../../core/localization/app_localizations.dart';
 import 'app_form_fields.dart';
 
 class FiltersBottomSheet extends StatefulWidget {
@@ -55,7 +56,9 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
   @override
   void initState() {
     super.initState();
-    _loadFiltersData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadFiltersData();
+    });
   }
 
   bool get _isFormValid {
@@ -80,26 +83,32 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
   }
 
   Future<void> _loadFiltersData() async {
-    if (!mounted) return;
-    setState(() => _isLoading = true);
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _isLoading = true;
+    });
+
+    final dataService = context.read<EbaraDataService>();
 
     try {
       final baseFutures = [
-        EbaraDataService.getApplicationsByCategory(widget.categoryId),
-        EbaraDataService.getFrequencies(),
-        EbaraDataService.getFlowRates(),
-        EbaraDataService.getHeightGauges(),
+        dataService.getApplicationsByCategory(widget.categoryId),
+        dataService.getFrequencies(),
+        dataService.getFlowRates(),
+        dataService.getHeightGauges(),
       ];
 
       Future<List<Map<String, dynamic>>>? systemTypesFuture;
       Future<List<String>>? wellDiametersFuture;
 
       if (_isSolar) {
-        systemTypesFuture = EbaraDataService.getSystemTypes();
+        systemTypesFuture = dataService.getSystemTypes();
       }
 
       if (_isSolar || _isSubmersible) {
-        wellDiametersFuture = EbaraDataService.getWellDiameters();
+        wellDiametersFuture = dataService.getWellDiameters();
       }
 
       final results = await Future.wait(baseFutures);
@@ -181,13 +190,20 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
         });
       }
     } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
   Future<void> _fetchModels(String application) async {
-    setState(() => _selectedModel = null);
-    final data = await EbaraDataService.getLines(
+    setState(() {
+      _selectedModel = null;
+    });
+    final dataService = context.read<EbaraDataService>();
+    final data = await dataService.getLines(
       widget.categoryId,
       application: application,
     );
@@ -212,33 +228,30 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-    final theme = Theme.of(context);
+    final bottomInset = context.mediaQuery.viewInsets.bottom;
 
     return Container(
       padding: EdgeInsets.only(bottom: bottomInset),
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.90,
-      ),
+      constraints: BoxConstraints(maxHeight: context.height * 0.90),
       decoration: BoxDecoration(
-        color: theme.scaffoldBackgroundColor,
+        color: context.theme.scaffoldBackgroundColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _buildHeader(theme),
+          _buildHeader(),
           Flexible(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              child: _isLoading ? _buildSkeleton(theme) : _buildContent(theme),
+              child: _isLoading ? _buildSkeleton() : _buildContent(),
             ),
           ),
           if (!_isLoading)
             Container(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
               decoration: BoxDecoration(
-                color: theme.scaffoldBackgroundColor,
+                color: context.theme.scaffoldBackgroundColor,
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.1),
@@ -251,7 +264,7 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
                 top: false,
                 child: Padding(
                   padding: const EdgeInsets.only(top: 16),
-                  child: _buildSearchButton(theme),
+                  child: _buildSearchButton(),
                 ),
               ),
             ),
@@ -260,179 +273,179 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
     );
   }
 
-  Widget _buildContent(ThemeData theme) {
-    final l10n = AppLocalizations.of(context)!;
-
+  Widget _buildContent() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         AppDropdown<String>(
-          label: l10n.translate('applications'),
-          hint: l10n.translate('pick_one'),
+          label: context.l10n.translate('applications'),
+          hint: context.l10n.translate('pick_one'),
           value: _selectedApplication,
-          items: _applications
-              .map(
-                (e) => DropdownMenuItem(
-                  value: e,
-                  child: Text(
-                    e,
-                    style: theme.textTheme.displayMedium?.copyWith(
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-              )
-              .toList(),
+          items: _applications.map((e) {
+            return DropdownMenuItem(
+              value: e,
+              child: Text(
+                e,
+                style: context.textTheme.displayMedium?.copyWith(fontSize: 14),
+              ),
+            );
+          }).toList(),
           onChanged: (val) {
             if (val != null) {
-              setState(() => _selectedApplication = val);
+              setState(() {
+                _selectedApplication = val;
+              });
               _fetchModels(val);
             }
           },
         ),
         const SizedBox(height: 16),
-
         if (_isSolar && _systemTypes.isNotEmpty) ...[
           AppDropdown<String>(
-            label: l10n.translate('system_type'),
-            hint: l10n.translate('pick_one'),
+            label: context.l10n.translate('system_type'),
+            hint: context.l10n.translate('pick_one'),
             value: _selectedSystemType,
-            items: _systemTypes
-                .map(
-                  (item) => DropdownMenuItem(
-                    value: item['value'].toString(),
-                    child: Text(
-                      l10n.translate(item['label']?.toString() ?? ''),
-                      style: theme.textTheme.displayMedium?.copyWith(
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                )
-                .toList(),
-            onChanged: (val) => setState(() => _selectedSystemType = val),
-          ),
-          const SizedBox(height: 16),
-        ],
-
-        AppDropdown<String>(
-          label: l10n.translate('models'),
-          hint: l10n.translate('pick_one'),
-          value: _selectedModel,
-          items: _models
-              .map(
-                (e) => DropdownMenuItem(
-                  value: e,
-                  child: Text(
-                    e,
-                    style: theme.textTheme.displayMedium?.copyWith(
-                      fontSize: 14,
-                    ),
+            items: _systemTypes.map((item) {
+              return DropdownMenuItem(
+                value: item['value'].toString(),
+                child: Text(
+                  context.l10n.translate(item['label']?.toString() ?? ''),
+                  style: context.textTheme.displayMedium?.copyWith(
+                    fontSize: 14,
                   ),
                 ),
-              )
-              .toList(),
-          onChanged: (val) => setState(() => _selectedModel = val),
-        ),
-        const SizedBox(height: 20),
-
-        if (!_isSolar && !_isPressurizer) ...[
-          _buildFrequencySection(theme),
-          const SizedBox(height: 20),
-        ],
-
-        if ((_isSolar || _isSubmersible) && _wellDiameters.isNotEmpty) ...[
-          AppDropdown<String>(
-            label: l10n.translate('well_diameter'),
-            hint: l10n.translate('pick_one'),
-            value: _selectedWellDiameter,
-            items: _wellDiameters
-                .map(
-                  (val) => DropdownMenuItem(
-                    value: val,
-                    child: Text(
-                      val == '0' ? l10n.translate('all') : val,
-                      style: theme.textTheme.displayMedium?.copyWith(
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                )
-                .toList(),
-            onChanged: (val) => setState(() => _selectedWellDiameter = val),
+              );
+            }).toList(),
+            onChanged: (val) {
+              setState(() {
+                _selectedSystemType = val;
+              });
+            },
           ),
           const SizedBox(height: 16),
         ],
-
+        AppDropdown<String>(
+          label: context.l10n.translate('models'),
+          hint: context.l10n.translate('pick_one'),
+          value: _selectedModel,
+          items: _models.map((e) {
+            return DropdownMenuItem(
+              value: e,
+              child: Text(
+                e,
+                style: context.textTheme.displayMedium?.copyWith(fontSize: 14),
+              ),
+            );
+          }).toList(),
+          onChanged: (val) {
+            setState(() {
+              _selectedModel = val;
+            });
+          },
+        ),
+        const SizedBox(height: 20),
+        if (!_isSolar && !_isPressurizer) ...[
+          _buildFrequencySection(),
+          const SizedBox(height: 20),
+        ],
+        if ((_isSolar || _isSubmersible) && _wellDiameters.isNotEmpty) ...[
+          AppDropdown<String>(
+            label: context.l10n.translate('well_diameter'),
+            hint: context.l10n.translate('pick_one'),
+            value: _selectedWellDiameter,
+            items: _wellDiameters.map((val) {
+              return DropdownMenuItem(
+                value: val,
+                child: Text(
+                  val == '0' ? context.l10n.translate('all') : val,
+                  style: context.textTheme.displayMedium?.copyWith(
+                    fontSize: 14,
+                  ),
+                ),
+              );
+            }).toList(),
+            onChanged: (val) {
+              setState(() {
+                _selectedWellDiameter = val;
+              });
+            },
+          ),
+          const SizedBox(height: 16),
+        ],
         AppNumericDropdown(
-          label: l10n.translate('flow'),
+          label: context.l10n.translate('flow'),
           controller: _flowController,
           unitValue: _selectedFlowUnit,
           unitItems: _flowUnits,
-          onUnitChanged: (val) => setState(() => _selectedFlowUnit = val!),
+          onUnitChanged: (val) {
+            setState(() {
+              _selectedFlowUnit = val!;
+            });
+          },
         ),
         const SizedBox(height: 16),
-
         AppNumericDropdown(
-          label: l10n.translate('manometric_head'),
+          label: context.l10n.translate('manometric_head'),
           controller: _headController,
           unitValue: _selectedHeadUnit,
           unitItems: _headUnits,
-          onUnitChanged: (val) => setState(() => _selectedHeadUnit = val!),
+          onUnitChanged: (val) {
+            setState(() {
+              _selectedHeadUnit = val!;
+            });
+          },
         ),
         const SizedBox(height: 16),
-
         if (_isSolar) ...[
           AppTextField(
-            label: l10n.translate('cable_length'),
+            label: context.l10n.translate('cable_length'),
             controller: _cableLengthController,
           ),
           const SizedBox(height: 24),
         ],
-
         if (_isPressurizer) ...[
           AppDropdown<String>(
-            label: l10n.translate('activation_type'),
-            hint: l10n.translate('pick_one'),
+            label: context.l10n.translate('activation_type'),
+            hint: context.l10n.translate('pick_one'),
             value: _activationType,
-            items: _activationOptions
-                .map(
-                  (val) => DropdownMenuItem(
-                    value: val,
-                    child: Text(
-                      l10n.translate(
-                        val == 'pressostato'
-                            ? 'pressure_switch'
-                            : 'frequency_inverter',
-                      ),
-                      style: theme.textTheme.displayMedium?.copyWith(
-                        fontSize: 14,
-                      ),
-                    ),
+            items: _activationOptions.map((val) {
+              return DropdownMenuItem(
+                value: val,
+                child: Text(
+                  context.l10n.translate(
+                    val == 'pressostato'
+                        ? 'pressure_switch'
+                        : 'frequency_inverter',
                   ),
-                )
-                .toList(),
-            onChanged: (val) =>
-                setState(() => _activationType = val ?? 'pressostato'),
+                  style: context.textTheme.displayMedium?.copyWith(
+                    fontSize: 14,
+                  ),
+                ),
+              );
+            }).toList(),
+            onChanged: (val) {
+              setState(() {
+                _activationType = val ?? 'pressostato';
+              });
+            },
           ),
           const SizedBox(height: 24),
-
           if (_activationType == 'inversor') ...[
             AppTextField(
-              label: l10n.translate('pumps_quantity'),
+              label: context.l10n.translate('pumps_quantity'),
               controller: _bombsQuantityController,
               isInteger: true,
             ),
             const SizedBox(height: 24),
           ],
         ],
-
         const SizedBox(height: 10),
       ],
     );
   }
 
-  Widget _buildSkeleton(ThemeData theme) {
+  Widget _buildSkeleton() {
+    final theme = context.theme;
     final baseColor = theme.brightness == Brightness.dark
         ? Colors.grey.shade800
         : Colors.grey.shade200;
@@ -465,11 +478,11 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
     );
   }
 
-  Widget _buildHeader(ThemeData theme) {
+  Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: theme.dividerColor)),
+        border: Border(bottom: BorderSide(color: context.theme.dividerColor)),
       ),
       child: Column(
         children: [
@@ -483,55 +496,57 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
           ),
           const SizedBox(height: 12),
           Text(
-            AppLocalizations.of(context)!.translate('filters'),
-            style: theme.textTheme.displayLarge?.copyWith(fontSize: 20),
+            context.l10n.translate('filters'),
+            style: context.textTheme.displayLarge?.copyWith(fontSize: 20),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildFrequencySection(ThemeData theme) {
+  Widget _buildFrequencySection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          AppLocalizations.of(context)!.translate('frequency'),
-          style: theme.textTheme.displayMedium?.copyWith(fontSize: 14),
+          context.l10n.translate('frequency'),
+          style: context.textTheme.displayMedium?.copyWith(fontSize: 14),
         ),
         const SizedBox(height: 12),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
-            children: _frequencies
-                .map(
-                  (f) => Padding(
-                    padding: const EdgeInsets.only(right: 12),
-                    child: _buildFrequencyButton(f, theme),
-                  ),
-                )
-                .toList(),
+            children: _frequencies.map((f) {
+              return Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: _buildFrequencyButton(f),
+              );
+            }).toList(),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildFrequencyButton(String freq, ThemeData theme) {
+  Widget _buildFrequencyButton(String freq) {
     final isSel = _selectedFrequency == freq;
     return InkWell(
-      onTap: () => setState(() => _selectedFrequency = freq),
+      onTap: () {
+        setState(() {
+          _selectedFrequency = freq;
+        });
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
         decoration: BoxDecoration(
-          color: isSel ? AppColors.primary : theme.cardColor,
+          color: isSel ? AppColors.primary : context.theme.cardColor,
           border: Border.all(color: AppColors.primary, width: 2),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Center(
           child: Text(
             "${freq}Hz",
-            style: theme.textTheme.displayMedium?.copyWith(
+            style: context.textTheme.displayMedium?.copyWith(
               color: isSel ? Colors.white : AppColors.primary,
               fontSize: 14,
             ),
@@ -541,7 +556,7 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
     );
   }
 
-  Widget _buildSearchButton(ThemeData theme) {
+  Widget _buildSearchButton() {
     return SizedBox(
       width: double.infinity,
       height: 50,
@@ -583,21 +598,21 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
                       result['well_diameter'] = _selectedWellDiameter;
                     }
 
-                    Navigator.pop(context, result);
+                    Navigator.of(context).pop(result);
                   }
                 : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
-              disabledBackgroundColor: theme.disabledColor,
+              disabledBackgroundColor: context.theme.disabledColor,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
               elevation: 0,
             ),
             child: Text(
-              AppLocalizations.of(context)!.translate('search'),
-              style: theme.textTheme.labelLarge?.copyWith(
+              context.l10n.translate('search'),
+              style: context.textTheme.labelLarge?.copyWith(
                 fontSize: 16,
                 color: _isFormValid ? Colors.white : null,
               ),

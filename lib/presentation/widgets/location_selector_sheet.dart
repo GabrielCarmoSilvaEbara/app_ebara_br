@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../core/extensions/context_extensions.dart';
 import '../theme/app_colors.dart';
 import '../../core/services/location_service.dart';
-import '../../core/localization/app_localizations.dart';
 
 class LocationSelectorSheet extends StatefulWidget {
   final Function(String city, String state, String country) onSelected;
@@ -47,10 +47,9 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
 
   Future<void> _search() async {
     final query = _controller.text.trim();
-    final l10n = AppLocalizations.of(context)!;
 
     if (query.length < _minQueryLength) {
-      setState(() => _error = l10n.translate('error_min_letters'));
+      setState(() => _error = context.l10n.translate('error_min_letters'));
       return;
     }
 
@@ -62,13 +61,15 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
     });
 
     try {
-      final result = await LocationService.searchCities(query: query);
+      final result = await LocationService().searchCities(query: query);
       if (mounted) {
         setState(() => _cities = result);
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _error = l10n.translate('error_fetching_cities'));
+        setState(
+          () => _error = context.l10n.translate('error_fetching_cities'),
+        );
       }
     } finally {
       if (mounted) {
@@ -81,7 +82,7 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
     FocusManager.instance.primaryFocus?.unfocus();
     _addToRecent(city);
     widget.onSelected(city['city']!, city['state']!, city['country']!);
-    Navigator.of(context).pop();
+    context.pop();
   }
 
   void _addToRecent(Map<String, String> city) {
@@ -97,14 +98,12 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final mediaQuery = MediaQuery.of(context);
-    final keyboardHeight = mediaQuery.viewInsets.bottom;
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final keyboardHeight = context.mediaQuery.viewInsets.bottom;
+    final isDark = context.theme.brightness == Brightness.dark;
 
     return Container(
       decoration: BoxDecoration(
-        color: theme.scaffoldBackgroundColor,
+        color: context.theme.scaffoldBackgroundColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         boxShadow: [
           BoxShadow(
@@ -118,7 +117,7 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
         mainAxisSize: MainAxisSize.min,
         children: [
           _buildHandle(),
-          _buildHeader(theme),
+          _buildHeader(),
           Flexible(
             child: SingleChildScrollView(
               controller: _scrollController,
@@ -126,7 +125,7 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _buildSearchField(theme, isDark),
+                  _buildSearchField(isDark),
                   if (_error != null) _buildError(),
                   const SizedBox(height: 16),
                   AnimatedSwitcher(
@@ -144,7 +143,7 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
                             ),
                           );
                         },
-                    child: _buildContent(theme, isDark),
+                    child: _buildContent(isDark),
                   ),
                   const SizedBox(height: 20),
                 ],
@@ -173,11 +172,11 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
     );
   }
 
-  Widget _buildHeader(ThemeData theme) {
+  Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: theme.dividerColor)),
+        border: Border(bottom: BorderSide(color: context.theme.dividerColor)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -185,15 +184,15 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
           const Icon(Icons.location_on, color: AppColors.primary, size: 24),
           const SizedBox(width: 12),
           Text(
-            AppLocalizations.of(context)!.translate('select_location'),
-            style: theme.textTheme.displayLarge?.copyWith(fontSize: 18),
+            context.l10n.translate('select_location'),
+            style: context.textTheme.displayLarge?.copyWith(fontSize: 18),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSearchField(ThemeData theme, bool isDark) {
+  Widget _buildSearchField(bool isDark) {
     return TextField(
       controller: _controller,
       focusNode: _focusNode,
@@ -204,10 +203,10 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
           setState(() => _error = null);
         }
       },
-      style: theme.textTheme.displayMedium?.copyWith(fontSize: 16),
+      style: context.textTheme.displayMedium?.copyWith(fontSize: 16),
       decoration: InputDecoration(
-        hintText: AppLocalizations.of(context)!.translate('enter_city_name'),
-        hintStyle: theme.textTheme.labelMedium?.copyWith(color: Colors.grey),
+        hintText: context.l10n.translate('enter_city_name'),
+        hintStyle: context.textTheme.labelMedium?.copyWith(color: Colors.grey),
         prefixIcon: const Icon(Icons.search, color: AppColors.primary),
         suffixIcon: _controller.text.isNotEmpty
             ? IconButton(
@@ -222,7 +221,7 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
               )
             : null,
         filled: true,
-        fillColor: isDark ? theme.cardColor : Colors.grey.shade50,
+        fillColor: isDark ? context.theme.cardColor : Colors.grey.shade50,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 14,
@@ -305,7 +304,7 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
                   const Icon(Icons.search, size: 22),
                   const SizedBox(width: 10),
                   Text(
-                    AppLocalizations.of(context)!.translate('search_button'),
+                    context.l10n.translate('search_button'),
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -318,44 +317,44 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
     );
   }
 
-  Widget _buildContent(ThemeData theme, bool isDark) {
+  Widget _buildContent(bool isDark) {
     if (_cities.isNotEmpty) {
       return Container(
         key: const ValueKey('cityList'),
-        child: _buildCityList(theme, isDark),
+        child: _buildCityList(isDark),
       );
     }
 
     if (_recent.isNotEmpty && !_loading) {
       return Container(
         key: const ValueKey('recentList'),
-        child: _buildRecent(theme, isDark),
+        child: _buildRecent(isDark),
       );
     }
 
     return const SizedBox.shrink(key: ValueKey('empty'));
   }
 
-  Widget _buildCityList(ThemeData theme, bool isDark) {
+  Widget _buildCityList(bool isDark) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: Text(
-            AppLocalizations.of(context)!.translate('results'),
-            style: theme.textTheme.displayMedium?.copyWith(
+            context.l10n.translate('results'),
+            style: context.textTheme.displayMedium?.copyWith(
               fontSize: 15,
               color: isDark ? Colors.white70 : Colors.grey.shade700,
             ),
           ),
         ),
-        ..._cities.map((city) => _buildCityTile(city, theme, isDark)),
+        ..._cities.map((city) => _buildCityTile(city, isDark)),
       ],
     );
   }
 
-  Widget _buildRecent(ThemeData theme, bool isDark) {
+  Widget _buildRecent(bool isDark) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -370,8 +369,8 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
               ),
               const SizedBox(width: 8),
               Text(
-                AppLocalizations.of(context)!.translate('recent'),
-                style: theme.textTheme.displayMedium?.copyWith(
+                context.l10n.translate('recent'),
+                style: context.textTheme.displayMedium?.copyWith(
                   fontSize: 15,
                   color: isDark ? Colors.white70 : Colors.grey.shade700,
                 ),
@@ -379,16 +378,13 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
             ],
           ),
         ),
-        ..._recent.map(
-          (city) => _buildCityTile(city, theme, isDark, isRecent: true),
-        ),
+        ..._recent.map((city) => _buildCityTile(city, isDark, isRecent: true)),
       ],
     );
   }
 
   Widget _buildCityTile(
     Map<String, String> city,
-    ThemeData theme,
     bool isDark, {
     bool isRecent = false,
   }) {
@@ -401,7 +397,7 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
           margin: const EdgeInsets.only(bottom: 8),
           decoration: BoxDecoration(
-            color: isDark ? theme.cardColor : Colors.grey.shade50,
+            color: isDark ? context.theme.cardColor : Colors.grey.shade50,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
@@ -432,7 +428,7 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
                   children: [
                     Text(
                       city['city']!,
-                      style: theme.textTheme.displayMedium?.copyWith(
+                      style: context.textTheme.displayMedium?.copyWith(
                         fontSize: 15,
                       ),
                     ),
@@ -440,7 +436,7 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
                       const SizedBox(height: 2),
                       Text(
                         _buildCitySubtitle(city),
-                        style: theme.textTheme.labelMedium?.copyWith(
+                        style: context.textTheme.labelMedium?.copyWith(
                           fontSize: 13,
                           color: isDark ? Colors.white60 : Colors.grey.shade600,
                         ),
@@ -463,8 +459,12 @@ class LocationSelectorSheetState extends State<LocationSelectorSheet> {
 
   String _buildCitySubtitle(Map<String, String> city) {
     final parts = <String>[];
-    if (city['state']!.isNotEmpty) parts.add(city['state']!);
-    if (city['country']!.isNotEmpty) parts.add(city['country']!);
+    if (city['state']!.isNotEmpty) {
+      parts.add(city['state']!);
+    }
+    if (city['country']!.isNotEmpty) {
+      parts.add(city['country']!);
+    }
     return parts.join(', ');
   }
 }

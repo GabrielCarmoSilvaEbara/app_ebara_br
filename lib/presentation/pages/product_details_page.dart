@@ -10,10 +10,10 @@ import '../../core/utils/file_type_util.dart';
 import '../theme/app_colors.dart';
 import '../widgets/files_skeleton.dart';
 import '../../core/providers/location_provider.dart';
-import '../../core/localization/app_localizations.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/providers/history_provider.dart';
 import '../../core/services/analytics_service.dart';
+import '../../core/extensions/context_extensions.dart';
 import '../widgets/auth_modal_sheet.dart';
 import '../widgets/image_viewer.dart';
 
@@ -66,7 +66,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   }
 
   void _changeVariant(int index, ProductDetailsProvider provider) {
-    if (index < 0 || index >= widget.variants.length) return;
+    if (index < 0 || index >= widget.variants.length) {
+      return;
+    }
     HapticFeedback.lightImpact();
     provider.updateIndex(index);
     _pageController.animateToPage(
@@ -77,12 +79,11 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   }
 
   void _shareProduct(Map<String, dynamic> variant) {
-    final l10n = AppLocalizations.of(context)!;
     final String name = variant['name'] ?? '';
     final String model = variant['model'] ?? '';
     final String link = variant['ecommerce_link'] ?? 'https://ebara.com.br';
 
-    final text = l10n.translate(
+    final text = context.l10n.translate(
       'share_text',
       params: {'name': name, 'model': model},
     );
@@ -93,10 +94,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<ProductDetailsProvider>();
-    final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      backgroundColor: context.theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
@@ -132,23 +132,20 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   }
 
   Widget _buildHeader(ProductDetailsProvider provider) {
-    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       child: Row(
         children: [
           IconButton.filled(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => context.pop(),
             icon: const Icon(Icons.arrow_back_ios_new, size: 18),
             style: IconButton.styleFrom(backgroundColor: AppColors.primary),
           ),
           Expanded(
             child: Text(
-              AppLocalizations.of(
-                context,
-              )!.translate(widget.category).toUpperCase(),
+              context.l10n.translate(widget.category).toUpperCase(),
               textAlign: TextAlign.center,
-              style: theme.textTheme.displayMedium?.copyWith(
+              style: context.textTheme.displayMedium?.copyWith(
                 color: AppColors.primary,
                 letterSpacing: 1.2,
                 fontSize: 13,
@@ -165,7 +162,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   }
 
   Future<void> _launchEcommerce(String? url) async {
-    if (url == null || url.isEmpty) return;
+    if (url == null || url.isEmpty) {
+      return;
+    }
     final Uri uri = Uri.parse(url);
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
@@ -181,131 +180,138 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     final String imageUrl = variant['image'] ?? '';
     final String heroTag = variant['id'] ?? 'product_hero';
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Stack(
-        children: [
-          _ProductImage(
-            imageUrl: imageUrl,
-            index: provider.currentIndex,
-            height: 220,
-            heroTag: heroTag,
-          ),
-          Positioned(
-            top: 10,
-            left: 10,
-            child: GestureDetector(
-              onTap: isEcommerceEnabled
-                  ? () => _launchEcommerce(ecommerceLink)
-                  : null,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: isEcommerceEnabled
-                      ? AppColors.primary.withValues(alpha: 0.1)
-                      : Colors.grey.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
+    return Dismissible(
+      key: const Key('dismiss_image_section'),
+      direction: DismissDirection.down,
+      onDismissed: (_) {
+        Navigator.pop(context);
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Stack(
+          children: [
+            _ProductImage(
+              imageUrl: imageUrl,
+              index: provider.currentIndex,
+              height: 220,
+              heroTag: heroTag,
+            ),
+            Positioned(
+              top: 10,
+              left: 10,
+              child: GestureDetector(
+                onTap: isEcommerceEnabled
+                    ? () => _launchEcommerce(ecommerceLink)
+                    : null,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
                     color: isEcommerceEnabled
-                        ? AppColors.primary.withValues(alpha: 0.2)
-                        : Colors.grey.withValues(alpha: 0.2),
-                    width: 1.5,
-                  ),
-                ),
-                child: Icon(
-                  Icons.monetization_on_outlined,
-                  color: isEcommerceEnabled
-                      ? AppColors.primary
-                      : Colors.grey.withValues(alpha: 0.5),
-                  size: 20,
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            top: 10,
-            right: 10,
-            child: GestureDetector(
-              onTap: () => provider.setComparisonBase(provider.currentIndex),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: AppColors.primary.withValues(
-                      alpha: isBase ? 0.5 : 0.1,
+                        ? AppColors.primary.withValues(alpha: 0.1)
+                        : Colors.grey.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isEcommerceEnabled
+                          ? AppColors.primary.withValues(alpha: 0.2)
+                          : Colors.grey.withValues(alpha: 0.2),
+                      width: 1.5,
                     ),
-                    width: 1.5,
                   ),
-                ),
-                child: Icon(
-                  isBase ? Icons.push_pin : Icons.push_pin_outlined,
-                  color: AppColors.primary.withValues(
-                    alpha: isBase ? 1.0 : 0.4,
+                  child: Icon(
+                    Icons.monetization_on_outlined,
+                    color: isEcommerceEnabled
+                        ? AppColors.primary
+                        : Colors.grey.withValues(alpha: 0.5),
+                    size: 20,
                   ),
-                  size: 20,
                 ),
               ),
             ),
-          ),
-          Positioned(
-            bottom: 10,
-            left: 10,
-            child: GestureDetector(
-              onTap: () => _shareProduct(variant),
-              child: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
+            Positioned(
+              top: 10,
+              right: 10,
+              child: GestureDetector(
+                onTap: () => provider.setComparisonBase(provider.currentIndex),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
                     color: AppColors.primary.withValues(alpha: 0.1),
-                    width: 1.5,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.primary.withValues(
+                        alpha: isBase ? 0.5 : 0.1,
+                      ),
+                      width: 1.5,
+                    ),
                   ),
-                ),
-                child: Icon(
-                  Icons.share,
-                  color: AppColors.primary.withValues(alpha: 0.8),
-                  size: 20,
+                  child: Icon(
+                    isBase ? Icons.push_pin : Icons.push_pin_outlined,
+                    color: AppColors.primary.withValues(
+                      alpha: isBase ? 1.0 : 0.4,
+                    ),
+                    size: 20,
+                  ),
                 ),
               ),
             ),
-          ),
-          Positioned(
-            bottom: 10,
-            right: 10,
-            child: GestureDetector(
-              onTap: () {
-                Navigator.of(context).push(
-                  PageRouteBuilder(
-                    opaque: false,
-                    pageBuilder: (context, animation, secondaryAnimation) =>
-                        ImageViewer(imageUrl: imageUrl, heroTag: heroTag),
-                  ),
-                );
-              },
-              child: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
+            Positioned(
+              bottom: 10,
+              left: 10,
+              child: GestureDetector(
+                onTap: () => _shareProduct(variant),
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
                     color: AppColors.primary.withValues(alpha: 0.1),
-                    width: 1.5,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      width: 1.5,
+                    ),
                   ),
-                ),
-                child: Icon(
-                  Icons.zoom_in,
-                  color: AppColors.primary.withValues(alpha: 0.8),
-                  size: 20,
+                  child: Icon(
+                    Icons.share,
+                    color: AppColors.primary.withValues(alpha: 0.8),
+                    size: 20,
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+            Positioned(
+              bottom: 10,
+              right: 10,
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.of(context).push(
+                    PageRouteBuilder(
+                      opaque: false,
+                      pageBuilder: (context, animation, secondaryAnimation) =>
+                          ImageViewer(imageUrl: imageUrl, heroTag: heroTag),
+                    ),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Icon(
+                    Icons.zoom_in,
+                    color: AppColors.primary.withValues(alpha: 0.8),
+                    size: 20,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -314,13 +320,11 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     Map<String, dynamic> variantData,
     ProductDetailsProvider provider,
   ) {
-    final theme = Theme.of(context);
-
     return Container(
       padding: const EdgeInsets.fromLTRB(25, 30, 25, 120),
       width: double.infinity,
       decoration: BoxDecoration(
-        color: theme.cardColor,
+        color: context.theme.cardColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
       ),
       child: Column(
@@ -334,13 +338,13 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                   variantData['name'],
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.displayLarge?.copyWith(fontSize: 19),
+                  style: context.textTheme.displayLarge?.copyWith(fontSize: 19),
                 ),
               ),
               const SizedBox(width: 10),
               Text(
                 variantData['model'],
-                style: theme.textTheme.labelMedium?.copyWith(fontSize: 13),
+                style: context.textTheme.labelMedium?.copyWith(fontSize: 13),
               ),
             ],
           ),
@@ -348,31 +352,23 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
           if (provider.isLoading)
             const FilesSkeleton()
           else ...[
-            _SectionTitle(
-              AppLocalizations.of(context)!.translate("Aplicações"),
-            ),
+            _SectionTitle(context.l10n.translate("Aplicações")),
             const SizedBox(height: 15),
             _ApplicationIcons(apps: provider.applications),
-            _SectionTitle(
-              AppLocalizations.of(context)!.translate("Ficha Técnica"),
-            ),
+            _SectionTitle(context.l10n.translate("Ficha Técnica")),
             const SizedBox(height: 15),
             _TechnicalSpecs(data: variantData),
             if (provider.descriptions != null) ...[
               _CollapsibleSection(
-                title: AppLocalizations.of(
-                  context,
-                )!.translate("Características"),
+                title: context.l10n.translate("Características"),
                 items: provider.descriptions!['description'] as List<String>,
               ),
               _CollapsibleSection(
-                title: AppLocalizations.of(
-                  context,
-                )!.translate("Especificações"),
+                title: context.l10n.translate("Especificações"),
                 items: provider.descriptions!['specifications'] as List<String>,
               ),
               _CollapsibleSection(
-                title: AppLocalizations.of(context)!.translate("Opções"),
+                title: context.l10n.translate("Opções"),
                 items: provider.descriptions!['options'] as List<String>,
               ),
             ],
@@ -388,11 +384,10 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   }
 
   Widget _buildBottomControls(ProductDetailsProvider provider) {
-    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 20),
       decoration: BoxDecoration(
-        color: theme.cardColor,
+        color: context.theme.cardColor,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.1),
@@ -508,13 +503,13 @@ class _FilesSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final theme = context.theme;
     return Theme(
       data: theme.copyWith(dividerColor: Colors.transparent),
       child: ExpansionTile(
         tilePadding: EdgeInsets.zero,
         title: Text(
-          AppLocalizations.of(context)!.translate("Documentos"),
+          context.l10n.translate("Documentos"),
           style: theme.textTheme.displayMedium?.copyWith(
             color: AppColors.primary,
             fontSize: 12,
@@ -536,9 +531,7 @@ class _FilesSection extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    AppLocalizations.of(
-                      context,
-                    )!.translate("Nenhum documento disponível"),
+                    context.l10n.translate("Nenhum documento disponível"),
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: Colors.grey,
                     ),
@@ -564,12 +557,11 @@ class _ComparisonSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Container(
-      height: MediaQuery.of(context).size.height * 0.6,
+      height: context.height * 0.7,
       padding: const EdgeInsets.all(25),
       decoration: BoxDecoration(
-        color: theme.cardColor,
+        color: context.theme.cardColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
       ),
       child: Column(
@@ -584,29 +576,27 @@ class _ComparisonSheet extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           Text(
-            AppLocalizations.of(context)!.translate('technical_comparison'),
-            style: theme.textTheme.displayLarge?.copyWith(fontSize: 18),
+            context.l10n.translate('technical_comparison'),
+            style: context.textTheme.displayLarge?.copyWith(fontSize: 18),
           ),
           const SizedBox(height: 20),
           Expanded(
             child: ListView(
               children: [
                 _CompareCard(
-                  label: AppLocalizations.of(context)!.translate('power'),
+                  label: context.l10n.translate('power'),
                   baseValue: base['power'],
                   currentValue: current['power'],
                   unit: "CV",
                 ),
                 _CompareCard(
-                  label: AppLocalizations.of(
-                    context,
-                  )!.translate('max_pressure'),
+                  label: context.l10n.translate('max_pressure'),
                   baseValue: base['mca_max'],
                   currentValue: current['mca_max'],
                   unit: "MCA",
                 ),
                 _CompareCard(
-                  label: AppLocalizations.of(context)!.translate('max_flow'),
+                  label: context.l10n.translate('max_flow'),
                   baseValue: base['rate_max'],
                   currentValue: current['rate_max'],
                   unit: "m³/h",
@@ -632,8 +622,7 @@ class _NavigationButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final isDark = context.theme.brightness == Brightness.dark;
 
     return InkWell(
       onTap: onTap,
@@ -687,7 +676,7 @@ class _FileLinkItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final theme = context.theme;
     final isDark = theme.brightness == Brightness.dark;
 
     return GestureDetector(
@@ -762,23 +751,23 @@ class _TechnicalSpecs extends StatelessWidget {
     return Column(
       children: [
         _TechTile(
-          label: AppLocalizations.of(context)!.translate('power'),
+          label: context.l10n.translate('power'),
           value: "${ParseUtil.formatValue(data['power'])} CV",
         ),
         _TechTile(
-          label: AppLocalizations.of(context)!.translate('rotation'),
+          label: context.l10n.translate('rotation'),
           value: "${data['rpm'] ?? '---'} RPM",
         ),
         _TechTile(
-          label: AppLocalizations.of(context)!.translate('max_pressure'),
+          label: context.l10n.translate('max_pressure'),
           value: "${ParseUtil.formatValue(data['mca_max'])} MCA",
         ),
         _TechTile(
-          label: AppLocalizations.of(context)!.translate('max_flow'),
+          label: context.l10n.translate('max_flow'),
           value: "${ParseUtil.formatValue(data['rate_max'])} m³/h",
         ),
         _TechTile(
-          label: AppLocalizations.of(context)!.translate('frequency'),
+          label: context.l10n.translate('frequency'),
           value: "${data['frequency'] ?? '---'} Hz",
         ),
       ],
@@ -793,7 +782,7 @@ class _TechTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final theme = context.theme;
     final isDark = theme.brightness == Brightness.dark;
 
     return Container(
@@ -835,10 +824,12 @@ class _CollapsibleSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final theme = context.theme;
     final isDark = theme.brightness == Brightness.dark;
 
-    if (items.isEmpty) return const SizedBox.shrink();
+    if (items.isEmpty) {
+      return const SizedBox.shrink();
+    }
     return Theme(
       data: theme.copyWith(dividerColor: Colors.transparent),
       child: ExpansionTile(
@@ -887,10 +878,9 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Text(
       title,
-      style: theme.textTheme.displayMedium?.copyWith(
+      style: context.textTheme.displayMedium?.copyWith(
         color: AppColors.primary,
         fontSize: 12,
       ),
@@ -955,6 +945,9 @@ class _ProductImage extends StatelessWidget {
               child: CachedNetworkImage(
                 imageUrl: imageUrl,
                 fit: BoxFit.contain,
+                memCacheHeight:
+                    (context.height * context.mediaQuery.devicePixelRatio)
+                        .toInt(),
                 errorWidget: (context, url, error) => const Icon(
                   Icons.image_not_supported,
                   size: 60,
@@ -974,6 +967,7 @@ class _CompareCard extends StatelessWidget {
   final dynamic baseValue;
   final dynamic currentValue;
   final String unit;
+
   const _CompareCard({
     required this.label,
     required this.baseValue,
@@ -983,58 +977,128 @@ class _CompareCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final theme = context.theme;
     final isDark = theme.brightness == Brightness.dark;
-    final val1 = ParseUtil.formatValue(baseValue);
-    final val2 = ParseUtil.formatValue(currentValue);
-    final isDiff = val1 != val2;
+
+    final v1 = double.tryParse(baseValue?.toString() ?? '0') ?? 0;
+    final v2 = double.tryParse(currentValue?.toString() ?? '0') ?? 0;
+    final maxVal = (v1 > v2 ? v1 : v2);
+    final safeMax = maxVal == 0 ? 1.0 : maxVal;
+
+    final p1 = (v1 / safeMax).clamp(0.0, 1.0);
+    final p2 = (v2 / safeMax).clamp(0.0, 1.0);
+
+    final isDiff = v1 != v2;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDiff
-            ? AppColors.primary.withValues(alpha: 0.05)
-            : (isDark
-                  ? theme.colorScheme.surfaceContainer
-                  : AppColors.backgroundSecondary),
+        color: isDark
+            ? theme.colorScheme.surfaceContainer
+            : AppColors.backgroundSecondary,
         borderRadius: BorderRadius.circular(15),
         border: isDiff
-            ? Border.all(color: AppColors.primary.withValues(alpha: 0.2))
+            ? Border.all(color: AppColors.primary.withValues(alpha: 0.1))
             : null,
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              color: AppColors.primary,
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
-            ),
-          ),
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                val1,
-                style: const TextStyle(color: Colors.grey, fontSize: 12),
-              ),
-              const Icon(Icons.arrow_right_alt, size: 16, color: Colors.grey),
-              Text(
-                "$val2 $unit",
+                label,
                 style: TextStyle(
+                  color: AppColors.primary,
                   fontWeight: FontWeight.bold,
-                  color: isDiff
-                      ? AppColors.primary
-                      : (isDark ? Colors.white : Colors.black),
                   fontSize: 13,
+                ),
+              ),
+              Text(
+                unit,
+                style: const TextStyle(color: Colors.grey, fontSize: 10),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _Bar(
+            value: v1,
+            percent: p1,
+            color: Colors.grey.withValues(alpha: 0.3),
+            label: "Base",
+          ),
+          const SizedBox(height: 8),
+          _Bar(
+            value: v2,
+            percent: p2,
+            color: AppColors.primary,
+            label: "Atual",
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Bar extends StatelessWidget {
+  final double value;
+  final double percent;
+  final Color color;
+  final String label;
+
+  const _Bar({
+    required this.value,
+    required this.percent,
+    required this.color,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 40,
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 10, color: Colors.grey),
+          ),
+        ),
+        Expanded(
+          child: Stack(
+            children: [
+              Container(
+                height: 20,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.grey.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              FractionallySizedBox(
+                widthFactor: percent,
+                child: Container(
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
                 ),
               ),
             ],
           ),
-        ],
-      ),
+        ),
+        const SizedBox(width: 8),
+        SizedBox(
+          width: 50,
+          child: Text(
+            value.toStringAsFixed(1),
+            textAlign: TextAlign.end,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+          ),
+        ),
+      ],
     );
   }
 }

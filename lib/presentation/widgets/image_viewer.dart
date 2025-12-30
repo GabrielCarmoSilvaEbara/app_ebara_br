@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../core/extensions/context_extensions.dart';
 import '../theme/app_colors.dart';
 
 class ImageViewer extends StatefulWidget {
@@ -63,10 +64,8 @@ class _ImageViewerState extends State<ImageViewer>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      backgroundColor: context.theme.scaffoldBackgroundColor,
       body: Stack(
         children: [
           Center(
@@ -79,6 +78,9 @@ class _ImageViewerState extends State<ImageViewer>
                 child: CachedNetworkImage(
                   imageUrl: widget.imageUrl,
                   fit: BoxFit.contain,
+                  memCacheHeight:
+                      (context.height * context.mediaQuery.devicePixelRatio)
+                          .toInt(),
                   placeholder: (context, url) => const Center(
                     child: CircularProgressIndicator(color: AppColors.primary),
                   ),
@@ -94,10 +96,7 @@ class _ImageViewerState extends State<ImageViewer>
           Positioned(
             top: 40,
             right: 20,
-            child: _buildButton(
-              icon: Icons.close,
-              onTap: () => Navigator.pop(context),
-            ),
+            child: _buildButton(icon: Icons.close, onTap: () => context.pop()),
           ),
           Positioned(
             bottom: 40,

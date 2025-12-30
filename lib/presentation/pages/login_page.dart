@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/providers/auth_provider.dart';
-import '../../core/localization/app_localizations.dart';
+import '../../core/extensions/context_extensions.dart';
 import '../theme/app_colors.dart';
 
 class LoginPage extends StatefulWidget {
@@ -15,35 +15,43 @@ class _LoginPageState extends State<LoginPage> {
   bool _isLoading = false;
 
   Future<void> _handleGoogleLogin() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+    });
     final auth = context.read<AuthProvider>();
-    final l10n = AppLocalizations.of(context)!;
     try {
       await auth.signInWithGoogle();
-      if (!mounted) return;
-      Navigator.of(context).pushReplacementNamed('/home');
+      if (!mounted) {
+        return;
+      }
+      context.pushReplacementNamed('/home');
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l10n.translate('login_error'))));
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.translate('login_error'))),
+      );
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
   Future<void> _handleGuestLogin() async {
     final auth = context.read<AuthProvider>();
     await auth.continueAsGuest();
-    if (!mounted) return;
-    Navigator.of(context).pushReplacementNamed('/home');
+    if (!mounted) {
+      return;
+    }
+    context.pushReplacementNamed('/home');
   }
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
-
     return Scaffold(
       backgroundColor: AppColors.primary,
       body: SafeArea(
@@ -81,17 +89,17 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       const SizedBox(height: 40),
                       Text(
-                        l10n.translate('welcome'),
-                        style: theme.textTheme.displayLarge?.copyWith(
+                        context.l10n.translate('welcome'),
+                        style: context.textTheme.displayLarge?.copyWith(
                           color: Colors.white,
                           fontSize: 28,
                         ),
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        l10n.translate('login_desc'),
+                        context.l10n.translate('login_desc'),
                         textAlign: TextAlign.center,
-                        style: theme.textTheme.labelSmall?.copyWith(
+                        style: context.textTheme.labelSmall?.copyWith(
                           color: Colors.white70,
                         ),
                       ),
@@ -128,7 +136,7 @@ class _LoginPageState extends State<LoginPage> {
                                 children: [
                                   const Icon(Icons.login),
                                   const SizedBox(width: 12),
-                                  Text(l10n.translate('enter_google')),
+                                  Text(context.l10n.translate('enter_google')),
                                 ],
                               ),
                       ),
@@ -136,8 +144,8 @@ class _LoginPageState extends State<LoginPage> {
                       TextButton(
                         onPressed: _isLoading ? null : _handleGuestLogin,
                         child: Text(
-                          l10n.translate('continue_guest'),
-                          style: theme.textTheme.labelLarge?.copyWith(
+                          context.l10n.translate('continue_guest'),
+                          style: context.textTheme.labelLarge?.copyWith(
                             fontSize: 16,
                           ),
                         ),

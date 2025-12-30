@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/extensions/context_extensions.dart';
 import 'filters_bottom_sheet.dart';
 
 class CustomSearchBar extends StatefulWidget {
@@ -67,7 +68,7 @@ class _CustomSearchBarState extends State<CustomSearchBar> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final colorScheme = context.colors;
 
     return Container(
       height: 56,

@@ -44,15 +44,25 @@ class ProductModel {
       image: json['file'] ?? json['image'] ?? '',
       slugCategory: json['slug_category'] ?? '',
       slugProduct: json['slug_product'],
-      power: json['power'],
-      frequency: json['frequency'],
-      rpm: json['rpm'],
-      rateMin: json['rate_min'],
-      rateMax: json['rate_max'],
-      mcaMin: json['mca_min'],
-      mcaMax: json['mca_max'],
+      power: _parseNumeric(json['power']),
+      frequency: _parseNumeric(json['frequency']),
+      rpm: _parseNumeric(json['rpm']),
+      rateMin: _parseNumeric(json['rate_min']),
+      rateMax: _parseNumeric(json['rate_max']),
+      mcaMin: _parseNumeric(json['mca_min']),
+      mcaMax: _parseNumeric(json['mca_max']),
       ecommerceLink: json['ecommerce_link'],
     );
+  }
+
+  static dynamic _parseNumeric(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value;
+    if (value is String) {
+      if (value.isEmpty) return null;
+      return double.tryParse(value.replaceAll(',', '.')) ?? value;
+    }
+    return value;
   }
 
   ProductModel copyWith({List<ProductModel>? variants}) {

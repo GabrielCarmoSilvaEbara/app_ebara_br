@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/models/product_model.dart';
+import '../../core/extensions/context_extensions.dart';
 import '../pages/product_details_page.dart';
 import '../widgets/product_card_skeleton.dart';
 import 'image_viewer.dart';
@@ -19,7 +20,7 @@ class ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final theme = context.theme;
     final isDark = theme.brightness == Brightness.dark;
     final hasVariants = product.variants.isNotEmpty;
 
@@ -65,7 +66,9 @@ class ProductCard extends StatelessWidget {
   }
 
   void _navigateToDetails(BuildContext context) {
-    if (product.variants.isEmpty) return;
+    if (product.variants.isEmpty) {
+      return;
+    }
 
     final variantsMap = product.variants.map((v) => v.toMap()).toList();
 
@@ -92,7 +95,9 @@ class _ProductImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!hasImage) return const _ErrorIcon();
+    if (!hasImage) {
+      return const _ErrorIcon();
+    }
 
     return Center(
       child: Hero(
@@ -128,7 +133,7 @@ class _CategoryLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       category,
-      style: Theme.of(context).textTheme.labelMedium,
+      style: context.textTheme.labelMedium,
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
     );
@@ -177,7 +182,9 @@ class _ZoomButton extends StatelessWidget {
   });
 
   void _openZoom(BuildContext context) {
-    if (imageUrl.isEmpty) return;
+    if (imageUrl.isEmpty) {
+      return;
+    }
 
     Navigator.of(context).push(
       PageRouteBuilder(

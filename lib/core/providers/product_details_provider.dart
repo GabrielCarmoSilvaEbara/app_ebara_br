@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import '../services/ebara_data_service.dart';
 
 class ProductDetailsProvider with ChangeNotifier {
+  final EbaraDataService _dataService;
+
   int _currentIndex = 0;
   int _comparisonBaseIndex = 0;
   bool _isLoading = true;
@@ -10,6 +12,9 @@ class ProductDetailsProvider with ChangeNotifier {
   Map<String, dynamic>? _descriptions;
   List<Map<String, dynamic>> _applications = [];
   List<Map<String, dynamic>> _files = [];
+
+  ProductDetailsProvider({required EbaraDataService dataService})
+    : _dataService = dataService;
 
   int get currentIndex => _currentIndex;
   int get comparisonBaseIndex => _comparisonBaseIndex;
@@ -25,15 +30,9 @@ class ProductDetailsProvider with ChangeNotifier {
     notifyListeners();
 
     final results = await Future.wait([
-      EbaraDataService.getProductDescriptions(
-        productId,
-        idLanguage: languageId,
-      ),
-      EbaraDataService.getProductApplications(
-        productId,
-        idLanguage: languageId,
-      ),
-      EbaraDataService.getProductFiles(productId, idLanguage: languageId),
+      _dataService.getProductDescriptions(productId, idLanguage: languageId),
+      _dataService.getProductApplications(productId, idLanguage: languageId),
+      _dataService.getProductFiles(productId, idLanguage: languageId),
     ]);
 
     _descriptions = results[0] as Map<String, dynamic>?;

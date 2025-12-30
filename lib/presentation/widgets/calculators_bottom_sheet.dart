@@ -1,6 +1,6 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
-import '../../core/localization/app_localizations.dart';
+import '../../core/extensions/context_extensions.dart';
+import '../../core/utils/calculator_util.dart';
 import '../theme/app_colors.dart';
 import 'app_form_fields.dart';
 
@@ -29,25 +29,21 @@ class _CalculatorsBottomSheetState extends State<CalculatorsBottomSheet>
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-    final theme = Theme.of(context);
+    final bottomInset = context.mediaQuery.viewInsets.bottom;
 
     return Container(
       padding: EdgeInsets.only(bottom: bottomInset),
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.90,
-      ),
+      constraints: BoxConstraints(maxHeight: context.height * 0.90),
       decoration: BoxDecoration(
-        color: theme.scaffoldBackgroundColor,
+        color: context.theme.scaffoldBackgroundColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _buildHeader(l10n, theme),
+          _buildHeader(),
           Container(
-            color: theme.scaffoldBackgroundColor,
+            color: context.theme.scaffoldBackgroundColor,
             child: TabBar(
               controller: _tabController,
               labelColor: AppColors.primary,
@@ -58,15 +54,15 @@ class _CalculatorsBottomSheetState extends State<CalculatorsBottomSheet>
               tabs: [
                 Tab(
                   icon: const Icon(Icons.swap_horiz),
-                  text: l10n.translate('unit_converter'),
+                  text: context.l10n.translate('unit_converter'),
                 ),
                 Tab(
                   icon: const Icon(Icons.water_drop),
-                  text: l10n.translate('hydraulic_calc'),
+                  text: context.l10n.translate('hydraulic_calc'),
                 ),
                 Tab(
                   icon: const Icon(Icons.flash_on),
-                  text: l10n.translate('electric_calc'),
+                  text: context.l10n.translate('electric_calc'),
                 ),
               ],
             ),
@@ -87,7 +83,7 @@ class _CalculatorsBottomSheetState extends State<CalculatorsBottomSheet>
     );
   }
 
-  Widget _buildHeader(AppLocalizations l10n, ThemeData theme) {
+  Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16),
       child: Column(
@@ -102,8 +98,202 @@ class _CalculatorsBottomSheetState extends State<CalculatorsBottomSheet>
           ),
           const SizedBox(height: 12),
           Text(
-            l10n.translate('calculators'),
-            style: theme.textTheme.displayLarge?.copyWith(fontSize: 20),
+            context.l10n.translate('calculators'),
+            style: context.textTheme.displayLarge?.copyWith(fontSize: 20),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class InteractiveSliderInput extends StatefulWidget {
+  final String label;
+  final TextEditingController controller;
+  final String suffix;
+  final double min;
+  final double max;
+  final VoidCallback onChanged;
+
+  const InteractiveSliderInput({
+    super.key,
+    required this.label,
+    required this.controller,
+    required this.suffix,
+    this.min = 0,
+    this.max = 100,
+    required this.onChanged,
+  });
+
+  @override
+  State<InteractiveSliderInput> createState() => _InteractiveSliderInputState();
+}
+
+class _InteractiveSliderInputState extends State<InteractiveSliderInput> {
+  double _currentValue = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentValue = double.tryParse(widget.controller.text) ?? 0;
+    widget.controller.addListener(_onTextChange);
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onTextChange);
+    super.dispose();
+  }
+
+  void _onTextChange() {
+    final val =
+        double.tryParse(widget.controller.text.replaceAll(',', '.')) ?? 0;
+    if (val != _currentValue) {
+      setState(() {
+        _currentValue = val.clamp(widget.min, widget.max);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              widget.label,
+              style: context.textTheme.displayMedium?.copyWith(fontSize: 14),
+            ),
+            Text(
+              "${_currentValue.toStringAsFixed(1)} ${widget.suffix}",
+              style: context.textTheme.labelMedium?.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            activeTrackColor: AppColors.primary,
+            inactiveTrackColor: AppColors.primary.withValues(alpha: 0.1),
+            thumbColor: AppColors.primary,
+            overlayColor: AppColors.primary.withValues(alpha: 0.1),
+            trackHeight: 4,
+          ),
+          child: Slider(
+            value: _currentValue,
+            min: widget.min,
+            max: widget.max,
+            onChanged: (val) {
+              setState(() => _currentValue = val);
+              widget.controller.text = val.toStringAsFixed(1);
+              widget.onChanged();
+            },
+          ),
+        ),
+        AppTextField(
+          controller: widget.controller,
+          suffixText: widget.suffix,
+          onChanged: (_) => widget.onChanged(),
+        ),
+      ],
+    );
+  }
+}
+
+class AnimatedGauge extends StatelessWidget {
+  final double value;
+  final double max;
+  final String label;
+  final String unit;
+  final Color color;
+
+  const AnimatedGauge({
+    super.key,
+    required this.value,
+    this.max = 100,
+    required this.label,
+    required this.unit,
+    this.color = AppColors.primary,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final percentage = (value / max).clamp(0.0, 1.0);
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: context.theme.cardColor,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Text(
+            label,
+            style: context.textTheme.displayMedium?.copyWith(
+              fontSize: 14,
+              color: Colors.grey,
+            ),
+          ),
+          const SizedBox(height: 15),
+          SizedBox(
+            height: 120,
+            width: 120,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                CircularProgressIndicator(
+                  value: 1.0,
+                  color: Colors.grey.withValues(alpha: 0.1),
+                  strokeWidth: 10,
+                ),
+                TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0, end: percentage),
+                  duration: const Duration(milliseconds: 1000),
+                  curve: Curves.easeOutCubic,
+                  builder: (context, val, _) {
+                    return CircularProgressIndicator(
+                      value: val,
+                      color: color,
+                      strokeWidth: 10,
+                      strokeCap: StrokeCap.round,
+                    );
+                  },
+                ),
+                Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        value.toStringAsFixed(2),
+                        style: context.textTheme.displayLarge?.copyWith(
+                          fontSize: 24,
+                          color: color,
+                        ),
+                      ),
+                      Text(
+                        unit,
+                        style: context.textTheme.labelMedium?.copyWith(
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -134,60 +324,34 @@ class _UnitConverterTabState extends State<_UnitConverterTab> {
   void _convert() {
     final value =
         double.tryParse(_valueController.text.replaceAll(',', '.')) ?? 0;
-    double base = 0;
 
     if (_category == 'flow') {
-      if (_fromUnit == 'm3h') base = value;
-      if (_fromUnit == 'ls') base = value * 3.6;
-      if (_fromUnit == 'lmin') base = value * 0.06;
-      if (_fromUnit == 'gpm') base = value * 0.2271;
-
-      if (_toUnit == 'm3h') _result = base.toStringAsFixed(2);
-      if (_toUnit == 'ls') _result = (base / 3.6).toStringAsFixed(2);
-      if (_toUnit == 'lmin') _result = (base / 0.06).toStringAsFixed(2);
-      if (_toUnit == 'gpm') _result = (base / 0.2271).toStringAsFixed(2);
+      _result = CalculatorUtil.convertFlow(value, _fromUnit, _toUnit);
     } else if (_category == 'pressure') {
-      if (_fromUnit == 'mca') base = value;
-      if (_fromUnit == 'bar') base = value * 10.197;
-      if (_fromUnit == 'psi') base = value * 0.703;
-      if (_fromUnit == 'kgfcm2') base = value * 10;
-
-      if (_toUnit == 'mca') _result = base.toStringAsFixed(2);
-      if (_toUnit == 'bar') _result = (base / 10.197).toStringAsFixed(2);
-      if (_toUnit == 'psi') _result = (base / 0.703).toStringAsFixed(2);
-      if (_toUnit == 'kgfcm2') _result = (base / 10).toStringAsFixed(2);
+      _result = CalculatorUtil.convertPressure(value, _fromUnit, _toUnit);
     } else if (_category == 'power') {
-      if (_fromUnit == 'cv') base = value * 0.7355;
-      if (_fromUnit == 'hp') base = value * 0.7457;
-      if (_fromUnit == 'kw') base = value;
-
-      if (_toUnit == 'cv') _result = (base / 0.7355).toStringAsFixed(2);
-      if (_toUnit == 'hp') _result = (base / 0.7457).toStringAsFixed(2);
-      if (_toUnit == 'kw') _result = base.toStringAsFixed(2);
+      _result = CalculatorUtil.convertPower(value, _fromUnit, _toUnit);
     }
     setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
-
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           AppDropdown<String>(
-            label: l10n.translate('select_category'),
+            label: context.l10n.translate('select_category'),
             value: _category,
             items: ['flow', 'pressure', 'power']
                 .map(
                   (e) => DropdownMenuItem(
                     value: e,
                     child: Text(
-                      l10n.translate(e),
-                      style: theme.textTheme.displayMedium?.copyWith(
+                      context.l10n.translate(e),
+                      style: context.textTheme.displayMedium?.copyWith(
                         fontSize: 14,
                       ),
                     ),
@@ -195,13 +359,15 @@ class _UnitConverterTabState extends State<_UnitConverterTab> {
                 )
                 .toList(),
             onChanged: (val) {
-              setState(() {
-                _category = val!;
-                _fromUnit = _units[_category]!.first;
-                _toUnit = _units[_category]![1];
-                _result = '';
-                _valueController.clear();
-              });
+              if (val != null) {
+                setState(() {
+                  _category = val;
+                  _fromUnit = _units[_category]!.first;
+                  _toUnit = _units[_category]![1];
+                  _result = '';
+                  _valueController.clear();
+                });
+              }
             },
           ),
           const SizedBox(height: 16),
@@ -217,7 +383,7 @@ class _UnitConverterTabState extends State<_UnitConverterTab> {
                           value: e,
                           child: Text(
                             _getUnitLabel(e),
-                            style: theme.textTheme.displayMedium?.copyWith(
+                            style: context.textTheme.displayMedium?.copyWith(
                               fontSize: 14,
                             ),
                           ),
@@ -225,8 +391,10 @@ class _UnitConverterTabState extends State<_UnitConverterTab> {
                       )
                       .toList(),
                   onChanged: (val) {
-                    setState(() => _fromUnit = val!);
-                    _convert();
+                    if (val != null) {
+                      setState(() => _fromUnit = val);
+                      _convert();
+                    }
                   },
                 ),
               ),
@@ -243,7 +411,7 @@ class _UnitConverterTabState extends State<_UnitConverterTab> {
                           value: e,
                           child: Text(
                             _getUnitLabel(e),
-                            style: theme.textTheme.displayMedium?.copyWith(
+                            style: context.textTheme.displayMedium?.copyWith(
                               fontSize: 14,
                             ),
                           ),
@@ -251,18 +419,22 @@ class _UnitConverterTabState extends State<_UnitConverterTab> {
                       )
                       .toList(),
                   onChanged: (val) {
-                    setState(() => _toUnit = val!);
-                    _convert();
+                    if (val != null) {
+                      setState(() => _toUnit = val);
+                      _convert();
+                    }
                   },
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          AppTextField(
-            label: l10n.translate('input_value'),
+          const SizedBox(height: 20),
+          InteractiveSliderInput(
+            label: context.l10n.translate('input_value'),
             controller: _valueController,
-            onChanged: (_) => _convert(),
+            suffix: _getUnitLabel(_fromUnit),
+            max: 500,
+            onChanged: _convert,
           ),
           const SizedBox(height: 24),
           if (_result.isNotEmpty)
@@ -270,8 +442,13 @@ class _UnitConverterTabState extends State<_UnitConverterTab> {
               width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(12),
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.primary.withValues(alpha: 0.1),
+                    AppColors.primary.withValues(alpha: 0.05),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: AppColors.primary.withValues(alpha: 0.1),
                 ),
@@ -279,12 +456,12 @@ class _UnitConverterTabState extends State<_UnitConverterTab> {
               child: Column(
                 children: [
                   Text(
-                    l10n.translate('result'),
+                    context.l10n.translate('result'),
                     style: const TextStyle(fontSize: 14, color: Colors.grey),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    _result,
+                    "$_result ${_getUnitLabel(_toUnit)}",
                     style: const TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
@@ -341,126 +518,90 @@ class _HydraulicCalcTabState extends State<_HydraulicCalcTab> {
   final _diamCtrl = TextEditingController();
   final _lenCtrl = TextEditingController();
   String _material = 'pvc';
-  String _result = '';
+  double _result = 0;
 
   void _calculate() {
-    final qm3h = double.tryParse(_flowCtrl.text.replaceAll(',', '.')) ?? 0;
-    final dmm = double.tryParse(_diamCtrl.text.replaceAll(',', '.')) ?? 0;
-    final L = double.tryParse(_lenCtrl.text.replaceAll(',', '.')) ?? 0;
+    final flow = double.tryParse(_flowCtrl.text.replaceAll(',', '.')) ?? 0;
+    final diam = double.tryParse(_diamCtrl.text.replaceAll(',', '.')) ?? 0;
+    final len = double.tryParse(_lenCtrl.text.replaceAll(',', '.')) ?? 0;
 
-    if (qm3h > 0 && dmm > 0 && L > 0) {
-      final C = _material == 'pvc' ? 150 : 100;
-      final dm = dmm / 1000.0;
-      final qm3s = qm3h / 3600.0;
-      final J = 10.643 * pow(qm3s, 1.852) * pow(C, -1.852) * pow(dm, -4.87);
-      final totalHead = J * L;
-      setState(() => _result = totalHead.toStringAsFixed(2));
-    }
+    final loss = CalculatorUtil.calculateHydraulicHeadLoss(
+      flowM3h: flow,
+      diameterMm: diam,
+      lengthM: len,
+      material: _material,
+    );
+
+    setState(() => _result = loss);
   }
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
-
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
         children: [
-          AppTextField(
-            label: l10n.translate('flow'),
+          InteractiveSliderInput(
+            label: context.l10n.translate('flow'),
             controller: _flowCtrl,
-            suffixText: 'm³/h',
+            suffix: 'm³/h',
+            max: 200,
+            onChanged: _calculate,
           ),
           const SizedBox(height: 16),
-          AppTextField(
-            label: l10n.translate('diameter'),
+          InteractiveSliderInput(
+            label: context.l10n.translate('diameter'),
             controller: _diamCtrl,
-            suffixText: 'mm',
+            suffix: 'mm',
+            max: 300,
+            onChanged: _calculate,
           ),
           const SizedBox(height: 16),
-          AppTextField(
-            label: l10n.translate('length'),
+          InteractiveSliderInput(
+            label: context.l10n.translate('length'),
             controller: _lenCtrl,
-            suffixText: 'm',
+            suffix: 'm',
+            max: 1000,
+            onChanged: _calculate,
           ),
           const SizedBox(height: 16),
           AppDropdown<String>(
-            label: l10n.translate('material'),
+            label: context.l10n.translate('material'),
             value: _material,
             items: [
               DropdownMenuItem(
                 value: 'pvc',
                 child: Text(
-                  l10n.translate('pvc'),
-                  style: theme.textTheme.displayMedium?.copyWith(fontSize: 14),
+                  context.l10n.translate('pvc'),
+                  style: context.textTheme.displayMedium?.copyWith(
+                    fontSize: 14,
+                  ),
                 ),
               ),
               DropdownMenuItem(
                 value: 'iron',
                 child: Text(
-                  l10n.translate('iron'),
-                  style: theme.textTheme.displayMedium?.copyWith(fontSize: 14),
+                  context.l10n.translate('iron'),
+                  style: context.textTheme.displayMedium?.copyWith(
+                    fontSize: 14,
+                  ),
                 ),
               ),
             ],
             onChanged: (val) {
-              setState(() => _material = val!);
-              _calculate();
+              if (val != null) {
+                setState(() => _material = val);
+                _calculate();
+              }
             },
           ),
           const SizedBox(height: 30),
-          SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: ElevatedButton(
-              onPressed: _calculate,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Text(
-                l10n.translate('calculate'),
-                style: theme.textTheme.labelLarge?.copyWith(
-                  fontSize: 16,
-                  color: Colors.white,
-                ),
-              ),
-            ),
+          AnimatedGauge(
+            label: context.l10n.translate('head_loss'),
+            value: _result,
+            max: 50,
+            unit: 'm.c.a',
           ),
-          const SizedBox(height: 20),
-          if (_result.isNotEmpty)
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.backgroundSecondary,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.blue.shade100),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    l10n.translate('head_loss'),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black,
-                    ),
-                  ),
-                  Text(
-                    "$_result m.c.a",
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
         ],
       ),
     );
@@ -479,32 +620,30 @@ class _ElectricCalcTabState extends State<_ElectricCalcTab> {
   final _voltCtrl = TextEditingController(text: '380');
   final _distCtrl = TextEditingController();
   final _sectionCtrl = TextEditingController();
-  String _result = '';
-  String _pct = '';
+  double _result = 0;
+  String _pct = '0.00';
 
   void _calculate() {
-    final I = double.tryParse(_currentCtrl.text.replaceAll(',', '.')) ?? 0;
-    final V = double.tryParse(_voltCtrl.text.replaceAll(',', '.')) ?? 0;
-    final L = double.tryParse(_distCtrl.text.replaceAll(',', '.')) ?? 0;
-    final S = double.tryParse(_sectionCtrl.text.replaceAll(',', '.')) ?? 0;
+    final i = double.tryParse(_currentCtrl.text.replaceAll(',', '.')) ?? 0;
+    final v = double.tryParse(_voltCtrl.text.replaceAll(',', '.')) ?? 0;
+    final l = double.tryParse(_distCtrl.text.replaceAll(',', '.')) ?? 0;
+    final s = double.tryParse(_sectionCtrl.text.replaceAll(',', '.')) ?? 0;
 
-    if (I > 0 && V > 0 && L > 0 && S > 0) {
-      final rho = 0.0172;
-      final drop = (sqrt(3) * rho * L * I) / S;
-      final percent = (drop / V) * 100;
+    final res = CalculatorUtil.calculateVoltageDrop(
+      current: i,
+      voltage: v,
+      length: l,
+      section: s,
+    );
 
-      setState(() {
-        _result = drop.toStringAsFixed(2);
-        _pct = percent.toStringAsFixed(2);
-      });
-    }
+    setState(() {
+      _result = double.tryParse(res['drop']!) ?? 0;
+      _pct = res['percent']!;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
-
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -512,113 +651,101 @@ class _ElectricCalcTabState extends State<_ElectricCalcTab> {
           Row(
             children: [
               Expanded(
-                child: AppTextField(
-                  label: l10n.translate('current'),
+                child: InteractiveSliderInput(
+                  label: context.l10n.translate('current'),
                   controller: _currentCtrl,
-                  suffixText: 'A',
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: AppTextField(
-                  label: l10n.translate('voltage'),
-                  controller: _voltCtrl,
-                  suffixText: 'V',
+                  suffix: 'A',
+                  max: 100,
+                  onChanged: _calculate,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          AppTextField(
-            label: l10n.translate('length'),
-            controller: _distCtrl,
-            suffixText: 'm',
+          Row(
+            children: [
+              Expanded(
+                child: InteractiveSliderInput(
+                  label: context.l10n.translate('voltage'),
+                  controller: _voltCtrl,
+                  suffix: 'V',
+                  max: 500,
+                  onChanged: _calculate,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
-          AppTextField(
-            label: l10n.translate('cable_section'),
+          InteractiveSliderInput(
+            label: context.l10n.translate('length'),
+            controller: _distCtrl,
+            suffix: 'm',
+            max: 500,
+            onChanged: _calculate,
+          ),
+          const SizedBox(height: 16),
+          InteractiveSliderInput(
+            label: context.l10n.translate('cable_section'),
             controller: _sectionCtrl,
-            suffixText: 'mm²',
+            suffix: 'mm²',
+            max: 120,
+            onChanged: _calculate,
           ),
           const SizedBox(height: 30),
-          SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: ElevatedButton(
-              onPressed: _calculate,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+          Row(
+            children: [
+              Expanded(
+                child: AnimatedGauge(
+                  label: context.l10n.translate('voltage_drop'),
+                  value: _result,
+                  max: 50,
+                  unit: 'V',
+                  color: Colors.orange,
                 ),
               ),
-              child: Text(
-                l10n.translate('calculate'),
-                style: theme.textTheme.labelLarge?.copyWith(
-                  fontSize: 16,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          if (_result.isNotEmpty)
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.orange.shade50,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.orange.shade200),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        l10n.translate('voltage_drop'),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black,
-                        ),
-                      ),
-                      Text(
-                        "$_result V",
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
-                        ),
+              const SizedBox(width: 15),
+              Expanded(
+                child: Container(
+                  height: 180,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: context.theme.cardColor,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
-                  Divider(color: Colors.orange.shade200),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text(
+                      Text(
                         "%",
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black,
+                        style: context.textTheme.displayMedium?.copyWith(
+                          fontSize: 14,
+                          color: Colors.grey,
                         ),
                       ),
+                      const SizedBox(height: 10),
                       Text(
-                        "$_pct %",
+                        "$_pct%",
                         style: TextStyle(
-                          fontSize: 18,
+                          fontSize: 28,
                           fontWeight: FontWeight.bold,
-                          color: double.parse(_pct) > 4
+                          color: double.tryParse(_pct)! > 4
                               ? Colors.red
                               : Colors.green,
                         ),
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
-            ),
+            ],
+          ),
         ],
       ),
     );

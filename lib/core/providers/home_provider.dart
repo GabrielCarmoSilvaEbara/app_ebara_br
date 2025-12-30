@@ -1,11 +1,25 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../services/ebara_data_service.dart';
 import '../models/category_model.dart';
 import '../models/product_model.dart';
+import '../models/product_filter_params.dart';
 import '../services/analytics_service.dart';
 
+List<ProductModel> _filterProductsIsolate(Map<String, dynamic> params) {
+  final List<ProductModel> all = params['products'];
+  final String query = params['query'].toString().toLowerCase();
+
+  return all.where((product) {
+    final name = product.name.toLowerCase();
+    final model = product.model.toLowerCase();
+    return name.contains(query) || model.contains(query);
+  }).toList();
+}
+
 class HomeProvider with ChangeNotifier {
+  final EbaraDataService _dataService;
+
   static const int _pageSize = 10;
 
   bool _isLoadingCategories = true;
@@ -25,10 +39,13 @@ class HomeProvider with ChangeNotifier {
   List<ProductModel> _visibleProducts = [];
 
   final Map<String, List<ProductModel>> _cacheByCategory = {};
-  Map<String, dynamic>? _activeFilters;
+  ProductFilterParams? _activeFilters;
 
   double _sunExposure = 5.0;
   bool _hasError = false;
+
+  HomeProvider({required EbaraDataService dataService})
+    : _dataService = dataService;
 
   bool get isLoadingCategories => _isLoadingCategories;
   bool get isLoadingProducts => _isLoadingProducts;
@@ -68,7 +85,7 @@ class HomeProvider with ChangeNotifier {
 
     final previousSelectedId = _selectedCategoryId;
 
-    _categories = await EbaraDataService.fetchCategories(
+    _categories = await _dataService.fetchCategories(
       idLanguage: _currentLanguageId,
     );
 
@@ -99,7 +116,7 @@ class HomeProvider with ChangeNotifier {
 
   Future<void> loadProducts(
     String categoryId, {
-    Map<String, dynamic>? filters,
+    ProductFilterParams? filters,
   }) async {
     _isLoadingProducts = true;
     _currentPage = 1;
@@ -113,9 +130,9 @@ class HomeProvider with ChangeNotifier {
       _activeFilters = filters;
 
       AnalyticsService.logSearchFilters(
-        flowRate: double.tryParse(filters['flow_rate'].toString()) ?? 0,
-        head: double.tryParse(filters['height_gauge'].toString()) ?? 0,
-        application: filters['application']?.toString() ?? 'TODOS',
+        flowRate: filters.flowRate,
+        head: filters.heightGauge,
+        application: filters.application,
         categoryId: categoryId,
       );
     }
@@ -134,27 +151,17 @@ class HomeProvider with ChangeNotifier {
       _hasError = false;
     } else {
       try {
-        final searchParams = _prepareSearchParams(categoryId, _activeFilters);
+        final searchParams =
+            filters ??
+            ProductFilterParams(
+              categoryId: categoryId,
+              idLanguage: _currentLanguageId,
+              sunExposure: _sunExposure,
+            );
 
-        final fetched = await EbaraDataService.searchProducts(
-          categoryId: categoryId,
-          idLanguage: _currentLanguageId,
-          application: searchParams['application'],
-          line: searchParams['line'],
-          flowRate: searchParams['flowRate'],
-          flowRateMeasure: searchParams['flowRateMeasure'],
-          heightGauge: searchParams['heightGauge'],
-          heightGaugeMeasure: searchParams['heightGaugeMeasure'],
-          frequency: searchParams['frequency'],
-          types: searchParams['types'],
-          wellDiameter: searchParams['wellDiameter'],
-          cableLength: searchParams['cableLength'],
-          activation: searchParams['activation'],
-          bombsQuantity: searchParams['bombsQuantity'],
-          sunExposure: searchParams['sunExposure'] ?? _sunExposure,
-        );
+        final fetched = await _dataService.searchProducts(searchParams);
 
-        _allProducts = EbaraDataService.groupProducts(fetched);
+        _allProducts = _dataService.groupProducts(fetched);
 
         if (_activeFilters == null) {
           _cacheByCategory[categoryId] = _allProducts;
@@ -168,116 +175,39 @@ class HomeProvider with ChangeNotifier {
       }
     }
 
-    _updateFilteredProducts();
+    await _updateFilteredProducts();
     _visibleProducts = _filteredProducts.take(_pageSize).toList();
     _isLoadingProducts = false;
     notifyListeners();
   }
 
-  void _updateFilteredProducts() {
+  Future<void> _updateFilteredProducts() async {
     if (_searchQuery.isEmpty) {
       _filteredProducts = List.from(_allProducts);
     } else {
-      final query = _searchQuery.toLowerCase();
-      _filteredProducts = _allProducts.where((product) {
-        final name = product.name.toLowerCase();
-        final model = product.model.toLowerCase();
-        return name.contains(query) || model.contains(query);
-      }).toList();
+      _filteredProducts = await compute(_filterProductsIsolate, {
+        'products': _allProducts,
+        'query': _searchQuery,
+      });
     }
   }
 
-  Map<String, dynamic> _prepareSearchParams(
-    String categoryId,
-    Map<String, dynamic>? filters,
-  ) {
-    final params = <String, dynamic>{
-      'application': 'TODOS',
-      'line': 'TODOS',
-      'flowRate': 0.0,
-      'flowRateMeasure': 'm3/h',
-      'heightGauge': 0.0,
-      'heightGaugeMeasure': 'm',
-      'frequency': 60,
-      'types': 0,
-      'wellDiameter': null,
-      'cableLength': null,
-      'activation': 'pressostato',
-      'bombsQuantity': 1,
-      'sunExposure': _sunExposure,
-    };
-
-    if (filters == null) {
-      return params;
-    }
-
-    if (filters['application'] != null) {
-      params['application'] = filters['application'];
-    }
-
-    if (filters['line'] != null) {
-      params['line'] = filters['line'];
-    }
-
-    if (filters['flow_rate'] != null) {
-      params['flowRate'] =
-          double.tryParse(filters['flow_rate'].toString()) ?? 0.0;
-    }
-    if (filters['flow_rate_measure'] != null) {
-      params['flowRateMeasure'] = filters['flow_rate_measure'];
-    }
-
-    if (filters['height_gauge'] != null) {
-      params['heightGauge'] =
-          double.tryParse(filters['height_gauge'].toString()) ?? 0.0;
-    }
-    if (filters['height_gauge_measure'] != null) {
-      params['heightGaugeMeasure'] = filters['height_gauge_measure'];
-    }
-
-    if (filters['frequency'] != null) {
-      final freqStr = filters['frequency'].toString().replaceAll(
-        RegExp(r'[^0-9]'),
-        '',
-      );
-      params['frequency'] = int.tryParse(freqStr) ?? 60;
-    }
-
-    if (filters['types'] != null) {
-      params['types'] = int.tryParse(filters['types'].toString()) ?? 0;
-    }
-
-    if (filters['well_diameter'] != null) {
-      params['wellDiameter'] = filters['well_diameter'];
-    }
-
-    if (filters['cable_lenght'] != null) {
-      params['cableLength'] = filters['cable_lenght'];
-    }
-
-    if (filters['activation'] != null) {
-      params['activation'] = filters['activation'];
-    }
-    if (filters['bombs_quantity'] != null) {
-      params['bombsQuantity'] = filters['bombs_quantity'];
-    }
-    return params;
-  }
-
-  void applyFilters(Map<String, dynamic> filters) {
+  void applyFilters(ProductFilterParams filters) {
     loadProducts(_selectedCategoryId, filters: filters);
   }
 
-  void setSearchQuery(String query) {
+  Future<void> setSearchQuery(String query) async {
     _searchQuery = query;
     _currentPage = 1;
-    _updateFilteredProducts();
+    await _updateFilteredProducts();
     _visibleProducts = _filteredProducts.take(_pageSize).toList();
     notifyListeners();
   }
 
   void loadMore() {
-    if (_isPaginating || !hasMoreProducts) return;
+    if (_isPaginating || !hasMoreProducts) {
+      return;
+    }
     _isPaginating = true;
     notifyListeners();
     final next = _filteredProducts
@@ -291,7 +221,9 @@ class HomeProvider with ChangeNotifier {
   }
 
   void updateCategoryByIndex(int index) {
-    if (index < 0 || index >= _categories.length) return;
+    if (index < 0 || index >= _categories.length) {
+      return;
+    }
     final cat = _categories[index];
     _activeFilters = null;
     _selectedCategory = cat.slug;

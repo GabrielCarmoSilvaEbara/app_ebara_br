@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/providers/connectivity_provider.dart';
-import '../../core/localization/app_localizations.dart';
+import '../../core/extensions/context_extensions.dart';
 
 class OfflineBannerWrapper extends StatelessWidget {
   final Widget child;
@@ -12,9 +12,7 @@ class OfflineBannerWrapper extends StatelessWidget {
   Widget build(BuildContext context) {
     final connectivity = context.watch<ConnectivityProvider>();
     final isOnline = connectivity.isOnline;
-    final l10n = AppLocalizations.of(context);
-
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final bottomPadding = context.mediaQuery.padding.bottom;
 
     return Stack(
       children: [
@@ -34,7 +32,7 @@ class OfflineBannerWrapper extends StatelessWidget {
                     const Icon(Icons.wifi_off, color: Colors.white, size: 16),
                     const SizedBox(width: 8),
                     Text(
-                      l10n?.translate('no_internet') ?? 'No connection',
+                      context.l10n.translate('no_internet'),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 12,

@@ -4,13 +4,14 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../services/analytics_service.dart';
+import '../constants/app_constants.dart';
 
 enum AuthStatus { initial, authenticated, guest, unauthenticated }
 
 class AuthProvider with ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
-  final Box _settingsBox = Hive.box('settings');
+  final Box _settingsBox = Hive.box(StorageKeys.boxSettings);
 
   User? _user;
   AuthStatus _status = AuthStatus.initial;
@@ -40,7 +41,10 @@ class AuthProvider with ChangeNotifier {
     if (_user != null) {
       _status = AuthStatus.authenticated;
     } else {
-      final isGuest = _settingsBox.get('is_guest', defaultValue: false);
+      final isGuest = _settingsBox.get(
+        StorageKeys.keyIsGuest,
+        defaultValue: false,
+      );
       if (isGuest) {
         _status = AuthStatus.guest;
       } else {
@@ -60,8 +64,7 @@ class AuthProvider with ChangeNotifier {
       } else {
         final GoogleSignInAccount googleUser = await _googleSignIn
             .authenticate();
-        final GoogleSignInAuthentication googleAuth =
-            await googleUser.authentication;
+        final GoogleSignInAuthentication googleAuth = googleUser.authentication;
 
         final AuthCredential credential = GoogleAuthProvider.credential(
           idToken: googleAuth.idToken,
@@ -71,7 +74,7 @@ class AuthProvider with ChangeNotifier {
       }
 
       _user = userCredential.user;
-      await _settingsBox.put('is_guest', false);
+      await _settingsBox.put(StorageKeys.keyIsGuest, false);
       _status = AuthStatus.authenticated;
 
       await AnalyticsService.logLogin('google');
@@ -83,7 +86,7 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<void> continueAsGuest() async {
-    await _settingsBox.put('is_guest', true);
+    await _settingsBox.put(StorageKeys.keyIsGuest, true);
     _status = AuthStatus.guest;
 
     await AnalyticsService.logLogin('guest');
@@ -99,7 +102,7 @@ class AuthProvider with ChangeNotifier {
     }
     await _auth.signOut();
 
-    await _settingsBox.put('is_guest', false);
+    await _settingsBox.put(StorageKeys.keyIsGuest, false);
     _user = null;
     _status = AuthStatus.unauthenticated;
     notifyListeners();

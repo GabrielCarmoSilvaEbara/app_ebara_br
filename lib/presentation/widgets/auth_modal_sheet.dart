@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/providers/auth_provider.dart';
-import '../../core/localization/app_localizations.dart';
+import '../../core/extensions/context_extensions.dart';
 import '../theme/app_colors.dart';
 import 'history_modal_sheet.dart';
 import 'calculators_bottom_sheet.dart';
@@ -17,7 +17,7 @@ class _AuthModalSheetState extends State<AuthModalSheet> {
   bool _isLoading = false;
 
   void _openHistory(BuildContext context) {
-    Navigator.pop(context);
+    context.pop();
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -28,16 +28,15 @@ class _AuthModalSheetState extends State<AuthModalSheet> {
 
   void _openCalculators(BuildContext context) {
     final auth = context.read<AuthProvider>();
-    final l10n = AppLocalizations.of(context)!;
 
     if (auth.status != AuthStatus.authenticated) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.translate('exclusive_feature'))),
+        SnackBar(content: Text(context.l10n.translate('exclusive_feature'))),
       );
       return;
     }
 
-    Navigator.pop(context);
+    context.pop();
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -51,13 +50,11 @@ class _AuthModalSheetState extends State<AuthModalSheet> {
     final authProvider = context.read<AuthProvider>();
     final isGuest = authProvider.status == AuthStatus.guest;
     final user = authProvider.user;
-    final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
 
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: theme.scaffoldBackgroundColor,
+        color: context.theme.scaffoldBackgroundColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
@@ -65,15 +62,14 @@ class _AuthModalSheetState extends State<AuthModalSheet> {
         children: [
           Text(
             isGuest
-                ? l10n.translate('want_login')
-                : l10n.translate('my_account'),
-            style: theme.textTheme.displayMedium?.copyWith(
+                ? context.l10n.translate('want_login')
+                : context.l10n.translate('my_account'),
+            style: context.textTheme.displayMedium?.copyWith(
               fontSize: 20,
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 20),
-
           if (!isGuest && user != null) ...[
             if (user.photoURL != null)
               Padding(
@@ -84,30 +80,33 @@ class _AuthModalSheetState extends State<AuthModalSheet> {
                 ),
               ),
             Text(
-              user.displayName ?? l10n.translate('user'),
-              style: theme.textTheme.displayMedium?.copyWith(fontSize: 16),
+              user.displayName ?? context.l10n.translate('user'),
+              style: context.textTheme.displayMedium?.copyWith(fontSize: 16),
             ),
             Text(
               user.email ?? "",
-              style: theme.textTheme.labelMedium?.copyWith(color: Colors.grey),
+              style: context.textTheme.labelMedium?.copyWith(
+                color: Colors.grey,
+              ),
             ),
             const SizedBox(height: 20),
             const Divider(),
           ] else if (isGuest) ...[
             Text(
-              l10n.translate('guest_modal_desc'),
+              context.l10n.translate('guest_modal_desc'),
               textAlign: TextAlign.center,
-              style: theme.textTheme.labelMedium?.copyWith(color: Colors.grey),
+              style: context.textTheme.labelMedium?.copyWith(
+                color: Colors.grey,
+              ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 0),
           ],
-
           if (!isGuest) ...[
             ListTile(
               leading: const Icon(Icons.history, color: AppColors.primary),
               title: Text(
-                l10n.translate('history'),
-                style: theme.textTheme.displayMedium?.copyWith(fontSize: 16),
+                context.l10n.translate('history'),
+                style: context.textTheme.displayMedium?.copyWith(fontSize: 16),
               ),
               onTap: () => _openHistory(context),
               contentPadding: EdgeInsets.zero,
@@ -116,17 +115,15 @@ class _AuthModalSheetState extends State<AuthModalSheet> {
             ListTile(
               leading: const Icon(Icons.calculate, color: AppColors.primary),
               title: Text(
-                l10n.translate('calculators'),
-                style: theme.textTheme.displayMedium?.copyWith(fontSize: 16),
+                context.l10n.translate('calculators'),
+                style: context.textTheme.displayMedium?.copyWith(fontSize: 16),
               ),
               onTap: () => _openCalculators(context),
               contentPadding: EdgeInsets.zero,
               trailing: const Icon(Icons.chevron_right, color: Colors.grey),
             ),
           ],
-
-          const SizedBox(height: 25),
-
+          const SizedBox(height: 10),
           if (isGuest)
             ElevatedButton(
               onPressed: _isLoading
@@ -135,18 +132,23 @@ class _AuthModalSheetState extends State<AuthModalSheet> {
                       setState(() => _isLoading = true);
 
                       final auth = context.read<AuthProvider>();
-                      final navigator = Navigator.of(context);
                       final messenger = ScaffoldMessenger.of(context);
 
                       try {
                         await auth.signInWithGoogle();
-                        if (mounted) navigator.pop();
+                        if (mounted) {
+                          context.pop();
+                        }
                       } catch (e) {
-                        if (!mounted) return;
+                        if (!mounted) {
+                          return;
+                        }
                         setState(() => _isLoading = false);
                         messenger.showSnackBar(
                           SnackBar(
-                            content: Text(l10n.translate('connect_error')),
+                            content: Text(
+                              context.l10n.translate('connect_error'),
+                            ),
                           ),
                         );
                       }
@@ -173,32 +175,33 @@ class _AuthModalSheetState extends State<AuthModalSheet> {
                       children: [
                         const Icon(Icons.login),
                         const SizedBox(width: 12),
-                        Text(l10n.translate('enter_google')),
+                        Text(context.l10n.translate('enter_google')),
                       ],
                     ),
             ),
-
           const SizedBox(height: 10),
-
           OutlinedButton(
             onPressed: _isLoading
                 ? null
                 : () async {
                     final auth = context.read<AuthProvider>();
-                    final navigator = Navigator.of(context);
-                    navigator.pop();
+                    context.pop();
                     await auth.signOut();
-                    if (mounted) navigator.pushReplacementNamed('/login');
+                    if (mounted) {
+                      context.pushReplacementNamed('/login');
+                    }
                   },
             style: OutlinedButton.styleFrom(
               minimumSize: const Size(double.infinity, 50),
-              side: BorderSide(color: theme.dividerColor),
+              side: BorderSide(color: context.theme.dividerColor),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
             child: Text(
-              isGuest ? l10n.translate('back_login') : l10n.translate('logout'),
+              isGuest
+                  ? context.l10n.translate('back_login')
+                  : context.l10n.translate('logout'),
               style: const TextStyle(color: Colors.red),
             ),
           ),

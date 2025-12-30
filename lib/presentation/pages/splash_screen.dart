@@ -6,11 +6,12 @@ import 'package:provider/provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../core/providers/home_provider.dart';
 import '../../core/providers/location_provider.dart';
-import '../../core/localization/app_localizations.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/providers/history_provider.dart';
 import '../../core/providers/theme_provider.dart';
 import '../../core/providers/connectivity_provider.dart';
+import '../../core/extensions/context_extensions.dart';
+import '../../core/constants/app_constants.dart';
 import 'home_page.dart';
 import 'login_page.dart';
 import 'location_page.dart';
@@ -37,7 +38,9 @@ class _SplashScreenState extends State<SplashScreen> {
     });
 
     Future.delayed(const Duration(milliseconds: 300), () {
-      if (mounted) setState(() => _startAnimation = true);
+      if (mounted) {
+        setState(() => _startAnimation = true);
+      }
     });
 
     _handleTransition();
@@ -66,16 +69,18 @@ class _SplashScreenState extends State<SplashScreen> {
       }
     } catch (_) {
     } finally {
-      if (!_apiDataCompleter.isCompleted) _apiDataCompleter.complete();
+      if (!_apiDataCompleter.isCompleted) {
+        _apiDataCompleter.complete();
+      }
     }
   }
 
   Future<void> _initHeavyServices() async {
     try {
-      await Hive.openBox('api_cache');
+      await Hive.openBox(StorageKeys.boxApiCache);
     } catch (e) {
-      await Hive.deleteBoxFromDisk('api_cache');
-      await Hive.openBox('api_cache');
+      await Hive.deleteBoxFromDisk(StorageKeys.boxApiCache);
+      await Hive.openBox(StorageKeys.boxApiCache);
     }
   }
 
@@ -98,9 +103,7 @@ class _SplashScreenState extends State<SplashScreen> {
     final locationProvider = context.read<LocationProvider>();
     final authProvider = context.read<AuthProvider>();
 
-    final String chooseLocationText = AppLocalizations.of(
-      context,
-    )!.translate('choose_location');
+    final String chooseLocationText = context.l10n.translate('choose_location');
 
     if (locationProvider.city == chooseLocationText ||
         locationProvider.city.isEmpty) {
@@ -129,7 +132,9 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   void dispose() {
-    if (!_apiDataCompleter.isCompleted) _apiDataCompleter.complete();
+    if (!_apiDataCompleter.isCompleted) {
+      _apiDataCompleter.complete();
+    }
     if (!_textAnimationCompleter.isCompleted) {
       _textAnimationCompleter.complete();
     }
@@ -138,7 +143,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = Theme.of(context).colorScheme.primary;
+    final primaryColor = context.colors.primary;
 
     return Scaffold(
       body: Container(
@@ -146,7 +151,7 @@ class _SplashScreenState extends State<SplashScreen> {
         height: double.infinity,
         decoration: BoxDecoration(
           gradient: RadialGradient(
-            colors: [primaryColor.withAlpha(200), primaryColor],
+            colors: [primaryColor.withValues(alpha: 0.78), primaryColor],
             center: Alignment.center,
             radius: 1.0,
           ),
@@ -166,7 +171,7 @@ class _SplashScreenState extends State<SplashScreen> {
                       duration: const Duration(milliseconds: 800),
                       child: Shimmer.fromColors(
                         baseColor: Colors.white,
-                        highlightColor: Colors.white.withAlpha(120),
+                        highlightColor: Colors.white.withValues(alpha: 0.47),
                         period: const Duration(seconds: 2),
                         child: Image.asset(
                           'assets/images/logo.png',

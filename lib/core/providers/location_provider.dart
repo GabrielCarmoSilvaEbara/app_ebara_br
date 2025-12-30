@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../services/location_service.dart';
 import '../services/analytics_service.dart';
+import '../constants/app_constants.dart';
 
 class LocationProvider with ChangeNotifier {
-  final Box _settingsBox = Hive.box('settings');
+  final LocationService _locationService;
+  final Box _settingsBox = Hive.box(StorageKeys.boxSettings);
 
   List<Map<String, dynamic>> _results = [];
   int _currentIndex = 0;
@@ -20,7 +22,8 @@ class LocationProvider with ChangeNotifier {
   Locale _currentLocale = const Locale('pt');
   Locale get currentLocale => _currentLocale;
 
-  LocationProvider();
+  LocationProvider({required LocationService locationService})
+    : _locationService = locationService;
 
   int get apiLanguageId {
     switch (_currentLocale.languageCode) {
@@ -60,7 +63,7 @@ class LocationProvider with ChangeNotifier {
 
   Future<void> initLocation() async {
     try {
-      final cachedLocation = _settingsBox.get('user_location');
+      final cachedLocation = _settingsBox.get(StorageKeys.keyUserLocation);
 
       if (cachedLocation != null) {
         final data = Map<String, dynamic>.from(cachedLocation);
@@ -81,10 +84,10 @@ class LocationProvider with ChangeNotifier {
         return;
       }
     } catch (e) {
-      await _settingsBox.delete('user_location');
+      await _settingsBox.delete(StorageKeys.keyUserLocation);
     }
 
-    final location = await LocationService.getCurrentCity();
+    final location = await _locationService.getCurrentCity();
 
     if (location != null) {
       updateUserLocation(
@@ -134,7 +137,7 @@ class LocationProvider with ChangeNotifier {
     _updateLocaleByCountry(country);
 
     if (saveToCache) {
-      _settingsBox.put('user_location', {
+      _settingsBox.put(StorageKeys.keyUserLocation, {
         'city': city,
         'state': state,
         'country': country,
@@ -168,11 +171,13 @@ class LocationProvider with ChangeNotifier {
   }
 
   Future<void> search(String query) async {
-    if (query.length < 3) return;
+    if (query.length < 3) {
+      return;
+    }
     _isLoading = true;
     notifyListeners();
     try {
-      _results = await LocationService.searchCities(query: query);
+      _results = await _locationService.searchCities(query: query);
       _currentIndex = 0;
     } finally {
       _isLoading = false;

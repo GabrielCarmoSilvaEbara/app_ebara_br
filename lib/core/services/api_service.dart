@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:hive_flutter/hive_flutter.dart';
+import '../constants/app_constants.dart';
 
 class ApiService {
   final String baseUrl;
@@ -10,7 +11,7 @@ class ApiService {
   final int maxRetries;
   final Duration retryDelay;
   final List<int> retryStatusCodes;
-  final Box _cache = Hive.box('api_cache');
+  final Box _cache = Hive.box(StorageKeys.boxApiCache);
   final http.Client _client = http.Client();
 
   ApiService({

@@ -3,16 +3,23 @@ import 'api_service.dart';
 import '../../core/utils/parse_util.dart';
 import '../models/category_model.dart';
 import '../models/product_model.dart';
+import '../models/product_filter_params.dart';
+import '../constants/app_constants.dart';
 
 class EbaraDataService {
-  static final ApiService _api = ApiService(
-    baseUrl: 'https://ebara.com.br/api',
-    defaultHeaders: {
-      'Content-Type': 'application/json',
-      'api-version': '1',
-      'api-token': 'EZTHB1985',
-    },
-  );
+  final ApiService _api;
+
+  EbaraDataService({ApiService? api})
+    : _api =
+          api ??
+          ApiService(
+            baseUrl: AppConstants.apiBaseUrl,
+            defaultHeaders: {
+              'Content-Type': 'application/json',
+              'api-version': AppConstants.apiVersion,
+              'api-token': AppConstants.apiToken,
+            },
+          );
 
   static const Map<String, IconData> _categoryIcons = {
     'bombas-centrifugas': Icons.tune,
@@ -31,9 +38,7 @@ class EbaraDataService {
     '29': Icons.home,
   };
 
-  static Future<List<CategoryModel>> fetchCategories({
-    int idLanguage = 1,
-  }) async {
+  Future<List<CategoryModel>> fetchCategories({int idLanguage = 1}) async {
     final response = await _api.get<List<CategoryModel>>(
       'categories',
       queryParams: {'id_language': idLanguage},
@@ -54,66 +59,26 @@ class EbaraDataService {
     return response.dataOrNull ?? [];
   }
 
-  static Future<List<ProductModel>> searchProducts({
-    required String categoryId,
-    String application = 'TODOS',
-    String line = 'TODOS',
-    double flowRate = 0,
-    String flowRateMeasure = 'm3/h',
-    double heightGauge = 0,
-    String heightGaugeMeasure = 'm',
-    int frequency = 60,
-    int types = 0,
-    String? wellDiameter,
-    String? cableLength,
-    double sunExposure = 5.0,
-    String activation = 'pressostato',
-    int bombsQuantity = 1,
-    String inverter = 'TODOS',
-    int alignedEquipment = 0,
-    int? idLanguage,
-  }) async {
+  Future<List<ProductModel>> searchProducts(ProductFilterParams params) async {
     String endpoint = 'busca-bombas/search-bomb';
     final bool isPressurizer =
-        categoryId == '27' || categoryId == 'sistemas-de-pressurizacao-1';
+        params.categoryId == '27' ||
+        params.categoryId == 'sistemas-de-pressurizacao-1';
 
     if (isPressurizer) {
       endpoint = 'busca-bombas/search-bomb-pressurization';
     }
 
-    final Map<String, dynamic> params = {
-      'application': application,
-      'line': line,
-      'flow_rate': flowRate,
-      'flow_rate_measure': flowRateMeasure,
-      'height_gauge': heightGauge,
-      'height_gauge_measure': heightGaugeMeasure,
-      'id_language': idLanguage ?? 1,
-    };
-
-    if (isPressurizer) {
-      params['activation'] = activation;
-      if (activation == 'inversor') {
-        params['bombs_quantity'] = bombsQuantity;
-      }
-    } else {
-      params['category'] = categoryId;
-      params['frequency'] = frequency;
-      params['types'] = types;
-      params['inverter'] = inverter;
-      params['aligned_equipment'] = alignedEquipment;
-      params['sun_exposure'] = sunExposure;
-
-      if (wellDiameter != null) params['well_diameter'] = wellDiameter;
-      if (cableLength != null) params['cable_lenght'] = cableLength;
-    }
+    final queryParams = params.toMap();
 
     final response = await _api.get<List<ProductModel>>(
       endpoint,
-      queryParams: params,
+      queryParams: queryParams,
       cacheDuration: const Duration(hours: 4),
       parser: (json) {
-        if (json['status'] != true) return [];
+        if (json['status'] != true) {
+          return [];
+        }
         final List result = json['data']['result'];
         return result.map((p) => ProductModel.fromJson(p)).toList();
       },
@@ -121,11 +86,13 @@ class EbaraDataService {
     return response.dataOrNull ?? [];
   }
 
-  static List<ProductModel> groupProducts(List<ProductModel> products) {
+  List<ProductModel> groupProducts(List<ProductModel> products) {
     final Map<String, List<ProductModel>> grouped = {};
     for (final p in products) {
       final key = p.productId.isNotEmpty ? p.productId : (p.slugProduct ?? '');
-      if (key.isEmpty) continue;
+      if (key.isEmpty) {
+        continue;
+      }
       grouped.putIfAbsent(key, () => []);
       grouped[key]!.add(p);
     }
@@ -136,7 +103,7 @@ class EbaraDataService {
     }).toList();
   }
 
-  static Future<Map<String, dynamic>?> getProductDescriptions(
+  Future<Map<String, dynamic>?> getProductDescriptions(
     String productId, {
     int? idLanguage,
   }) async {
@@ -168,7 +135,7 @@ class EbaraDataService {
     return response.dataOrNull;
   }
 
-  static Future<List<Map<String, dynamic>>> getProductFiles(
+  Future<List<Map<String, dynamic>>> getProductFiles(
     String productId, {
     int? idLanguage,
   }) async {
@@ -177,13 +144,17 @@ class EbaraDataService {
       queryParams: {'id_product': productId, 'id_language': idLanguage ?? 1},
       cacheDuration: const Duration(hours: 4),
       parser: (json) {
-        if (json['status'] != true) return [];
+        if (json['status'] != true) {
+          return [];
+        }
         final List result = json['data'];
         final seenFiles = <String>{};
         final List<Map<String, dynamic>> uniqueList = [];
         for (var f in result) {
           final fileName = f['file'] ?? '';
-          if (fileName.isEmpty || seenFiles.contains(fileName)) continue;
+          if (fileName.isEmpty || seenFiles.contains(fileName)) {
+            continue;
+          }
           seenFiles.add(fileName);
           uniqueList.add({
             'name': f['name'] ?? '',
@@ -200,7 +171,7 @@ class EbaraDataService {
     return response.dataOrNull ?? [];
   }
 
-  static Future<List<Map<String, dynamic>>> getProductApplications(
+  Future<List<Map<String, dynamic>>> getProductApplications(
     String productId, {
     int? idLanguage,
   }) async {
@@ -209,7 +180,9 @@ class EbaraDataService {
       queryParams: {'id_product': productId, 'id_language': idLanguage ?? 1},
       cacheDuration: const Duration(hours: 4),
       parser: (json) {
-        if (json['status'] != true) return [];
+        if (json['status'] != true) {
+          return [];
+        }
         return (json['data'] as List)
             .map((e) => e as Map<String, dynamic>)
             .toList();
@@ -218,7 +191,7 @@ class EbaraDataService {
     return response.dataOrNull ?? [];
   }
 
-  static Future<List<Map<String, dynamic>>> getApplicationsByCategory(
+  Future<List<Map<String, dynamic>>> getApplicationsByCategory(
     String categoryId,
   ) async {
     final response = await _api.get<List<Map<String, dynamic>>>(
@@ -226,7 +199,9 @@ class EbaraDataService {
       queryParams: {'id_category': categoryId},
       cacheDuration: const Duration(hours: 4),
       parser: (json) {
-        if (json['status'] != true) return [];
+        if (json['status'] != true) {
+          return [];
+        }
         return (json['data'] as List)
             .map((e) => e as Map<String, dynamic>)
             .toList();
@@ -235,7 +210,7 @@ class EbaraDataService {
     return response.dataOrNull ?? [];
   }
 
-  static Future<List<Map<String, dynamic>>> getLines(
+  Future<List<Map<String, dynamic>>> getLines(
     String categoryId, {
     String application = 'TODOS',
   }) async {
@@ -244,7 +219,9 @@ class EbaraDataService {
       queryParams: {'id_category': categoryId, 'id_application': application},
       cacheDuration: const Duration(hours: 4),
       parser: (json) {
-        if (json['status'] != true) return [];
+        if (json['status'] != true) {
+          return [];
+        }
         return (json['data'] as List)
             .map((e) => e as Map<String, dynamic>)
             .toList();
@@ -253,12 +230,14 @@ class EbaraDataService {
     return response.dataOrNull ?? [];
   }
 
-  static Future<List<Map<String, dynamic>>> getFrequencies() async {
+  Future<List<Map<String, dynamic>>> getFrequencies() async {
     final response = await _api.get<List<Map<String, dynamic>>>(
       'busca-bombas/get-frequency',
       cacheDuration: const Duration(days: 30),
       parser: (json) {
-        if (json['status'] != true) return [];
+        if (json['status'] != true) {
+          return [];
+        }
         return (json['data'] as List)
             .map((e) => e as Map<String, dynamic>)
             .toList();
@@ -267,12 +246,14 @@ class EbaraDataService {
     return response.dataOrNull ?? [];
   }
 
-  static Future<List<Map<String, dynamic>>> getFlowRates() async {
+  Future<List<Map<String, dynamic>>> getFlowRates() async {
     final response = await _api.get<List<Map<String, dynamic>>>(
       'busca-bombas/list-flow-rate',
       cacheDuration: const Duration(days: 30),
       parser: (json) {
-        if (json['status'] != true) return [];
+        if (json['status'] != true) {
+          return [];
+        }
         return (json['data'] as List)
             .map((e) => e as Map<String, dynamic>)
             .toList();
@@ -281,12 +262,14 @@ class EbaraDataService {
     return response.dataOrNull ?? [];
   }
 
-  static Future<List<Map<String, dynamic>>> getHeightGauges() async {
+  Future<List<Map<String, dynamic>>> getHeightGauges() async {
     final response = await _api.get<List<Map<String, dynamic>>>(
       'busca-bombas/list_height_gauge',
       cacheDuration: const Duration(days: 30),
       parser: (json) {
-        if (json['status'] != true) return [];
+        if (json['status'] != true) {
+          return [];
+        }
         return (json['data'] as List)
             .map((e) => e as Map<String, dynamic>)
             .toList();
@@ -295,12 +278,14 @@ class EbaraDataService {
     return response.dataOrNull ?? [];
   }
 
-  static Future<List<Map<String, dynamic>>> getSystemTypes() async {
+  Future<List<Map<String, dynamic>>> getSystemTypes() async {
     final response = await _api.get<List<Map<String, dynamic>>>(
       'busca-bombas/get_types',
       cacheDuration: const Duration(days: 30),
       parser: (json) {
-        if (json['status'] != true) return [];
+        if (json['status'] != true) {
+          return [];
+        }
         return (json['data'] as List)
             .map((e) => e as Map<String, dynamic>)
             .toList();
@@ -309,12 +294,14 @@ class EbaraDataService {
     return response.dataOrNull ?? [];
   }
 
-  static Future<List<String>> getWellDiameters() async {
+  Future<List<String>> getWellDiameters() async {
     final response = await _api.get<List<String>>(
       'busca-bombas/diametros',
       cacheDuration: const Duration(days: 30),
       parser: (json) {
-        if (json['status'] != true) return [];
+        if (json['status'] != true) {
+          return [];
+        }
         return (json['data'] as List).map((e) => e.toString()).toList();
       },
     );

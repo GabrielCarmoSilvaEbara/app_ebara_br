@@ -5,8 +5,8 @@ import 'package:provider/provider.dart';
 import '../../core/providers/location_provider.dart';
 import '../../core/providers/home_provider.dart';
 import '../../core/services/location_service.dart';
-import '../../core/localization/app_localizations.dart';
 import '../../core/providers/auth_provider.dart';
+import '../../core/extensions/context_extensions.dart';
 import '../theme/app_colors.dart';
 
 class LocationPage extends StatefulWidget {
@@ -27,7 +27,6 @@ class _LocationPageState extends State<LocationPage> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final locProv = context.read<LocationProvider>();
-      final l10n = AppLocalizations.of(context)!;
 
       if (widget.isInitialSelection && locProv.city.isEmpty) {
         locProv.initDefaultLocation();
@@ -36,7 +35,7 @@ class _LocationPageState extends State<LocationPage> {
           13.0,
         );
       } else if (locProv.city.isNotEmpty &&
-          locProv.city != l10n.translate('choose_location')) {
+          locProv.city != context.l10n.translate('choose_location')) {
         locProv.initWithCurrentLocation();
         _mapController.move(coords.LatLng(locProv.lat, locProv.lon), 13.0);
       }
@@ -59,9 +58,7 @@ class _LocationPageState extends State<LocationPage> {
   Widget build(BuildContext context) {
     final provider = context.watch<LocationProvider>();
     final currentPos = coords.LatLng(provider.previewLat, provider.previewLon);
-    final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final isDark = context.theme.brightness == Brightness.dark;
 
     final tileUrl = isDark
         ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
@@ -103,7 +100,7 @@ class _LocationPageState extends State<LocationPage> {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: theme.cardColor,
+                            color: context.theme.cardColor,
                             borderRadius: BorderRadius.circular(8),
                             boxShadow: const [
                               BoxShadow(color: Colors.black12, blurRadius: 4),
@@ -116,7 +113,7 @@ class _LocationPageState extends State<LocationPage> {
                                 : (provider.city.isEmpty
                                       ? "São Paulo"
                                       : provider.city),
-                            style: theme.textTheme.labelMedium?.copyWith(
+                            style: context.textTheme.labelMedium?.copyWith(
                               fontWeight: FontWeight.bold,
                               fontSize: 10,
                             ),
@@ -138,12 +135,12 @@ class _LocationPageState extends State<LocationPage> {
             child: Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 60, 20, 10),
+                  padding: const EdgeInsets.fromLTRB(20, 30, 20, 10),
                   child: Row(
                     children: [
                       if (!widget.isInitialSelection) ...[
                         IconButton.filled(
-                          onPressed: () => Navigator.pop(context),
+                          onPressed: () => context.pop(),
                           icon: const Icon(Icons.arrow_back_ios_new, size: 20),
                           style: IconButton.styleFrom(
                             backgroundColor: AppColors.primary,
@@ -159,7 +156,7 @@ class _LocationPageState extends State<LocationPage> {
                         child: Container(
                           height: 55,
                           decoration: BoxDecoration(
-                            color: theme.cardColor,
+                            color: context.theme.cardColor,
                             borderRadius: BorderRadius.circular(15),
                             boxShadow: const [
                               BoxShadow(color: Colors.black12, blurRadius: 10),
@@ -181,12 +178,12 @@ class _LocationPageState extends State<LocationPage> {
                                   _pageController.jumpToPage(0);
                                 }
                               },
-                              style: theme.textTheme.displayMedium?.copyWith(
+                              style: context.textTheme.displayMedium?.copyWith(
                                 fontSize: 16,
                               ),
                               decoration: InputDecoration(
-                                hintText: l10n.translate('search'),
-                                hintStyle: theme.textTheme.labelMedium
+                                hintText: context.l10n.translate('search'),
+                                hintStyle: context.textTheme.labelMedium
                                     ?.copyWith(color: Colors.grey),
                                 prefixIcon: const Icon(
                                   Icons.search,
@@ -208,7 +205,7 @@ class _LocationPageState extends State<LocationPage> {
                 ),
                 const Spacer(),
                 if (provider.results.isNotEmpty)
-                  _buildBottomCard(provider, context, theme),
+                  _buildBottomCard(provider, context),
               ],
             ),
           ),
@@ -217,17 +214,12 @@ class _LocationPageState extends State<LocationPage> {
     );
   }
 
-  Widget _buildBottomCard(
-    LocationProvider provider,
-    BuildContext context,
-    ThemeData theme,
-  ) {
-    final l10n = AppLocalizations.of(context)!;
+  Widget _buildBottomCard(LocationProvider provider, BuildContext context) {
     return Container(
       margin: const EdgeInsets.all(20),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: theme.cardColor,
+        color: context.theme.cardColor,
         borderRadius: BorderRadius.circular(30),
         boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 20)],
       ),
@@ -252,13 +244,13 @@ class _LocationPageState extends State<LocationPage> {
                   children: [
                     Text(
                       item['city'],
-                      style: theme.textTheme.displayLarge?.copyWith(
+                      style: context.textTheme.displayLarge?.copyWith(
                         fontSize: 18,
                       ),
                     ),
                     Text(
                       "${item['state']}, ${item['country']}",
-                      style: theme.textTheme.labelMedium,
+                      style: context.textTheme.labelMedium,
                     ),
                   ],
                 );
@@ -281,7 +273,6 @@ class _LocationPageState extends State<LocationPage> {
                         }
                       }
                     : null,
-                theme,
               ),
               GestureDetector(
                 onTap: provider.isLoading
@@ -293,7 +284,7 @@ class _LocationPageState extends State<LocationPage> {
                         final navigator = Navigator.of(context);
 
                         provider.setGpsLoading(true);
-                        final loc = await LocationService.getCurrentCity();
+                        final loc = await LocationService().getCurrentCity();
                         if (loc != null) {
                           provider.updateUserLocation(
                             city: loc['city']!,
@@ -311,7 +302,7 @@ class _LocationPageState extends State<LocationPage> {
                           homeProvider.reloadData(apiLanguageId);
 
                           if (isInitial) {
-                            navigator.pushReplacementNamed('/home');
+                            context.pushReplacementNamed('/home');
                           } else {
                             navigator.pop();
                           }
@@ -352,7 +343,6 @@ class _LocationPageState extends State<LocationPage> {
                         }
                       }
                     : null,
-                theme,
               ),
             ],
           ),
@@ -379,12 +369,12 @@ class _LocationPageState extends State<LocationPage> {
                       final authProvider = context.read<AuthProvider>();
 
                       if (authProvider.status == AuthStatus.unauthenticated) {
-                        Navigator.pushReplacementNamed(context, '/login');
+                        context.pushReplacementNamed('/login');
                       } else {
-                        Navigator.pushReplacementNamed(context, '/home');
+                        context.pushReplacementNamed('/home');
                       }
                     } else {
-                      Navigator.pop(context);
+                      context.pop();
                     }
                   },
             style: ElevatedButton.styleFrom(
@@ -405,7 +395,7 @@ class _LocationPageState extends State<LocationPage> {
                     ),
                   )
                 : Text(
-                    l10n.translate('select_location').toUpperCase(),
+                    context.l10n.translate('select_location').toUpperCase(),
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -421,8 +411,8 @@ class _LocationPageState extends State<LocationPage> {
 class _NavBtn extends StatelessWidget {
   final IconData icon;
   final VoidCallback? onTap;
-  final ThemeData theme;
-  const _NavBtn(this.icon, this.onTap, this.theme);
+
+  const _NavBtn(this.icon, this.onTap);
 
   @override
   Widget build(BuildContext context) {
@@ -432,7 +422,7 @@ class _NavBtn extends StatelessWidget {
       style: IconButton.styleFrom(
         backgroundColor: onTap != null
             ? AppColors.primary.withValues(alpha: 0.1)
-            : (theme.brightness == Brightness.dark
+            : (context.theme.brightness == Brightness.dark
                   ? Colors.grey.shade800
                   : Colors.grey.shade100),
         foregroundColor: onTap != null

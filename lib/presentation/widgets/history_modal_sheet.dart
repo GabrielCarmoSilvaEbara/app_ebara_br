@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/providers/history_provider.dart';
-import '../../core/localization/app_localizations.dart';
+import '../../core/extensions/context_extensions.dart';
 import '../pages/product_details_page.dart';
 
 class HistoryModalSheet extends StatelessWidget {
@@ -11,18 +11,14 @@ class HistoryModalSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final historyProvider = context.watch<HistoryProvider>();
-    final l10n = AppLocalizations.of(context)!;
     final list = historyProvider.history;
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final isDark = context.theme.brightness == Brightness.dark;
 
     return Container(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.7,
-      ),
+      constraints: BoxConstraints(maxHeight: context.height * 0.7),
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       decoration: BoxDecoration(
-        color: theme.scaffoldBackgroundColor,
+        color: context.theme.scaffoldBackgroundColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
@@ -33,8 +29,8 @@ class HistoryModalSheet extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                l10n.translate('recent_products'),
-                style: theme.textTheme.displayMedium?.copyWith(
+                context.l10n.translate('recent_products'),
+                style: context.textTheme.displayMedium?.copyWith(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
@@ -43,7 +39,7 @@ class HistoryModalSheet extends StatelessWidget {
                 TextButton(
                   onPressed: () => historyProvider.clearHistory(),
                   child: Text(
-                    l10n.translate('clear'),
+                    context.l10n.translate('clear'),
                     style: const TextStyle(color: Colors.red),
                   ),
                 ),
@@ -55,7 +51,7 @@ class HistoryModalSheet extends StatelessWidget {
               padding: const EdgeInsets.all(40.0),
               child: Center(
                 child: Text(
-                  l10n.translate('no_recent_products'),
+                  context.l10n.translate('no_recent_products'),
                   style: const TextStyle(color: Colors.grey),
                 ),
               ),
@@ -79,9 +75,9 @@ class HistoryModalSheet extends StatelessWidget {
                             : Colors.grey.shade100,
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: item['image'] != null && item['image'].isNotEmpty
+                      child: item.image.isNotEmpty
                           ? CachedNetworkImage(
-                              imageUrl: item['image'],
+                              imageUrl: item.image,
                               fit: BoxFit.contain,
                               errorWidget: (c, e, s) =>
                                   const Icon(Icons.image_not_supported),
@@ -89,24 +85,22 @@ class HistoryModalSheet extends StatelessWidget {
                           : const Icon(Icons.image),
                     ),
                     title: Text(
-                      item['name'] ?? '',
+                      item.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.displayMedium?.copyWith(
+                      style: context.textTheme.displayMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                         fontSize: 14,
                       ),
                     ),
                     subtitle: Text(
-                      item['model'] ?? '',
+                      item.model,
                       style: const TextStyle(color: Colors.grey, fontSize: 12),
                     ),
                     onTap: () {
-                      Navigator.pop(context);
+                      context.pop();
 
-                      final category = item['history_category'] ?? '';
-                      final rawVariants = item['variants'] as List;
-                      final variants = rawVariants
+                      final variants = item.variants
                           .map((e) => Map<String, dynamic>.from(e))
                           .toList();
 
@@ -114,7 +108,7 @@ class HistoryModalSheet extends StatelessWidget {
                         context,
                         MaterialPageRoute(
                           builder: (_) => ProductDetailsPage(
-                            category: category,
+                            category: item.category,
                             variants: variants,
                           ),
                         ),
