@@ -22,7 +22,6 @@ class ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.colors;
     final hasVariants = product.variants.isNotEmpty;
 
     return Card(
@@ -30,10 +29,6 @@ class ProductCard extends StatelessWidget {
       color: context.theme.cardColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppDimens.radiusMd),
-        side: BorderSide(
-          color: colors.outline.withValues(alpha: 0.2),
-          width: 1,
-        ),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(AppDimens.radiusMd),

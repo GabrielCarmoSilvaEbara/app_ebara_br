@@ -92,6 +92,7 @@ class _CustomSearchBarState extends State<CustomSearchBar> {
     return TextField(
       controller: _controller,
       onChanged: widget.onChanged,
+      textAlignVertical: TextAlignVertical.center,
       style: TextStyle(color: colors.onSurface),
       decoration: InputDecoration(
         hintText: widget.hintText,

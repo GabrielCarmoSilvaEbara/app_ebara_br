@@ -49,7 +49,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     final product = widget.variants.first;
     final id = product['id_product'];
 
-    _pageController = PageController(initialPage: provider.currentIndex);
+    _pageController = PageController(initialPage: 0);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       provider.loadProductData(id, locProvider.apiLanguageId);
