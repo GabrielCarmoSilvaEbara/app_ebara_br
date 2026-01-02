@@ -5,6 +5,7 @@ import '../models/category_model.dart';
 import '../models/product_model.dart';
 import '../models/product_filter_params.dart';
 import '../constants/app_constants.dart';
+import '../constants/api_endpoints.dart';
 
 class EbaraDataService {
   final ApiService _api;
@@ -40,7 +41,7 @@ class EbaraDataService {
 
   Future<List<CategoryModel>> fetchCategories({int idLanguage = 1}) async {
     final response = await _api.get<List<CategoryModel>>(
-      'categories',
+      ApiEndpoints.categories,
       queryParams: {'id_language': idLanguage},
       cacheDuration: const Duration(days: 7),
       parser: (json) {
@@ -60,13 +61,13 @@ class EbaraDataService {
   }
 
   Future<List<ProductModel>> searchProducts(ProductFilterParams params) async {
-    String endpoint = 'busca-bombas/search-bomb';
+    String endpoint = ApiEndpoints.searchBomb;
     final bool isPressurizer =
         params.categoryId == '27' ||
         params.categoryId == 'sistemas-de-pressurizacao-1';
 
     if (isPressurizer) {
-      endpoint = 'busca-bombas/search-bomb-pressurization';
+      endpoint = ApiEndpoints.searchPressurization;
     }
 
     final queryParams = params.toMap();
@@ -108,7 +109,7 @@ class EbaraDataService {
     int? idLanguage,
   }) async {
     final response = await _api.get<Map<String, dynamic>>(
-      'busca-bombas/get_descriptions',
+      ApiEndpoints.getDescriptions,
       queryParams: {'id_product': productId, 'id_language': idLanguage ?? 1},
       cacheDuration: const Duration(hours: 12),
       parser: (json) {
@@ -140,7 +141,7 @@ class EbaraDataService {
     int? idLanguage,
   }) async {
     final response = await _api.get<List<Map<String, dynamic>>>(
-      'busca-bombas/get_archives',
+      ApiEndpoints.getArchives,
       queryParams: {'id_product': productId, 'id_language': idLanguage ?? 1},
       cacheDuration: const Duration(hours: 4),
       parser: (json) {
@@ -176,7 +177,7 @@ class EbaraDataService {
     int? idLanguage,
   }) async {
     final response = await _api.get<List<Map<String, dynamic>>>(
-      'busca-bombas/get_applications',
+      ApiEndpoints.getApplications,
       queryParams: {'id_product': productId, 'id_language': idLanguage ?? 1},
       cacheDuration: const Duration(hours: 4),
       parser: (json) {
@@ -195,7 +196,7 @@ class EbaraDataService {
     String categoryId,
   ) async {
     final response = await _api.get<List<Map<String, dynamic>>>(
-      'aplicacoes',
+      ApiEndpoints.applicationsList,
       queryParams: {'id_category': categoryId},
       cacheDuration: const Duration(hours: 4),
       parser: (json) {
@@ -215,7 +216,7 @@ class EbaraDataService {
     String application = 'TODOS',
   }) async {
     final response = await _api.get<List<Map<String, dynamic>>>(
-      'busca-bombas/get-lines',
+      ApiEndpoints.getLines,
       queryParams: {'id_category': categoryId, 'id_application': application},
       cacheDuration: const Duration(hours: 4),
       parser: (json) {
@@ -232,7 +233,7 @@ class EbaraDataService {
 
   Future<List<Map<String, dynamic>>> getFrequencies() async {
     final response = await _api.get<List<Map<String, dynamic>>>(
-      'busca-bombas/get-frequency',
+      ApiEndpoints.getFrequency,
       cacheDuration: const Duration(days: 30),
       parser: (json) {
         if (json['status'] != true) {
@@ -248,7 +249,7 @@ class EbaraDataService {
 
   Future<List<Map<String, dynamic>>> getFlowRates() async {
     final response = await _api.get<List<Map<String, dynamic>>>(
-      'busca-bombas/list-flow-rate',
+      ApiEndpoints.listFlowRate,
       cacheDuration: const Duration(days: 30),
       parser: (json) {
         if (json['status'] != true) {
@@ -264,7 +265,7 @@ class EbaraDataService {
 
   Future<List<Map<String, dynamic>>> getHeightGauges() async {
     final response = await _api.get<List<Map<String, dynamic>>>(
-      'busca-bombas/list_height_gauge',
+      ApiEndpoints.listHeightGauge,
       cacheDuration: const Duration(days: 30),
       parser: (json) {
         if (json['status'] != true) {
@@ -280,7 +281,7 @@ class EbaraDataService {
 
   Future<List<Map<String, dynamic>>> getSystemTypes() async {
     final response = await _api.get<List<Map<String, dynamic>>>(
-      'busca-bombas/get_types',
+      ApiEndpoints.getTypes,
       cacheDuration: const Duration(days: 30),
       parser: (json) {
         if (json['status'] != true) {
@@ -296,7 +297,7 @@ class EbaraDataService {
 
   Future<List<String>> getWellDiameters() async {
     final response = await _api.get<List<String>>(
-      'busca-bombas/diametros',
+      ApiEndpoints.getDiameters,
       cacheDuration: const Duration(days: 30),
       parser: (json) {
         if (json['status'] != true) {

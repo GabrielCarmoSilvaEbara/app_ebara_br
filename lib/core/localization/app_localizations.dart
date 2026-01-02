@@ -115,6 +115,12 @@ class AppLocalizations {
       'try_again': 'Try Again',
       'no_internet': 'No internet connection',
       'offline_mode': 'You are in offline mode',
+      'from': 'From',
+      'to': 'To',
+      'tap_to_copy': 'Tap to copy',
+      'comparison_base': 'Base',
+      'comparison_current': 'Current',
+      'pump_selector': 'Pump Selector',
     },
     'pt': {
       'location': 'Localização',
@@ -218,6 +224,12 @@ class AppLocalizations {
       'try_again': 'Tentar Novamente',
       'no_internet': 'Sem conexão com a internet',
       'offline_mode': 'Você está em modo offline',
+      'from': 'De',
+      'to': 'Para',
+      'tap_to_copy': 'Toque para copiar',
+      'comparison_base': 'Base',
+      'comparison_current': 'Atual',
+      'pump_selector': 'Seletor de Bombas',
     },
     'es': {
       'location': 'Ubicación',
@@ -321,6 +333,12 @@ class AppLocalizations {
       'try_again': 'Intentar de nuevo',
       'no_internet': 'Sin conexión a internet',
       'offline_mode': 'Estás en modo offline',
+      'from': 'De',
+      'to': 'Para',
+      'tap_to_copy': 'Toque para copiar',
+      'comparison_base': 'Base',
+      'comparison_current': 'Actual',
+      'pump_selector': 'Selector de Bombas',
     },
   };
 

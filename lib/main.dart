@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:animated_theme_switcher/animated_theme_switcher.dart' as anim;
 import 'presentation/theme/app_theme.dart';
 import 'core/providers/auth_provider.dart';
 import 'core/providers/home_provider.dart';
@@ -85,33 +86,34 @@ class MyApp extends StatelessWidget {
     final themeProvider = context.watch<ThemeProvider>();
     final locale = locationProvider.currentLocale;
 
-    final themeMode = themeProvider.isDarkMode
-        ? ThemeMode.dark
-        : ThemeMode.light;
-
-    return MaterialApp(
-      title: 'Ebara Brasil',
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: themeMode,
-      debugShowCheckedModeBanner: false,
-      locale: locale,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [
-        Locale('pt', ''),
-        Locale('en', ''),
-        Locale('es', ''),
-      ],
-      initialRoute: '/',
-      builder: (context, child) {
-        return OfflineBannerWrapper(child: child!);
+    return anim.ThemeProvider(
+      initTheme: themeProvider.isDarkMode
+          ? AppTheme.darkTheme
+          : AppTheme.lightTheme,
+      builder: (context, theme) {
+        return MaterialApp(
+          title: 'Ebara Brasil',
+          theme: theme,
+          debugShowCheckedModeBanner: false,
+          locale: locale,
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [
+            Locale('pt', ''),
+            Locale('en', ''),
+            Locale('es', ''),
+          ],
+          initialRoute: '/',
+          builder: (context, child) {
+            return OfflineBannerWrapper(child: child!);
+          },
+          onGenerateRoute: AppRouter.generateRoute,
+        );
       },
-      onGenerateRoute: AppRouter.generateRoute,
     );
   }
 }

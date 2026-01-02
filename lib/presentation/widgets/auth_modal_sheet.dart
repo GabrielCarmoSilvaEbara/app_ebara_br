@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/extensions/context_extensions.dart';
-import '../theme/app_colors.dart';
 import 'history_modal_sheet.dart';
 import 'calculators_bottom_sheet.dart';
+import 'app_buttons.dart';
 
 class AuthModalSheet extends StatefulWidget {
   const AuthModalSheet({super.key});
@@ -20,7 +20,7 @@ class _AuthModalSheetState extends State<AuthModalSheet> {
     context.pop();
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: context.colors.surface.withValues(alpha: 0),
       isScrollControlled: true,
       builder: (context) => const HistoryModalSheet(),
     );
@@ -39,7 +39,7 @@ class _AuthModalSheetState extends State<AuthModalSheet> {
     context.pop();
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: context.colors.surface.withValues(alpha: 0),
       isScrollControlled: true,
       builder: (context) => const CalculatorsBottomSheet(),
     );
@@ -50,6 +50,7 @@ class _AuthModalSheetState extends State<AuthModalSheet> {
     final authProvider = context.read<AuthProvider>();
     final isGuest = authProvider.status == AuthStatus.guest;
     final user = authProvider.user;
+    final colors = context.colors;
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -86,7 +87,7 @@ class _AuthModalSheetState extends State<AuthModalSheet> {
             Text(
               user.email ?? "",
               style: context.textTheme.labelMedium?.copyWith(
-                color: Colors.grey,
+                color: colors.onSurface.withValues(alpha: 0.5),
               ),
             ),
             const SizedBox(height: 20),
@@ -96,53 +97,55 @@ class _AuthModalSheetState extends State<AuthModalSheet> {
               context.l10n.translate('guest_modal_desc'),
               textAlign: TextAlign.center,
               style: context.textTheme.labelMedium?.copyWith(
-                color: Colors.grey,
+                color: colors.onSurface.withValues(alpha: 0.5),
               ),
             ),
             const SizedBox(height: 0),
           ],
           if (!isGuest) ...[
             ListTile(
-              leading: const Icon(Icons.history, color: AppColors.primary),
+              leading: Icon(Icons.history, color: colors.primary),
               title: Text(
                 context.l10n.translate('history'),
                 style: context.textTheme.displayMedium?.copyWith(fontSize: 16),
               ),
               onTap: () => _openHistory(context),
               contentPadding: EdgeInsets.zero,
-              trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+              trailing: Icon(
+                Icons.chevron_right,
+                color: colors.onSurface.withValues(alpha: 0.5),
+              ),
             ),
             ListTile(
-              leading: const Icon(Icons.calculate, color: AppColors.primary),
+              leading: Icon(Icons.calculate, color: colors.primary),
               title: Text(
                 context.l10n.translate('calculators'),
                 style: context.textTheme.displayMedium?.copyWith(fontSize: 16),
               ),
               onTap: () => _openCalculators(context),
               contentPadding: EdgeInsets.zero,
-              trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+              trailing: Icon(
+                Icons.chevron_right,
+                color: colors.onSurface.withValues(alpha: 0.5),
+              ),
             ),
           ],
           const SizedBox(height: 10),
           if (isGuest)
-            ElevatedButton(
+            AppPrimaryButton(
               onPressed: _isLoading
                   ? null
                   : () async {
                       setState(() => _isLoading = true);
-
                       final auth = context.read<AuthProvider>();
                       final messenger = ScaffoldMessenger.of(context);
-
                       try {
                         await auth.signInWithGoogle();
                         if (mounted) {
                           context.pop();
                         }
                       } catch (e) {
-                        if (!mounted) {
-                          return;
-                        }
+                        if (!mounted) return;
                         setState(() => _isLoading = false);
                         messenger.showSnackBar(
                           SnackBar(
@@ -153,34 +156,13 @@ class _AuthModalSheetState extends State<AuthModalSheet> {
                         );
                       }
                     },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: _isLoading
-                  ? const SizedBox(
-                      height: 24,
-                      width: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.login),
-                        const SizedBox(width: 12),
-                        Text(context.l10n.translate('enter_google')),
-                      ],
-                    ),
+              text: context.l10n.translate('enter_google'),
+              isLoading: _isLoading,
+              icon: Icons.login,
+              foregroundColor: colors.onPrimary,
             ),
           const SizedBox(height: 10),
-          OutlinedButton(
+          AppOutlinedButton(
             onPressed: _isLoading
                 ? null
                 : () async {
@@ -191,19 +173,10 @@ class _AuthModalSheetState extends State<AuthModalSheet> {
                       context.pushReplacementNamed('/login');
                     }
                   },
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size(double.infinity, 50),
-              side: BorderSide(color: context.theme.dividerColor),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: Text(
-              isGuest
-                  ? context.l10n.translate('back_login')
-                  : context.l10n.translate('logout'),
-              style: const TextStyle(color: Colors.red),
-            ),
+            text: isGuest
+                ? context.l10n.translate('back_login')
+                : context.l10n.translate('logout'),
+            textColor: colors.error,
           ),
         ],
       ),

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/extensions/context_extensions.dart';
-import '../theme/app_colors.dart';
 
 class ImageViewer extends StatefulWidget {
   final String imageUrl;
@@ -64,8 +63,10 @@ class _ImageViewerState extends State<ImageViewer>
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Scaffold(
-      backgroundColor: context.theme.scaffoldBackgroundColor,
+      backgroundColor: colors.primary,
       body: Stack(
         children: [
           Center(
@@ -81,12 +82,12 @@ class _ImageViewerState extends State<ImageViewer>
                   memCacheHeight:
                       (context.height * context.mediaQuery.devicePixelRatio)
                           .toInt(),
-                  placeholder: (context, url) => const Center(
-                    child: CircularProgressIndicator(color: AppColors.primary),
+                  placeholder: (context, url) => Center(
+                    child: CircularProgressIndicator(color: colors.onPrimary),
                   ),
-                  errorWidget: (context, url, error) => const Icon(
+                  errorWidget: (context, url, error) => Icon(
                     Icons.broken_image,
-                    color: AppColors.primary,
+                    color: colors.onPrimary,
                     size: 50,
                   ),
                 ),
@@ -96,7 +97,11 @@ class _ImageViewerState extends State<ImageViewer>
           Positioned(
             top: 40,
             right: 20,
-            child: _buildButton(icon: Icons.close, onTap: () => context.pop()),
+            child: _buildButton(
+              icon: Icons.close,
+              onTap: () => context.pop(),
+              context: context,
+            ),
           ),
           Positioned(
             bottom: 40,
@@ -111,6 +116,7 @@ class _ImageViewerState extends State<ImageViewer>
                     HapticFeedback.selectionClick();
                     _zoom(false);
                   },
+                  context: context,
                 ),
                 const SizedBox(width: 20),
                 _buildButton(
@@ -119,6 +125,7 @@ class _ImageViewerState extends State<ImageViewer>
                     HapticFeedback.selectionClick();
                     _zoom(true);
                   },
+                  context: context,
                 ),
               ],
             ),
@@ -128,18 +135,24 @@ class _ImageViewerState extends State<ImageViewer>
     );
   }
 
-  Widget _buildButton({required IconData icon, required VoidCallback onTap}) {
+  Widget _buildButton({
+    required IconData icon,
+    required VoidCallback onTap,
+    required BuildContext context,
+  }) {
+    final colors = context.colors;
+
     return Material(
-      color: AppColors.primary,
+      color: colors.onPrimary.withValues(alpha: 0.2),
       borderRadius: BorderRadius.circular(30),
-      elevation: 4,
+      elevation: 0,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(30),
         child: Container(
           padding: const EdgeInsets.all(12),
           decoration: const BoxDecoration(shape: BoxShape.circle),
-          child: Icon(icon, color: Colors.white, size: 28),
+          child: Icon(icon, color: colors.onPrimary, size: 28),
         ),
       ),
     );

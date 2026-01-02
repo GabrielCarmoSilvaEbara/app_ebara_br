@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/extensions/context_extensions.dart';
+import '../theme/app_dimens.dart';
+import '../theme/app_shadows.dart';
 import 'filters_bottom_sheet.dart';
 
 class CustomSearchBar extends StatefulWidget {
@@ -53,12 +55,8 @@ class _CustomSearchBarState extends State<CustomSearchBar> {
   }
 
   Future<void> _openFilters() async {
-    final result = await showModalBottomSheet<Map<String, dynamic>>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) =>
-          FiltersBottomSheet(categoryId: widget.selectedCategoryId),
+    final result = await context.showAppBottomSheet<Map<String, dynamic>>(
+      child: FiltersBottomSheet(categoryId: widget.selectedCategoryId),
     );
 
     if (result != null && widget.onFiltersApplied != null) {
@@ -68,49 +66,40 @@ class _CustomSearchBarState extends State<CustomSearchBar> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = context.colors;
-
     return Container(
       height: 56,
-      decoration: _buildContainerDecoration(colorScheme),
+      decoration: _buildContainerDecoration(context),
       child: Row(
         children: [
-          Expanded(child: _buildTextField(colorScheme)),
-          _buildFilterButton(colorScheme),
+          Expanded(child: _buildTextField(context)),
+          _buildFilterButton(context),
         ],
       ),
     );
   }
 
-  BoxDecoration _buildContainerDecoration(ColorScheme colorScheme) {
+  BoxDecoration _buildContainerDecoration(BuildContext context) {
     return BoxDecoration(
-      color: colorScheme.surface,
-      borderRadius: BorderRadius.circular(12),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withValues(alpha: 0.05),
-          spreadRadius: 1,
-          blurRadius: 5,
-          offset: const Offset(0, 3),
-        ),
-      ],
+      color: context.colors.surface,
+      borderRadius: BorderRadius.circular(AppDimens.radiusMd),
+      boxShadow: AppShadows.sm(context.colors.shadow),
     );
   }
 
-  Widget _buildTextField(ColorScheme colorScheme) {
+  Widget _buildTextField(BuildContext context) {
+    final colors = context.colors;
+
     return TextField(
       controller: _controller,
       onChanged: widget.onChanged,
-      style: TextStyle(color: colorScheme.onSurface),
+      style: TextStyle(color: colors.onSurface),
       decoration: InputDecoration(
         hintText: widget.hintText,
-        hintStyle: TextStyle(
-          color: colorScheme.onSurface.withValues(alpha: 0.5),
-        ),
-        prefixIcon: Icon(Icons.search, color: colorScheme.onSurface),
+        hintStyle: context.bodySmall,
+        prefixIcon: Icon(Icons.search, color: colors.onSurface),
         suffixIcon: _hasText
             ? IconButton(
-                icon: Icon(Icons.clear, color: colorScheme.onSurface),
+                icon: Icon(Icons.clear, color: colors.onSurface),
                 onPressed: _clearSearch,
                 splashRadius: 20,
               )
@@ -123,18 +112,20 @@ class _CustomSearchBarState extends State<CustomSearchBar> {
     );
   }
 
-  Widget _buildFilterButton(ColorScheme colorScheme) {
+  Widget _buildFilterButton(BuildContext context) {
+    final colors = context.colors;
+
     return Material(
-      color: colorScheme.primary,
-      borderRadius: BorderRadius.circular(12),
+      color: colors.primary,
+      borderRadius: BorderRadius.circular(AppDimens.radiusMd),
       child: InkWell(
         onTap: _openFilters,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppDimens.radiusMd),
         child: Container(
           width: 56,
           height: 56,
           alignment: Alignment.center,
-          child: Icon(Icons.tune, color: colorScheme.onPrimary),
+          child: Icon(Icons.tune, color: colors.onPrimary),
         ),
       ),
     );

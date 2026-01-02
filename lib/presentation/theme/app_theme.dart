@@ -10,20 +10,23 @@ class AppTheme {
       brightness: Brightness.light,
       primaryColor: AppColors.primary,
       scaffoldBackgroundColor: AppColors.backgroundSecondary,
-      dividerColor: Colors.grey.shade200,
+      dividerColor: AppColors.textDecoration.withValues(alpha: 0.2),
       cardColor: AppColors.backgroundCard,
       colorScheme: const ColorScheme(
         brightness: Brightness.light,
         primary: AppColors.primary,
-        onPrimary: AppColors.textSecondaryDecoration,
+        onPrimary: Colors.white,
         secondary: AppColors.secondary,
-        onSecondary: Colors.white,
+        onSecondary: AppColors.textPrimary,
         error: Colors.red,
         onError: Colors.white,
         surface: AppColors.backgroundCard,
         onSurface: AppColors.textPrimary,
-        surfaceContainer: AppColors.background,
+        surfaceContainer: AppColors.backgroundSecondary,
+        outline: AppColors.textDecoration,
+        shadow: Colors.black,
       ),
+      iconTheme: const IconThemeData(color: AppColors.primary),
       textTheme: TextTheme(
         displayLarge: AppTextStyles.displayLarge.copyWith(
           color: AppColors.textPrimary,
@@ -52,7 +55,7 @@ class AppTheme {
       primaryColor: AppColors.primary,
       scaffoldBackgroundColor: const Color(0xFF121212),
       cardColor: const Color(0xFF1E1E1E),
-      dividerColor: Colors.grey.shade800,
+      dividerColor: Colors.white24,
       colorScheme: const ColorScheme(
         brightness: Brightness.dark,
         primary: AppColors.primary,
@@ -63,8 +66,11 @@ class AppTheme {
         onError: Colors.black,
         surface: Color(0xFF1E1E1E),
         onSurface: Colors.white,
-        surfaceContainer: Color(0xFF2C2C2C),
+        surfaceContainer: Color(0xFF121212),
+        outline: Colors.white24,
+        shadow: Colors.black,
       ),
+      iconTheme: const IconThemeData(color: Colors.white),
       textTheme: TextTheme(
         displayLarge: AppTextStyles.displayLarge.copyWith(color: Colors.white),
         displayMedium: AppTextStyles.displayMedium.copyWith(
@@ -74,7 +80,6 @@ class AppTheme {
         labelMedium: AppTextStyles.labelMedium.copyWith(color: Colors.white70),
         labelSmall: AppTextStyles.labelSmall.copyWith(color: Colors.white60),
       ),
-      iconTheme: const IconThemeData(color: Colors.white),
       appBarTheme: const AppBarTheme(
         backgroundColor: Color(0xFF121212),
         iconTheme: IconThemeData(color: Colors.white),

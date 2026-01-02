@@ -7,7 +7,6 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/providers/product_details_provider.dart';
 import '../../core/utils/parse_util.dart';
 import '../../core/utils/file_type_util.dart';
-import '../theme/app_colors.dart';
 import '../widgets/files_skeleton.dart';
 import '../../core/providers/location_provider.dart';
 import '../../core/providers/auth_provider.dart';
@@ -16,6 +15,9 @@ import '../../core/services/analytics_service.dart';
 import '../../core/extensions/context_extensions.dart';
 import '../widgets/auth_modal_sheet.dart';
 import '../widgets/image_viewer.dart';
+import '../widgets/app_buttons.dart';
+import '../theme/app_dimens.dart';
+import '../theme/app_shadows.dart';
 
 class ProductDetailsPage extends StatefulWidget {
   final String category;
@@ -33,6 +35,10 @@ class ProductDetailsPage extends StatefulWidget {
 
 class _ProductDetailsPageState extends State<ProductDetailsPage> {
   late PageController _pageController;
+  final ExpansibleController _featuresCtrl = ExpansibleController();
+  final ExpansibleController _specsCtrl = ExpansibleController();
+  final ExpansibleController _optionsCtrl = ExpansibleController();
+  final ExpansibleController _docsCtrl = ExpansibleController();
 
   @override
   void initState() {
@@ -65,6 +71,21 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     super.dispose();
   }
 
+  void _handleExpansion(ExpansibleController selected) {
+    if (selected != _featuresCtrl && _featuresCtrl.isExpanded) {
+      _featuresCtrl.collapse();
+    }
+    if (selected != _specsCtrl && _specsCtrl.isExpanded) {
+      _specsCtrl.collapse();
+    }
+    if (selected != _optionsCtrl && _optionsCtrl.isExpanded) {
+      _optionsCtrl.collapse();
+    }
+    if (selected != _docsCtrl && _docsCtrl.isExpanded) {
+      _docsCtrl.collapse();
+    }
+  }
+
   void _changeVariant(int index, ProductDetailsProvider provider) {
     if (index < 0 || index >= widget.variants.length) {
       return;
@@ -94,13 +115,14 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<ProductDetailsProvider>();
+    final colors = context.colors;
 
     return Scaffold(
-      backgroundColor: context.theme.scaffoldBackgroundColor,
+      backgroundColor: colors.primary,
       body: SafeArea(
         child: Column(
           children: [
-            const SizedBox(height: 25),
+            const SizedBox(height: AppDimens.xl),
             _buildHeader(provider),
             Expanded(
               child: PageView.builder(
@@ -110,13 +132,14 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                 itemCount: widget.variants.length,
                 itemBuilder: (context, index) {
                   final v = widget.variants[index];
+
                   return SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
+                    physics: const ClampingScrollPhysics(),
                     child: Column(
                       children: [
-                        const SizedBox(height: 20),
+                        const SizedBox(height: AppDimens.lg),
                         _buildHeroImageSection(v, provider),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: AppDimens.lg),
                         _buildInfoContent(v, provider),
                       ],
                     ),
@@ -132,21 +155,28 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   }
 
   Widget _buildHeader(ProductDetailsProvider provider) {
+    final textColor = context.colors.onPrimary;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppDimens.lg,
+        vertical: AppDimens.sm,
+      ),
       child: Row(
         children: [
-          IconButton.filled(
-            onPressed: () => context.pop(),
-            icon: const Icon(Icons.arrow_back_ios_new, size: 18),
-            style: IconButton.styleFrom(backgroundColor: AppColors.primary),
+          AppSquareIconButton(
+            icon: Icons.arrow_back_ios_new,
+            onTap: () => context.pop(),
+            backgroundColor: context.colors.onPrimary.withValues(alpha: 0.2),
+            iconColor: context.colors.onPrimary,
+            iconSize: 18,
           ),
           Expanded(
             child: Text(
               context.l10n.translate(widget.category).toUpperCase(),
               textAlign: TextAlign.center,
-              style: context.textTheme.displayMedium?.copyWith(
-                color: AppColors.primary,
+              style: context.subtitleStyle?.copyWith(
+                color: textColor,
                 letterSpacing: 1.2,
                 fontSize: 13,
               ),
@@ -180,6 +210,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     final String imageUrl = variant['image'] ?? '';
     final String heroTag = variant['id'] ?? 'product_hero';
 
+    final btnBgColor = context.colors.onPrimary.withValues(alpha: 0.2);
+    final btnIconColor = context.colors.onPrimary;
+
     return Dismissible(
       key: const Key('dismiss_image_section'),
       direction: DismissDirection.down,
@@ -187,7 +220,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         Navigator.pop(context);
       },
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
+        padding: const EdgeInsets.symmetric(horizontal: AppDimens.lg),
         child: Stack(
           children: [
             _ProductImage(
@@ -199,7 +232,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
             Positioned(
               top: 10,
               left: 10,
-              child: GestureDetector(
+              child: AppBouncingButton(
                 onTap: isEcommerceEnabled
                     ? () => _launchEcommerce(ecommerceLink)
                     : null,
@@ -208,21 +241,21 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
                     color: isEcommerceEnabled
-                        ? AppColors.primary.withValues(alpha: 0.1)
-                        : Colors.grey.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
+                        ? btnBgColor
+                        : context.colors.onPrimary.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(AppDimens.radiusMd),
                     border: Border.all(
                       color: isEcommerceEnabled
-                          ? AppColors.primary.withValues(alpha: 0.2)
-                          : Colors.grey.withValues(alpha: 0.2),
+                          ? btnIconColor.withValues(alpha: 0.2)
+                          : context.colors.onPrimary.withValues(alpha: 0.1),
                       width: 1.5,
                     ),
                   ),
                   child: Icon(
                     Icons.monetization_on_outlined,
                     color: isEcommerceEnabled
-                        ? AppColors.primary
-                        : Colors.grey.withValues(alpha: 0.5),
+                        ? btnIconColor
+                        : context.colors.onPrimary.withValues(alpha: 0.3),
                     size: 20,
                   ),
                 ),
@@ -231,26 +264,24 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
             Positioned(
               top: 10,
               right: 10,
-              child: GestureDetector(
+              child: AppBouncingButton(
                 onTap: () => provider.setComparisonBase(provider.currentIndex),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    color: btnBgColor,
+                    borderRadius: BorderRadius.circular(AppDimens.radiusMd),
                     border: Border.all(
-                      color: AppColors.primary.withValues(
-                        alpha: isBase ? 0.5 : 0.1,
-                      ),
+                      color: isBase
+                          ? context.colors.onPrimary.withValues(alpha: 0.8)
+                          : context.colors.surface.withValues(alpha: 0),
                       width: 1.5,
                     ),
                   ),
                   child: Icon(
                     isBase ? Icons.push_pin : Icons.push_pin_outlined,
-                    color: AppColors.primary.withValues(
-                      alpha: isBase ? 1.0 : 0.4,
-                    ),
+                    color: isBase ? context.colors.onPrimary : btnIconColor,
                     size: 20,
                   ),
                 ),
@@ -259,30 +290,23 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
             Positioned(
               bottom: 10,
               left: 10,
-              child: GestureDetector(
+              child: AppBouncingButton(
                 onTap: () => _shareProduct(variant),
                 child: Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      width: 1.5,
-                    ),
+                    color: btnBgColor,
+                    borderRadius: BorderRadius.circular(AppDimens.radiusMd),
+                    border: Border.all(color: btnBgColor, width: 1.5),
                   ),
-                  child: Icon(
-                    Icons.share,
-                    color: AppColors.primary.withValues(alpha: 0.8),
-                    size: 20,
-                  ),
+                  child: Icon(Icons.share, color: btnIconColor, size: 20),
                 ),
               ),
             ),
             Positioned(
               bottom: 10,
               right: 10,
-              child: GestureDetector(
+              child: AppBouncingButton(
                 onTap: () {
                   Navigator.of(context).push(
                     PageRouteBuilder(
@@ -295,18 +319,11 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                 child: Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      width: 1.5,
-                    ),
+                    color: btnBgColor,
+                    borderRadius: BorderRadius.circular(AppDimens.radiusMd),
+                    border: Border.all(color: btnBgColor, width: 1.5),
                   ),
-                  child: Icon(
-                    Icons.zoom_in,
-                    color: AppColors.primary.withValues(alpha: 0.8),
-                    size: 20,
-                  ),
+                  child: Icon(Icons.zoom_in, color: btnIconColor, size: 20),
                 ),
               ),
             ),
@@ -321,11 +338,13 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     ProductDetailsProvider provider,
   ) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(25, 30, 25, 120),
+      padding: const EdgeInsets.fromLTRB(25, 30, 25, 0),
       width: double.infinity,
       decoration: BoxDecoration(
-        color: context.theme.cardColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
+        color: context.colors.surface,
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(AppDimens.xxxl),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -338,46 +357,62 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                   variantData['name'],
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: context.textTheme.displayLarge?.copyWith(fontSize: 19),
+                  style: context.titleStyle?.copyWith(fontSize: 19),
                 ),
               ),
               const SizedBox(width: 10),
               Text(
                 variantData['model'],
-                style: context.textTheme.labelMedium?.copyWith(fontSize: 13),
+                style: context.bodyStyle?.copyWith(fontSize: 13),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppDimens.sm),
           if (provider.isLoading)
             const FilesSkeleton()
           else ...[
             _SectionTitle(context.l10n.translate("Aplicações")),
-            const SizedBox(height: 15),
+            const SizedBox(height: AppDimens.md),
             _ApplicationIcons(apps: provider.applications),
             _SectionTitle(context.l10n.translate("Ficha Técnica")),
-            const SizedBox(height: 15),
+            const SizedBox(height: AppDimens.md),
             _TechnicalSpecs(data: variantData),
             if (provider.descriptions != null) ...[
               _CollapsibleSection(
                 title: context.l10n.translate("Características"),
                 items: provider.descriptions!['description'] as List<String>,
+                controller: _featuresCtrl,
+                onExpansionChanged: (isOpen) {
+                  if (isOpen) _handleExpansion(_featuresCtrl);
+                },
               ),
               _CollapsibleSection(
                 title: context.l10n.translate("Especificações"),
                 items: provider.descriptions!['specifications'] as List<String>,
+                controller: _specsCtrl,
+                onExpansionChanged: (isOpen) {
+                  if (isOpen) _handleExpansion(_specsCtrl);
+                },
               ),
               _CollapsibleSection(
                 title: context.l10n.translate("Opções"),
                 items: provider.descriptions!['options'] as List<String>,
+                controller: _optionsCtrl,
+                onExpansionChanged: (isOpen) {
+                  if (isOpen) _handleExpansion(_optionsCtrl);
+                },
               ),
             ],
             _FilesSection(
               files: provider.files,
               productName: variantData['name'],
+              controller: _docsCtrl,
+              onExpansionChanged: (isOpen) {
+                if (isOpen) _handleExpansion(_docsCtrl);
+              },
             ),
           ],
-          const SizedBox(height: 30),
+          const SizedBox(height: AppDimens.xxl),
         ],
       ),
     );
@@ -385,26 +420,24 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
 
   Widget _buildBottomControls(ProductDetailsProvider provider) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 20),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppDimens.xl,
+        vertical: AppDimens.lg,
+      ),
       decoration: BoxDecoration(
-        color: context.theme.cardColor,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 15,
-            offset: const Offset(0, -5),
-          ),
-        ],
+        color: context.colors.surface,
+        boxShadow: AppShadows.lg(context.colors.shadow),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _NavigationButton(
+          AppSquareIconButton(
             icon: Icons.arrow_back_ios_rounded,
             isEnabled: provider.currentIndex > 0,
             onTap: provider.currentIndex > 0
                 ? () => _changeVariant(provider.currentIndex - 1, provider)
                 : null,
+            iconSize: 18,
           ),
           _ComparisonButton(
             isEnabled: widget.variants.length > 1,
@@ -420,22 +453,19 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                       current['id_product'],
                     );
 
-                    showModalBottomSheet(
-                      context: context,
-                      backgroundColor: Colors.transparent,
-                      isScrollControlled: true,
-                      builder: (context) =>
-                          _ComparisonSheet(base: base, current: current),
+                    context.showAppBottomSheet(
+                      child: _ComparisonSheet(base: base, current: current),
                     );
                   }
                 : null,
           ),
-          _NavigationButton(
+          AppSquareIconButton(
             icon: Icons.arrow_forward_ios_rounded,
             isEnabled: provider.currentIndex < widget.variants.length - 1,
             onTap: provider.currentIndex < widget.variants.length - 1
                 ? () => _changeVariant(provider.currentIndex + 1, provider)
                 : null,
+            iconSize: 18,
           ),
         ],
       ),
@@ -449,6 +479,13 @@ class _ApplicationIcons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+    final isDark = context.theme.brightness == Brightness.dark;
+    final iconColor = isDark ? colors.onPrimary : colors.primary;
+    final bgColor = isDark
+        ? colors.onPrimary.withValues(alpha: 0.1)
+        : colors.primary.withValues(alpha: 0.05);
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Wrap(
@@ -469,10 +506,12 @@ class _ApplicationIcons extends StatelessWidget {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.05),
+                color: bgColor,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
-                  color: AppColors.primary.withValues(alpha: 0.1),
+                  color: isDark
+                      ? colors.outline
+                      : colors.primary.withValues(alpha: 0.1),
                   width: 1,
                 ),
               ),
@@ -483,10 +522,10 @@ class _ApplicationIcons extends StatelessWidget {
                       errorWidget: (c, e, s) => Icon(
                         Icons.image_not_supported_outlined,
                         size: 20,
-                        color: AppColors.primary.withValues(alpha: 0.3),
+                        color: iconColor.withValues(alpha: 0.5),
                       ),
                     )
-                  : Icon(Icons.apps, color: AppColors.primary),
+                  : Icon(Icons.apps, color: iconColor),
             ),
           );
         }).toList(),
@@ -498,25 +537,38 @@ class _ApplicationIcons extends StatelessWidget {
 class _FilesSection extends StatelessWidget {
   final List<Map<String, dynamic>> files;
   final String productName;
+  final ExpansibleController? controller;
+  final ValueChanged<bool>? onExpansionChanged;
 
-  const _FilesSection({required this.files, required this.productName});
+  const _FilesSection({
+    required this.files,
+    required this.productName,
+    this.controller,
+    this.onExpansionChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     final theme = context.theme;
+    final isDark = theme.brightness == Brightness.dark;
+    final textColor = isDark ? colors.onPrimary : colors.primary;
+
     return Theme(
-      data: theme.copyWith(dividerColor: Colors.transparent),
+      data: theme.copyWith(dividerColor: colors.surface.withValues(alpha: 0)),
       child: ExpansionTile(
+        controller: controller,
+        onExpansionChanged: onExpansionChanged,
         tilePadding: EdgeInsets.zero,
         title: Text(
           context.l10n.translate("Documentos"),
-          style: theme.textTheme.displayMedium?.copyWith(
-            color: AppColors.primary,
+          style: context.subtitleStyle?.copyWith(
+            color: textColor,
             fontSize: 12,
           ),
         ),
-        iconColor: AppColors.primary,
-        collapsedIconColor: AppColors.primary,
+        iconColor: textColor,
+        collapsedIconColor: textColor,
         children: [
           if (files.isEmpty)
             Container(
@@ -527,14 +579,12 @@ class _FilesSection extends StatelessWidget {
                   Icon(
                     Icons.folder_off_outlined,
                     size: 40,
-                    color: Colors.grey.withValues(alpha: 0.5),
+                    color: colors.onSurface.withValues(alpha: 0.3),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     context.l10n.translate("Nenhum documento disponível"),
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: Colors.grey,
-                    ),
+                    style: context.bodySmall,
                   ),
                 ],
               ),
@@ -557,12 +607,16 @@ class _ComparisonSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Container(
       height: context.height * 0.7,
-      padding: const EdgeInsets.all(25),
+      padding: const EdgeInsets.all(AppDimens.xl),
       decoration: BoxDecoration(
-        color: context.theme.cardColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+        color: colors.surface,
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(AppDimens.radiusXl),
+        ),
       ),
       child: Column(
         children: [
@@ -570,16 +624,16 @@ class _ComparisonSheet extends StatelessWidget {
             width: 50,
             height: 5,
             decoration: BoxDecoration(
-              color: Colors.grey[300],
+              color: colors.outline.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(10),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: AppDimens.lg),
           Text(
             context.l10n.translate('technical_comparison'),
-            style: context.textTheme.displayLarge?.copyWith(fontSize: 18),
+            style: context.titleStyle?.copyWith(fontSize: 18),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: AppDimens.lg),
           Expanded(
             child: ListView(
               children: [
@@ -610,42 +664,6 @@ class _ComparisonSheet extends StatelessWidget {
   }
 }
 
-class _NavigationButton extends StatelessWidget {
-  final IconData icon;
-  final bool isEnabled;
-  final VoidCallback? onTap;
-  const _NavigationButton({
-    required this.icon,
-    required this.isEnabled,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = context.theme.brightness == Brightness.dark;
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(15),
-      child: Container(
-        width: 55,
-        height: 55,
-        decoration: BoxDecoration(
-          color: isEnabled
-              ? AppColors.primary.withValues(alpha: 0.1)
-              : (isDark ? Colors.grey.shade800 : Colors.grey.shade100),
-          borderRadius: BorderRadius.circular(15),
-        ),
-        child: Icon(
-          icon,
-          size: 18,
-          color: isEnabled ? AppColors.primary : Colors.grey[300],
-        ),
-      ),
-    );
-  }
-}
-
 class _ComparisonButton extends StatelessWidget {
   final bool isEnabled;
   final VoidCallback? onTap;
@@ -653,16 +671,26 @@ class _ComparisonButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: 70,
         height: 55,
         decoration: BoxDecoration(
-          color: isEnabled ? AppColors.primary : Colors.grey[300],
-          borderRadius: BorderRadius.circular(15),
+          color: isEnabled
+              ? colors.primary
+              : colors.onSurface.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(AppDimens.radiusMd),
         ),
-        child: const Icon(Icons.compare_arrows, size: 26, color: Colors.white),
+        child: Icon(
+          Icons.compare_arrows,
+          size: 26,
+          color: isEnabled
+              ? colors.onPrimary
+              : colors.onSurface.withValues(alpha: 0.3),
+        ),
       ),
     );
   }
@@ -676,19 +704,17 @@ class _FileLinkItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     final theme = context.theme;
     final isDark = theme.brightness == Brightness.dark;
+    final textColor = isDark ? colors.onPrimary : colors.primary;
 
     return GestureDetector(
       onTap: () async {
         final authProvider = context.read<AuthProvider>();
 
         if (authProvider.status != AuthStatus.authenticated) {
-          showModalBottomSheet(
-            context: context,
-            backgroundColor: Colors.transparent,
-            builder: (context) => const AuthModalSheet(),
-          );
+          context.showAppBottomSheet(child: const AuthModalSheet());
           return;
         }
 
@@ -703,35 +729,36 @@ class _FileLinkItem extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isDark ? theme.colorScheme.surfaceContainer : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+          color: colors.surfaceContainer,
+          borderRadius: BorderRadius.circular(AppDimens.radiusMd),
+          border: Border.all(
+            color: isDark
+                ? colors.outline
+                : colors.primary.withValues(alpha: 0.1),
+          ),
         ),
         child: Row(
           children: [
-            Icon(
-              FileTypeUtil.icon(file['extension']),
-              color: AppColors.primary,
-            ),
+            Icon(FileTypeUtil.icon(file['extension']), color: textColor),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
                 file['name'],
                 overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: context.bodySmall?.copyWith(fontWeight: FontWeight.bold),
               ),
             ),
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
+                color: isDark
+                    ? colors.outline
+                    : colors.primary.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.open_in_new_rounded,
-                color: AppColors.primary,
+                color: textColor,
                 size: 20,
               ),
             ),
@@ -783,30 +810,30 @@ class _TechTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = context.theme;
+    final colors = context.colors;
     final isDark = theme.brightness == Brightness.dark;
+    final textColor = isDark ? colors.onPrimary : colors.primary;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: isDark
-            ? theme.colorScheme.surfaceContainer
-            : AppColors.backgroundSecondary,
-        borderRadius: BorderRadius.circular(12),
+        color: colors.surfaceContainer,
+        borderRadius: BorderRadius.circular(AppDimens.radiusMd),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
             label,
-            style: theme.textTheme.displayMedium?.copyWith(
-              color: AppColors.primary,
+            style: context.subtitleStyle?.copyWith(
+              color: textColor,
               fontSize: 13,
             ),
           ),
           Text(
             value,
-            style: theme.textTheme.labelSmall?.copyWith(
+            style: context.bodySmall?.copyWith(
               fontWeight: FontWeight.bold,
               fontSize: 13,
             ),
@@ -820,29 +847,41 @@ class _TechTile extends StatelessWidget {
 class _CollapsibleSection extends StatelessWidget {
   final String title;
   final List<String> items;
-  const _CollapsibleSection({required this.title, required this.items});
+  final ExpansibleController? controller;
+  final ValueChanged<bool>? onExpansionChanged;
+
+  const _CollapsibleSection({
+    required this.title,
+    required this.items,
+    this.controller,
+    this.onExpansionChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     final theme = context.theme;
     final isDark = theme.brightness == Brightness.dark;
+    final textColor = isDark ? colors.onPrimary : colors.primary;
 
     if (items.isEmpty) {
       return const SizedBox.shrink();
     }
     return Theme(
-      data: theme.copyWith(dividerColor: Colors.transparent),
+      data: theme.copyWith(dividerColor: colors.surface.withValues(alpha: 0)),
       child: ExpansionTile(
+        controller: controller,
+        onExpansionChanged: onExpansionChanged,
         tilePadding: EdgeInsets.zero,
         title: Text(
           title,
-          style: theme.textTheme.displayMedium?.copyWith(
-            color: AppColors.primary,
+          style: context.subtitleStyle?.copyWith(
+            color: textColor,
             fontSize: 12,
           ),
         ),
-        iconColor: AppColors.primary,
-        collapsedIconColor: AppColors.primary,
+        iconColor: textColor,
+        collapsedIconColor: textColor,
         children: [
           ...items.map(
             (text) => Container(
@@ -850,17 +889,15 @@ class _CollapsibleSection extends StatelessWidget {
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: isDark
-                    ? theme.colorScheme.surfaceContainer
-                    : AppColors.backgroundSecondary,
-                borderRadius: BorderRadius.circular(12),
+                color: colors.surfaceContainer,
+                borderRadius: BorderRadius.circular(AppDimens.radiusMd),
               ),
               child: Text(
                 text,
-                style: theme.textTheme.labelSmall?.copyWith(
+                style: context.bodySmall?.copyWith(
                   fontWeight: FontWeight.bold,
                   fontSize: 13,
-                  color: AppColors.primary,
+                  color: textColor,
                 ),
               ),
             ),
@@ -878,10 +915,11 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.theme.brightness == Brightness.dark;
     return Text(
       title,
-      style: context.textTheme.displayMedium?.copyWith(
-        color: AppColors.primary,
+      style: context.subtitleStyle?.copyWith(
+        color: isDark ? context.colors.onPrimary : context.colors.primary,
         fontSize: 12,
       ),
     );
@@ -891,6 +929,7 @@ class _SectionTitle extends StatelessWidget {
 class _VariantCounter extends StatelessWidget {
   final int current;
   final int total;
+
   const _VariantCounter({required this.current, required this.total});
 
   @override
@@ -898,13 +937,13 @@ class _VariantCounter extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.primary,
+        color: context.colors.onPrimary.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
         "$current / $total",
-        style: const TextStyle(
-          color: Colors.white,
+        style: TextStyle(
+          color: context.colors.onPrimary,
           fontSize: 11,
           fontWeight: FontWeight.bold,
         ),
@@ -948,10 +987,10 @@ class _ProductImage extends StatelessWidget {
                 memCacheHeight:
                     (context.height * context.mediaQuery.devicePixelRatio)
                         .toInt(),
-                errorWidget: (context, url, error) => const Icon(
+                errorWidget: (context, url, error) => Icon(
                   Icons.image_not_supported,
                   size: 60,
-                  color: Colors.grey,
+                  color: context.colors.onSurface.withValues(alpha: 0.3),
                 ),
               ),
             ),
@@ -977,8 +1016,8 @@ class _CompareCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = context.theme;
-    final isDark = theme.brightness == Brightness.dark;
+    final colors = context.colors;
+    final textColor = colors.primary;
 
     final v1 = double.tryParse(baseValue?.toString() ?? '0') ?? 0;
     final v2 = double.tryParse(currentValue?.toString() ?? '0') ?? 0;
@@ -992,14 +1031,12 @@ class _CompareCard extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppDimens.md),
       decoration: BoxDecoration(
-        color: isDark
-            ? theme.colorScheme.surfaceContainer
-            : AppColors.backgroundSecondary,
+        color: colors.surfaceContainer,
         borderRadius: BorderRadius.circular(15),
         border: isDiff
-            ? Border.all(color: AppColors.primary.withValues(alpha: 0.1))
+            ? Border.all(color: colors.primary.withValues(alpha: 0.1))
             : null,
       ),
       child: Column(
@@ -1010,30 +1047,29 @@ class _CompareCard extends StatelessWidget {
               Text(
                 label,
                 style: TextStyle(
-                  color: AppColors.primary,
+                  color: textColor,
                   fontWeight: FontWeight.bold,
                   fontSize: 13,
                 ),
               ),
-              Text(
-                unit,
-                style: const TextStyle(color: Colors.grey, fontSize: 10),
-              ),
+              Text(unit, style: context.bodySmall?.copyWith(fontSize: 10)),
             ],
           ),
           const SizedBox(height: 12),
           _Bar(
             value: v1,
             percent: p1,
-            color: Colors.grey.withValues(alpha: 0.3),
-            label: "Base",
+            color: colors.error,
+            label: context.l10n.translate('comparison_base'),
+            labelColor: colors.error,
           ),
           const SizedBox(height: 8),
           _Bar(
             value: v2,
             percent: p2,
-            color: AppColors.primary,
-            label: "Atual",
+            color: colors.primary,
+            label: context.l10n.translate('comparison_current'),
+            labelColor: colors.primary,
           ),
         ],
       ),
@@ -1046,23 +1082,30 @@ class _Bar extends StatelessWidget {
   final double percent;
   final Color color;
   final String label;
+  final Color? labelColor;
 
   const _Bar({
     required this.value,
     required this.percent,
     required this.color,
     required this.label,
+    this.labelColor,
   });
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     return Row(
       children: [
         SizedBox(
           width: 40,
           child: Text(
             label,
-            style: const TextStyle(fontSize: 10, color: Colors.grey),
+            style: TextStyle(
+              fontSize: 10,
+              color: labelColor ?? colors.onSurface.withValues(alpha: 0.5),
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
         Expanded(
@@ -1072,7 +1115,7 @@ class _Bar extends StatelessWidget {
                 height: 20,
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: Colors.grey.withValues(alpha: 0.1),
+                  color: colors.onSurface.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),

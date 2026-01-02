@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../theme/app_colors.dart';
+import '../../core/extensions/context_extensions.dart';
+import '../theme/app_dimens.dart';
 
 class AppFormLabel extends StatelessWidget {
   final String label;
@@ -8,13 +9,9 @@ class AppFormLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: Text(
-        label,
-        style: theme.textTheme.displayMedium?.copyWith(fontSize: 14),
-      ),
+      child: Text(label, style: context.subtitleStyle?.copyWith(fontSize: 14)),
     );
   }
 }
@@ -41,8 +38,7 @@ class AppTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final colors = context.colors;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -50,9 +46,9 @@ class AppTextField extends StatelessWidget {
         if (label != null) AppFormLabel(label!),
         Container(
           decoration: BoxDecoration(
-            border: Border.all(color: AppColors.primary, width: 2),
-            borderRadius: BorderRadius.circular(8),
-            color: isDark ? theme.cardColor : Colors.white,
+            border: Border.all(color: colors.primary, width: 2),
+            borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+            color: context.theme.cardColor,
           ),
           child: Row(
             children: [
@@ -71,32 +67,32 @@ class AppTextField extends StatelessWidget {
                           ),
                   ],
                   onChanged: onChanged,
-                  style: theme.textTheme.displayMedium?.copyWith(fontSize: 16),
+                  style: context.subtitleStyle?.copyWith(fontSize: 16),
                   decoration: InputDecoration(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: AppDimens.md,
+                    ),
                     border: InputBorder.none,
                     hintText: hintText ?? '0,0',
-                    hintStyle: theme.textTheme.labelMedium?.copyWith(
-                      color: Colors.grey,
-                    ),
+                    hintStyle: context.bodySmall,
                   ),
                 ),
               ),
               if (suffixText != null)
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
+                    horizontal: AppDimens.md,
                     vertical: 14,
                   ),
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     border: Border(
-                      left: BorderSide(color: AppColors.primary, width: 2),
+                      left: BorderSide(color: colors.primary, width: 2),
                     ),
                   ),
                   child: Text(
                     suffixText!,
-                    style: theme.textTheme.displayMedium?.copyWith(
-                      color: Colors.grey,
+                    style: context.subtitleStyle?.copyWith(
+                      color: colors.onSurface.withValues(alpha: 0.5),
                       fontSize: 14,
                     ),
                   ),
@@ -127,37 +123,29 @@ class AppDropdown<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final colors = context.colors;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (label != null) AppFormLabel(label!),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: AppDimens.md),
           decoration: BoxDecoration(
-            border: Border.all(color: AppColors.primary, width: 2),
-            borderRadius: BorderRadius.circular(8),
-            color: isDark ? theme.cardColor : Colors.white,
+            border: Border.all(color: colors.primary, width: 2),
+            borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+            color: context.theme.cardColor,
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<T>(
               isExpanded: true,
               value: value,
-              dropdownColor: theme.cardColor,
-              icon: const Icon(Icons.unfold_more, color: AppColors.primary),
-              hint: hint != null
-                  ? Text(
-                      hint!,
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: Colors.grey,
-                      ),
-                    )
-                  : null,
+              dropdownColor: context.theme.cardColor,
+              icon: Icon(Icons.unfold_more, color: colors.primary),
+              hint: hint != null ? Text(hint!, style: context.bodySmall) : null,
               items: items,
               onChanged: onChanged,
-              style: theme.textTheme.displayMedium?.copyWith(fontSize: 14),
+              style: context.subtitleStyle?.copyWith(fontSize: 14),
             ),
           ),
         ),
@@ -184,8 +172,7 @@ class AppNumericDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final colors = context.colors;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -193,9 +180,9 @@ class AppNumericDropdown extends StatelessWidget {
         AppFormLabel(label),
         Container(
           decoration: BoxDecoration(
-            border: Border.all(color: AppColors.primary, width: 2),
-            borderRadius: BorderRadius.circular(8),
-            color: isDark ? theme.cardColor : Colors.white,
+            border: Border.all(color: colors.primary, width: 2),
+            borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+            color: context.theme.cardColor,
           ),
           child: Row(
             children: [
@@ -209,9 +196,11 @@ class AppNumericDropdown extends StatelessWidget {
                   inputFormatters: [
                     FilteringTextInputFormatter.allow(RegExp(r'^\d*[.,]?\d*')),
                   ],
-                  style: theme.textTheme.displayMedium?.copyWith(fontSize: 14),
+                  style: context.subtitleStyle?.copyWith(fontSize: 14),
                   decoration: const InputDecoration(
-                    contentPadding: EdgeInsets.symmetric(horizontal: 16),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: AppDimens.md,
+                    ),
                     border: InputBorder.none,
                     hintText: '0,0',
                   ),
@@ -219,15 +208,15 @@ class AppNumericDropdown extends StatelessWidget {
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   border: Border(
-                    left: BorderSide(color: AppColors.primary, width: 2),
+                    left: BorderSide(color: colors.primary, width: 2),
                   ),
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
                     value: unitValue,
-                    dropdownColor: theme.cardColor,
+                    dropdownColor: context.theme.cardColor,
                     isDense: true,
                     items: unitItems
                         .map(
@@ -235,7 +224,7 @@ class AppNumericDropdown extends StatelessWidget {
                             value: u['value'].toString(),
                             child: Text(
                               u['title'].toString(),
-                              style: theme.textTheme.displayMedium?.copyWith(
+                              style: context.subtitleStyle?.copyWith(
                                 fontSize: 14,
                               ),
                             ),

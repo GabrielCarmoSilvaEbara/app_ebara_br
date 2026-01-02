@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/extensions/context_extensions.dart';
-import '../theme/app_colors.dart';
+import '../../core/constants/app_assets.dart';
+import '../widgets/app_buttons.dart';
+import '../theme/app_dimens.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -29,8 +31,9 @@ class _LoginPageState extends State<LoginPage> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.translate('login_error'))),
+      context.showSnackBar(
+        context.l10n.translate('login_error'),
+        isError: true,
       );
     } finally {
       if (mounted) {
@@ -52,38 +55,40 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Scaffold(
-      backgroundColor: AppColors.primary,
+      backgroundColor: colors.primary,
       body: SafeArea(
         child: Stack(
           children: [
             Center(
               child: SingleChildScrollView(
                 child: Padding(
-                  padding: const EdgeInsets.all(30.0),
+                  padding: const EdgeInsets.all(AppDimens.xxl),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(20),
+                        padding: const EdgeInsets.all(AppDimens.lg),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
+                              color: colors.shadow.withValues(alpha: 0.1),
                               blurRadius: 20,
                               offset: const Offset(0, 10),
                             ),
                           ],
                         ),
                         child: Image.asset(
-                          'assets/images/logo.png',
+                          AppAssets.logo,
                           height: 80,
                           width: 80,
-                          errorBuilder: (c, o, s) => const Icon(
+                          errorBuilder: (c, o, s) => Icon(
                             Icons.water_drop,
                             size: 60,
-                            color: AppColors.primary,
+                            color: colors.primary,
                           ),
                         ),
                       ),
@@ -91,7 +96,7 @@ class _LoginPageState extends State<LoginPage> {
                       Text(
                         context.l10n.translate('welcome'),
                         style: context.textTheme.displayLarge?.copyWith(
-                          color: Colors.white,
+                          color: colors.onPrimary,
                           fontSize: 28,
                         ),
                       ),
@@ -99,46 +104,18 @@ class _LoginPageState extends State<LoginPage> {
                       Text(
                         context.l10n.translate('login_desc'),
                         textAlign: TextAlign.center,
-                        style: context.textTheme.labelSmall?.copyWith(
-                          color: Colors.white70,
+                        style: context.bodySmall?.copyWith(
+                          color: colors.onPrimary.withValues(alpha: 0.7),
                         ),
                       ),
                       const SizedBox(height: 60),
-                      ElevatedButton(
+                      AppPrimaryButton(
                         onPressed: _isLoading ? null : _handleGoogleLogin,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: AppColors.primary,
-                          disabledForegroundColor: AppColors.primary.withValues(
-                            alpha: 0.6,
-                          ),
-                          disabledBackgroundColor: Colors.white.withValues(
-                            alpha: 0.8,
-                          ),
-                          minimumSize: const Size(double.infinity, 55),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: _isLoading
-                            ? const SizedBox(
-                                height: 24,
-                                width: 24,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2.5,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    AppColors.primary,
-                                  ),
-                                ),
-                              )
-                            : Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.login),
-                                  const SizedBox(width: 12),
-                                  Text(context.l10n.translate('enter_google')),
-                                ],
-                              ),
+                        text: context.l10n.translate('enter_google'),
+                        isLoading: _isLoading,
+                        icon: Icons.login,
+                        backgroundColor: colors.onPrimary,
+                        foregroundColor: colors.primary,
                       ),
                       const SizedBox(height: 16),
                       TextButton(
@@ -147,6 +124,7 @@ class _LoginPageState extends State<LoginPage> {
                           context.l10n.translate('continue_guest'),
                           style: context.textTheme.labelLarge?.copyWith(
                             fontSize: 16,
+                            color: colors.onPrimary,
                           ),
                         ),
                       ),
@@ -160,9 +138,7 @@ class _LoginPageState extends State<LoginPage> {
               left: 0,
               right: 0,
               bottom: 20,
-              child: Center(
-                child: Image.asset('assets/images/eeps.png', height: 40),
-              ),
+              child: Center(child: Image.asset(AppAssets.eeps, height: 40)),
             ),
           ],
         ),

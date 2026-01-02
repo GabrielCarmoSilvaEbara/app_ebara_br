@@ -54,6 +54,12 @@ class HistoryProvider with ChangeNotifier {
     await _saveHistory();
   }
 
+  Future<void> removeFromHistory(String id) async {
+    _history.removeWhere((e) => e.id == id);
+    notifyListeners();
+    await _saveHistory();
+  }
+
   Future<void> clearHistory() async {
     _history.clear();
     notifyListeners();

@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:animated_theme_switcher/animated_theme_switcher.dart'
+    hide ThemeProvider;
 import '../../core/providers/home_provider.dart';
 import '../../core/providers/location_provider.dart';
 import '../../core/models/category_model.dart';
@@ -11,13 +13,16 @@ import '../../core/providers/auth_provider.dart';
 import '../../core/providers/theme_provider.dart';
 import '../../core/extensions/context_extensions.dart';
 import '../../core/models/product_filter_params.dart';
-import '../theme/app_colors.dart';
+import '../../core/constants/app_constants.dart';
+import '../../presentation/theme/app_theme.dart';
+import '../theme/app_dimens.dart';
 import '../widgets/category_chip.dart';
 import '../widgets/category_chip_skeleton.dart';
 import '../widgets/custom_search_bar.dart';
 import '../widgets/product_card.dart';
 import '../widgets/product_card_skeleton.dart';
 import '../widgets/auth_modal_sheet.dart';
+import '../widgets/app_status_widgets.dart';
 import 'location_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -50,7 +55,7 @@ class HomePageState extends State<HomePage> {
     if (_itemScrollController.isAttached) {
       _itemScrollController.scrollTo(
         index: index,
-        duration: const Duration(milliseconds: 300),
+        duration: AppDurations.normal,
         curve: Curves.easeInOut,
         alignment: 0.38,
       );
@@ -58,12 +63,7 @@ class HomePageState extends State<HomePage> {
   }
 
   void _showAuthModal(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) => const AuthModalSheet(),
-    );
+    context.showAppBottomSheet(child: const AuthModalSheet());
   }
 
   bool _onScrollNotification(ScrollNotification notification) {
@@ -79,6 +79,8 @@ class HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Scaffold(
       body: NotificationListener<ScrollNotification>(
         onNotification: _onScrollNotification,
@@ -86,7 +88,12 @@ class HomePageState extends State<HomePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 50, 20, 0),
+              padding: const EdgeInsets.fromLTRB(
+                AppDimens.lg,
+                50,
+                AppDimens.lg,
+                0,
+              ),
               child: SizedBox(
                 width: double.infinity,
                 child: Stack(
@@ -94,16 +101,24 @@ class HomePageState extends State<HomePage> {
                   children: [
                     Positioned(
                       left: 0,
-                      child: Selector<ThemeProvider, bool>(
-                        selector: (_, provider) => provider.isDarkMode,
-                        builder: (context, isDarkMode, _) {
+                      child: ThemeSwitcher(
+                        builder: (context) {
                           return Semantics(
                             label: context.l10n.translate('dark_mode'),
                             button: true,
                             child: GestureDetector(
                               onTap: () {
-                                context.read<ThemeProvider>().toggleTheme(
-                                  !isDarkMode,
+                                final themeProv = context.read<ThemeProvider>();
+                                final isDark = themeProv.isDarkMode;
+                                final nextTheme = isDark
+                                    ? AppTheme.lightTheme
+                                    : AppTheme.darkTheme;
+
+                                themeProv.toggleTheme(!isDark);
+
+                                ThemeSwitcher.of(context).changeTheme(
+                                  theme: nextTheme,
+                                  isReversed: isDark,
                                 );
                               },
                               child: Container(
@@ -114,7 +129,7 @@ class HomePageState extends State<HomePage> {
                                   color: context.theme.cardColor,
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withValues(
+                                      color: colors.shadow.withValues(
                                         alpha: 0.05,
                                       ),
                                       blurRadius: 10,
@@ -123,10 +138,13 @@ class HomePageState extends State<HomePage> {
                                   ],
                                 ),
                                 child: Icon(
-                                  isDarkMode
+                                  ThemeModelInheritedNotifier.of(
+                                            context,
+                                          ).theme.brightness ==
+                                          Brightness.dark
                                       ? Icons.nightlight_round
                                       : Icons.wb_sunny,
-                                  color: context.colors.primary,
+                                  color: colors.primary,
                                   size: 22,
                                 ),
                               ),
@@ -149,12 +167,12 @@ class HomePageState extends State<HomePage> {
                                   Icon(
                                     Icons.location_on,
                                     size: 14,
-                                    color: context.colors.primary,
+                                    color: colors.primary,
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
                                     context.l10n.translate('location'),
-                                    style: context.textTheme.labelSmall,
+                                    style: context.bodySmall,
                                   ),
                                 ],
                               ),
@@ -162,9 +180,7 @@ class HomePageState extends State<HomePage> {
                                 city.isEmpty
                                     ? context.l10n.translate('choose_location')
                                     : city,
-                                style: context.textTheme.displayLarge?.copyWith(
-                                  fontSize: 20,
-                                ),
+                                style: context.titleStyle,
                                 textAlign: TextAlign.center,
                               ),
                             ],
@@ -184,9 +200,7 @@ class HomePageState extends State<HomePage> {
                             height: 40,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: context.colors.primary.withValues(
-                                alpha: 0.1,
-                              ),
+                              color: colors.primary.withValues(alpha: 0.1),
                             ),
                             child: Selector<AuthProvider, String?>(
                               selector: (_, provider) =>
@@ -210,7 +224,7 @@ class HomePageState extends State<HomePage> {
                                       errorWidget: (context, url, error) =>
                                           Icon(
                                             Icons.person,
-                                            color: context.colors.primary,
+                                            color: colors.primary,
                                           ),
                                     ),
                                   );
@@ -218,8 +232,8 @@ class HomePageState extends State<HomePage> {
                                 return Icon(
                                   Icons.person,
                                   color: authStatus == AuthStatus.authenticated
-                                      ? context.colors.primary
-                                      : Colors.grey,
+                                      ? colors.primary
+                                      : colors.onSurface.withValues(alpha: 0.5),
                                 );
                               },
                             ),
@@ -232,7 +246,10 @@ class HomePageState extends State<HomePage> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppDimens.lg,
+                vertical: AppDimens.sm,
+              ),
               child: Selector<HomeProvider, String>(
                 selector: (_, provider) => provider.selectedCategoryId,
                 builder: (context, selectedCategoryId, _) {
@@ -331,7 +348,9 @@ class HomePageState extends State<HomePage> {
 
                   if (isLoadingCategories) {
                     return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppDimens.lg,
+                      ),
                       child: _ProductLoadingSkeleton(),
                     );
                   }
@@ -345,7 +364,9 @@ class HomePageState extends State<HomePage> {
                     },
                     itemBuilder: (context, index) {
                       return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppDimens.lg,
+                        ),
                         child: Consumer<HomeProvider>(
                           builder: (context, homeProvider, _) {
                             return _ProductGrid(
@@ -402,10 +423,10 @@ class _CategorySection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(left: 20, bottom: 8),
+          padding: const EdgeInsets.only(left: AppDimens.lg, bottom: 8),
           child: Text(
             context.l10n.translate('select_category'),
-            style: context.textTheme.displayLarge?.copyWith(fontSize: 20),
+            style: context.titleStyle,
           ),
         ),
         SizedBox(
@@ -415,7 +436,7 @@ class _CategorySection extends StatelessWidget {
               : ScrollablePositionedList.builder(
                   itemScrollController: itemScrollController,
                   scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  padding: const EdgeInsets.symmetric(horizontal: AppDimens.lg),
                   itemCount: categories.length,
                   itemBuilder: (context, index) {
                     final category = categories[index];
@@ -438,7 +459,7 @@ class _CategoryLoadingSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView.builder(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.symmetric(horizontal: AppDimens.lg),
       itemCount: 6,
       itemBuilder: (_, index) => const CategoryChipSkeleton(),
     );
@@ -477,33 +498,16 @@ class _ProductGridState extends State<_ProductGrid>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    final colors = context.colors;
 
     if (widget.isLoading) {
       return _ProductLoadingSkeleton();
     }
 
     if (widget.hasError) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.wifi_off, size: 60, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text(
-              context.l10n.translate('connect_error'),
-              style: context.textTheme.labelMedium,
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: widget.onRetry,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-              ),
-              child: Text(context.l10n.translate('try_again')),
-            ),
-          ],
-        ),
+      return AppErrorState(
+        message: context.l10n.translate('connect_error'),
+        onRetry: widget.onRetry,
       );
     }
 
@@ -514,11 +518,8 @@ class _ProductGridState extends State<_ProductGrid>
           physics: const AlwaysScrollableScrollPhysics(),
           child: SizedBox(
             height: context.height * 0.6,
-            child: Center(
-              child: Text(
-                context.l10n.translate('no_products_found'),
-                style: context.textTheme.labelMedium,
-              ),
+            child: AppEmptyState(
+              message: context.l10n.translate('no_products_found'),
             ),
           ),
         ),
@@ -527,7 +528,7 @@ class _ProductGridState extends State<_ProductGrid>
 
     return RefreshIndicator(
       onRefresh: widget.onRefresh,
-      color: AppColors.primary,
+      color: colors.primary,
       backgroundColor: context.theme.cardColor,
       child: GridView.builder(
         physics: const AlwaysScrollableScrollPhysics(),

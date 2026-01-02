@@ -46,6 +46,7 @@ dependencies:
   intl: ^0.20.2
   json_serializable: ^6.11.3
   build_runner: ^2.10.4
+  animated_theme_switcher: ^2.0.10
 
 dev_dependencies:
   flutter_test:

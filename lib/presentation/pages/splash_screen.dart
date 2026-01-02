@@ -12,6 +12,7 @@ import '../../core/providers/theme_provider.dart';
 import '../../core/providers/connectivity_provider.dart';
 import '../../core/extensions/context_extensions.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/constants/app_assets.dart';
 import 'home_page.dart';
 import 'login_page.dart';
 import 'location_page.dart';
@@ -37,7 +38,7 @@ class _SplashScreenState extends State<SplashScreen> {
       _loadResources();
     });
 
-    Future.delayed(const Duration(milliseconds: 300), () {
+    Future.delayed(AppDurations.normal, () {
       if (mounted) {
         setState(() => _startAnimation = true);
       }
@@ -143,7 +144,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = context.colors.primary;
+    final colors = context.colors;
 
     return Scaffold(
       body: Container(
@@ -151,7 +152,7 @@ class _SplashScreenState extends State<SplashScreen> {
         height: double.infinity,
         decoration: BoxDecoration(
           gradient: RadialGradient(
-            colors: [primaryColor.withValues(alpha: 0.78), primaryColor],
+            colors: [colors.primary.withValues(alpha: 0.78), colors.primary],
             center: Alignment.center,
             radius: 1.0,
           ),
@@ -164,17 +165,19 @@ class _SplashScreenState extends State<SplashScreen> {
                 children: [
                   AnimatedScale(
                     scale: _startAnimation ? 1.0 : 0.7,
-                    duration: const Duration(milliseconds: 1000),
+                    duration: AppDurations.splash,
                     curve: Curves.easeOutBack,
                     child: AnimatedOpacity(
                       opacity: _startAnimation ? 1.0 : 0.0,
                       duration: const Duration(milliseconds: 800),
                       child: Shimmer.fromColors(
-                        baseColor: Colors.white,
-                        highlightColor: Colors.white.withValues(alpha: 0.47),
+                        baseColor: colors.onPrimary,
+                        highlightColor: colors.onPrimary.withValues(
+                          alpha: 0.47,
+                        ),
                         period: const Duration(seconds: 2),
                         child: Image.asset(
-                          'assets/images/logo.png',
+                          AppAssets.logo,
                           height: 140,
                           width: 131,
                         ),
@@ -186,23 +189,23 @@ class _SplashScreenState extends State<SplashScreen> {
                     SizedBox(
                       height: 40,
                       child: DefaultTextStyle(
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 26,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: colors.onPrimary,
                           letterSpacing: 3,
                           shadows: [
                             Shadow(
                               blurRadius: 10,
-                              color: Colors.black26,
-                              offset: Offset(2, 2),
+                              color: colors.shadow.withValues(alpha: 0.26),
+                              offset: const Offset(2, 2),
                             ),
                           ],
                         ),
                         child: AnimatedTextKit(
                           animatedTexts: [
                             TypewriterAnimatedText(
-                              'Pump Selector',
+                              context.l10n.translate('pump_selector'),
                               speed: const Duration(milliseconds: 150),
                               cursor: '',
                             ),
@@ -223,9 +226,7 @@ class _SplashScreenState extends State<SplashScreen> {
               left: 0,
               right: 0,
               bottom: 40,
-              child: Center(
-                child: Image.asset('assets/images/eeps.png', height: 40),
-              ),
+              child: Center(child: Image.asset(AppAssets.eeps, height: 40)),
             ),
           ],
         ),

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../core/extensions/context_extensions.dart';
 import '../../core/utils/calculator_util.dart';
-import '../theme/app_colors.dart';
 import 'app_form_fields.dart';
+import '../theme/app_dimens.dart';
+import '../theme/app_shadows.dart';
 
 class CalculatorsBottomSheet extends StatefulWidget {
   const CalculatorsBottomSheet({super.key});
@@ -30,6 +32,7 @@ class _CalculatorsBottomSheetState extends State<CalculatorsBottomSheet>
   @override
   Widget build(BuildContext context) {
     final bottomInset = context.mediaQuery.viewInsets.bottom;
+    final colors = context.colors;
 
     return Container(
       padding: EdgeInsets.only(bottom: bottomInset),
@@ -46,11 +49,11 @@ class _CalculatorsBottomSheetState extends State<CalculatorsBottomSheet>
             color: context.theme.scaffoldBackgroundColor,
             child: TabBar(
               controller: _tabController,
-              labelColor: AppColors.primary,
-              unselectedLabelColor: Colors.grey,
-              indicatorColor: AppColors.primary,
+              labelColor: colors.primary,
+              unselectedLabelColor: colors.onSurface.withValues(alpha: 0.5),
+              indicatorColor: colors.primary,
               indicatorSize: TabBarIndicatorSize.label,
-              dividerColor: Colors.transparent,
+              dividerColor: colors.surface.withValues(alpha: 0),
               tabs: [
                 Tab(
                   icon: const Icon(Icons.swap_horiz),
@@ -67,7 +70,7 @@ class _CalculatorsBottomSheetState extends State<CalculatorsBottomSheet>
               ],
             ),
           ),
-          const Divider(height: 1, color: Colors.grey),
+          Divider(height: 1, color: colors.outline.withValues(alpha: 0.2)),
           Expanded(
             child: TabBarView(
               controller: _tabController,
@@ -92,14 +95,80 @@ class _CalculatorsBottomSheetState extends State<CalculatorsBottomSheet>
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: Colors.grey.shade300,
+              color: context.colors.onSurface.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppDimens.sm),
           Text(
             context.l10n.translate('calculators'),
-            style: context.textTheme.displayLarge?.copyWith(fontSize: 20),
+            style: context.titleStyle?.copyWith(fontSize: 20),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class AnimatedCopyButton extends StatefulWidget {
+  final String textToCopy;
+  final Widget child;
+
+  const AnimatedCopyButton({
+    super.key,
+    required this.textToCopy,
+    required this.child,
+  });
+
+  @override
+  State<AnimatedCopyButton> createState() => _AnimatedCopyButtonState();
+}
+
+class _AnimatedCopyButtonState extends State<AnimatedCopyButton> {
+  bool _isCopied = false;
+
+  void _copy() async {
+    await Clipboard.setData(ClipboardData(text: widget.textToCopy));
+    if (mounted) {
+      setState(() => _isCopied = true);
+      HapticFeedback.mediumImpact();
+
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) setState(() => _isCopied = false);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: _copy,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          AnimatedOpacity(
+            duration: const Duration(milliseconds: 200),
+            opacity: _isCopied ? 0.0 : 1.0,
+            child: widget.child,
+          ),
+          AnimatedOpacity(
+            duration: const Duration(milliseconds: 200),
+            opacity: _isCopied ? 1.0 : 0.0,
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.green,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.green.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.check, color: Colors.white, size: 24),
+            ),
           ),
         ],
       ),
@@ -157,6 +226,8 @@ class _InteractiveSliderInputState extends State<InteractiveSliderInput> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -165,12 +236,12 @@ class _InteractiveSliderInputState extends State<InteractiveSliderInput> {
           children: [
             Text(
               widget.label,
-              style: context.textTheme.displayMedium?.copyWith(fontSize: 14),
+              style: context.subtitleStyle?.copyWith(fontSize: 14),
             ),
             Text(
               "${_currentValue.toStringAsFixed(1)} ${widget.suffix}",
-              style: context.textTheme.labelMedium?.copyWith(
-                color: AppColors.primary,
+              style: context.bodyStyle?.copyWith(
+                color: colors.primary,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -178,10 +249,10 @@ class _InteractiveSliderInputState extends State<InteractiveSliderInput> {
         ),
         SliderTheme(
           data: SliderTheme.of(context).copyWith(
-            activeTrackColor: AppColors.primary,
-            inactiveTrackColor: AppColors.primary.withValues(alpha: 0.1),
-            thumbColor: AppColors.primary,
-            overlayColor: AppColors.primary.withValues(alpha: 0.1),
+            activeTrackColor: colors.primary,
+            inactiveTrackColor: colors.primary.withValues(alpha: 0.1),
+            thumbColor: colors.primary,
+            overlayColor: colors.primary.withValues(alpha: 0.1),
             trackHeight: 4,
           ),
           child: Slider(
@@ -210,7 +281,7 @@ class AnimatedGauge extends StatelessWidget {
   final double max;
   final String label;
   final String unit;
-  final Color color;
+  final Color? color;
 
   const AnimatedGauge({
     super.key,
@@ -218,33 +289,28 @@ class AnimatedGauge extends StatelessWidget {
     this.max = 100,
     required this.label,
     required this.unit,
-    this.color = AppColors.primary,
+    this.color,
   });
 
   @override
   Widget build(BuildContext context) {
     final percentage = (value / max).clamp(0.0, 1.0);
+    final effectiveColor = color ?? context.colors.primary;
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(AppDimens.lg),
       decoration: BoxDecoration(
         color: context.theme.cardColor,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(AppDimens.radiusLg),
+        boxShadow: AppShadows.sm(context.colors.shadow),
       ),
       child: Column(
         children: [
           Text(
             label,
-            style: context.textTheme.displayMedium?.copyWith(
+            style: context.subtitleStyle?.copyWith(
               fontSize: 14,
-              color: Colors.grey,
+              color: context.colors.onSurface.withValues(alpha: 0.5),
             ),
           ),
           const SizedBox(height: 15),
@@ -256,7 +322,7 @@ class AnimatedGauge extends StatelessWidget {
               children: [
                 CircularProgressIndicator(
                   value: 1.0,
-                  color: Colors.grey.withValues(alpha: 0.1),
+                  color: context.colors.onSurface.withValues(alpha: 0.1),
                   strokeWidth: 10,
                 ),
                 TweenAnimationBuilder<double>(
@@ -266,7 +332,7 @@ class AnimatedGauge extends StatelessWidget {
                   builder: (context, val, _) {
                     return CircularProgressIndicator(
                       value: val,
-                      color: color,
+                      color: effectiveColor,
                       strokeWidth: 10,
                       strokeCap: StrokeCap.round,
                     );
@@ -278,17 +344,12 @@ class AnimatedGauge extends StatelessWidget {
                     children: [
                       Text(
                         value.toStringAsFixed(2),
-                        style: context.textTheme.displayLarge?.copyWith(
+                        style: context.titleStyle?.copyWith(
                           fontSize: 24,
-                          color: color,
+                          color: effectiveColor,
                         ),
                       ),
-                      Text(
-                        unit,
-                        style: context.textTheme.labelMedium?.copyWith(
-                          color: Colors.grey,
-                        ),
-                      ),
+                      Text(unit, style: context.bodySmall),
                     ],
                   ),
                 ),
@@ -337,6 +398,8 @@ class _UnitConverterTabState extends State<_UnitConverterTab> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -351,9 +414,7 @@ class _UnitConverterTabState extends State<_UnitConverterTab> {
                     value: e,
                     child: Text(
                       context.l10n.translate(e),
-                      style: context.textTheme.displayMedium?.copyWith(
-                        fontSize: 14,
-                      ),
+                      style: context.subtitleStyle?.copyWith(fontSize: 14),
                     ),
                   ),
                 )
@@ -375,7 +436,7 @@ class _UnitConverterTabState extends State<_UnitConverterTab> {
             children: [
               Expanded(
                 child: AppDropdown<String>(
-                  label: 'De',
+                  label: context.l10n.translate('from'),
                   value: _fromUnit,
                   items: _units[_category]!
                       .map(
@@ -383,7 +444,7 @@ class _UnitConverterTabState extends State<_UnitConverterTab> {
                           value: e,
                           child: Text(
                             _getUnitLabel(e),
-                            style: context.textTheme.displayMedium?.copyWith(
+                            style: context.subtitleStyle?.copyWith(
                               fontSize: 14,
                             ),
                           ),
@@ -399,11 +460,14 @@ class _UnitConverterTabState extends State<_UnitConverterTab> {
                 ),
               ),
               const SizedBox(width: 15),
-              const Icon(Icons.arrow_forward, color: Colors.grey),
+              Icon(
+                Icons.arrow_forward,
+                color: colors.onSurface.withValues(alpha: 0.5),
+              ),
               const SizedBox(width: 15),
               Expanded(
                 child: AppDropdown<String>(
-                  label: 'Para',
+                  label: context.l10n.translate('to'),
                   value: _toUnit,
                   items: _units[_category]!
                       .map(
@@ -411,7 +475,7 @@ class _UnitConverterTabState extends State<_UnitConverterTab> {
                           value: e,
                           child: Text(
                             _getUnitLabel(e),
-                            style: context.textTheme.displayMedium?.copyWith(
+                            style: context.subtitleStyle?.copyWith(
                               fontSize: 14,
                             ),
                           ),
@@ -438,37 +502,45 @@ class _UnitConverterTabState extends State<_UnitConverterTab> {
           ),
           const SizedBox(height: 24),
           if (_result.isNotEmpty)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppColors.primary.withValues(alpha: 0.1),
-                    AppColors.primary.withValues(alpha: 0.05),
+            AnimatedCopyButton(
+              textToCopy: _result,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(AppDimens.lg),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      colors.primary.withValues(alpha: 0.1),
+                      colors.primary.withValues(alpha: 0.05),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(AppDimens.radiusMd),
+                  border: Border.all(
+                    color: colors.primary.withValues(alpha: 0.1),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      context.l10n.translate('result'),
+                      style: context.bodySmall,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "$_result ${_getUnitLabel(_toUnit)}",
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: colors.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      context.l10n.translate('tap_to_copy'),
+                      style: context.bodySmall?.copyWith(fontSize: 10),
+                    ),
                   ],
                 ),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                ),
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    context.l10n.translate('result'),
-                    style: const TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    "$_result ${_getUnitLabel(_toUnit)}",
-                    style: const TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ],
               ),
             ),
         ],
@@ -538,7 +610,7 @@ class _HydraulicCalcTabState extends State<_HydraulicCalcTab> {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(AppDimens.lg),
       child: Column(
         children: [
           InteractiveSliderInput(
@@ -573,18 +645,14 @@ class _HydraulicCalcTabState extends State<_HydraulicCalcTab> {
                 value: 'pvc',
                 child: Text(
                   context.l10n.translate('pvc'),
-                  style: context.textTheme.displayMedium?.copyWith(
-                    fontSize: 14,
-                  ),
+                  style: context.subtitleStyle?.copyWith(fontSize: 14),
                 ),
               ),
               DropdownMenuItem(
                 value: 'iron',
                 child: Text(
                   context.l10n.translate('iron'),
-                  style: context.textTheme.displayMedium?.copyWith(
-                    fontSize: 14,
-                  ),
+                  style: context.subtitleStyle?.copyWith(fontSize: 14),
                 ),
               ),
             ],
@@ -645,7 +713,7 @@ class _ElectricCalcTabState extends State<_ElectricCalcTab> {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(AppDimens.lg),
       child: Column(
         children: [
           Row(
@@ -711,22 +779,18 @@ class _ElectricCalcTabState extends State<_ElectricCalcTab> {
                   decoration: BoxDecoration(
                     color: context.theme.cardColor,
                     borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
+                    boxShadow: AppShadows.sm(context.colors.shadow),
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
                         "%",
-                        style: context.textTheme.displayMedium?.copyWith(
+                        style: context.subtitleStyle?.copyWith(
                           fontSize: 14,
-                          color: Colors.grey,
+                          color: context.colors.onSurface.withValues(
+                            alpha: 0.5,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 10),
@@ -736,7 +800,7 @@ class _ElectricCalcTabState extends State<_ElectricCalcTab> {
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
                           color: double.tryParse(_pct)! > 4
-                              ? Colors.red
+                              ? context.colors.error
                               : Colors.green,
                         ),
                       ),

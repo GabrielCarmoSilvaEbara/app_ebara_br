@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/extensions/context_extensions.dart';
-import '../theme/app_colors.dart';
 import '../../core/services/ebara_data_service.dart';
 import 'app_form_fields.dart';
+import 'app_buttons.dart';
+import '../theme/app_shadows.dart';
 
 class FiltersBottomSheet extends StatefulWidget {
   final String categoryId;
@@ -229,6 +230,7 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = context.mediaQuery.viewInsets.bottom;
+    final colors = context.colors;
 
     return Container(
       padding: EdgeInsets.only(bottom: bottomInset),
@@ -252,13 +254,7 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
               decoration: BoxDecoration(
                 color: context.theme.scaffoldBackgroundColor,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 4,
-                    offset: const Offset(0, -2),
-                  ),
-                ],
+                boxShadow: AppShadows.sm(colors.shadow),
               ),
               child: SafeArea(
                 top: false,
@@ -286,7 +282,7 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
               value: e,
               child: Text(
                 e,
-                style: context.textTheme.displayMedium?.copyWith(fontSize: 14),
+                style: context.subtitleStyle?.copyWith(fontSize: 14),
               ),
             );
           }).toList(),
@@ -310,9 +306,7 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
                 value: item['value'].toString(),
                 child: Text(
                   context.l10n.translate(item['label']?.toString() ?? ''),
-                  style: context.textTheme.displayMedium?.copyWith(
-                    fontSize: 14,
-                  ),
+                  style: context.subtitleStyle?.copyWith(fontSize: 14),
                 ),
               );
             }).toList(),
@@ -333,7 +327,7 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
               value: e,
               child: Text(
                 e,
-                style: context.textTheme.displayMedium?.copyWith(fontSize: 14),
+                style: context.subtitleStyle?.copyWith(fontSize: 14),
               ),
             );
           }).toList(),
@@ -358,9 +352,7 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
                 value: val,
                 child: Text(
                   val == '0' ? context.l10n.translate('all') : val,
-                  style: context.textTheme.displayMedium?.copyWith(
-                    fontSize: 14,
-                  ),
+                  style: context.subtitleStyle?.copyWith(fontSize: 14),
                 ),
               );
             }).toList(),
@@ -417,9 +409,7 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
                         ? 'pressure_switch'
                         : 'frequency_inverter',
                   ),
-                  style: context.textTheme.displayMedium?.copyWith(
-                    fontSize: 14,
-                  ),
+                  style: context.subtitleStyle?.copyWith(fontSize: 14),
                 ),
               );
             }).toList(),
@@ -445,13 +435,9 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
   }
 
   Widget _buildSkeleton() {
-    final theme = context.theme;
-    final baseColor = theme.brightness == Brightness.dark
-        ? Colors.grey.shade800
-        : Colors.grey.shade200;
-    final containerColor = theme.brightness == Brightness.dark
-        ? Colors.grey.shade700
-        : Colors.grey.shade100;
+    final colors = context.colors;
+    final baseColor = colors.onSurface.withValues(alpha: 0.1);
+    final containerColor = colors.onSurface.withValues(alpha: 0.05);
 
     return Column(
       children: List.generate(
@@ -490,14 +476,14 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: Colors.grey.shade300,
+              color: context.colors.onSurface.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
           const SizedBox(height: 12),
           Text(
             context.l10n.translate('filters'),
-            style: context.textTheme.displayLarge?.copyWith(fontSize: 20),
+            style: context.titleStyle?.copyWith(fontSize: 20),
           ),
         ],
       ),
@@ -510,7 +496,7 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
       children: [
         Text(
           context.l10n.translate('frequency'),
-          style: context.textTheme.displayMedium?.copyWith(fontSize: 14),
+          style: context.subtitleStyle?.copyWith(fontSize: 14),
         ),
         const SizedBox(height: 12),
         SingleChildScrollView(
@@ -530,6 +516,8 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
 
   Widget _buildFrequencyButton(String freq) {
     final isSel = _selectedFrequency == freq;
+    final colors = context.colors;
+
     return InkWell(
       onTap: () {
         setState(() {
@@ -539,15 +527,15 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
         decoration: BoxDecoration(
-          color: isSel ? AppColors.primary : context.theme.cardColor,
-          border: Border.all(color: AppColors.primary, width: 2),
+          color: isSel ? colors.primary : context.theme.cardColor,
+          border: Border.all(color: colors.primary, width: 2),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Center(
           child: Text(
             "${freq}Hz",
-            style: context.textTheme.displayMedium?.copyWith(
-              color: isSel ? Colors.white : AppColors.primary,
+            style: context.subtitleStyle?.copyWith(
+              color: isSel ? colors.onPrimary : colors.primary,
               fontSize: 14,
             ),
           ),
@@ -568,7 +556,8 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
           _bombsQuantityController,
         ]),
         builder: (context, child) {
-          return ElevatedButton(
+          final colors = context.colors;
+          return AppPrimaryButton(
             onPressed: _isFormValid
                 ? () {
                     final Map<String, dynamic> result = {
@@ -601,22 +590,9 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
                     Navigator.of(context).pop(result);
                   }
                 : null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              disabledBackgroundColor: context.theme.disabledColor,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              elevation: 0,
-            ),
-            child: Text(
-              context.l10n.translate('search'),
-              style: context.textTheme.labelLarge?.copyWith(
-                fontSize: 16,
-                color: _isFormValid ? Colors.white : null,
-              ),
-            ),
+            text: context.l10n.translate('search'),
+            backgroundColor: colors.primary,
+            foregroundColor: colors.onPrimary,
           );
         },
       ),

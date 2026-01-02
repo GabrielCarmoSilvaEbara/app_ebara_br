@@ -13,6 +13,7 @@ class OfflineBannerWrapper extends StatelessWidget {
     final connectivity = context.watch<ConnectivityProvider>();
     final isOnline = connectivity.isOnline;
     final bottomPadding = context.mediaQuery.padding.bottom;
+    final colors = context.colors;
 
     return Stack(
       children: [
@@ -23,18 +24,18 @@ class OfflineBannerWrapper extends StatelessWidget {
             right: 0,
             bottom: 0,
             child: Material(
-              color: Colors.redAccent,
+              color: colors.error,
               child: Padding(
                 padding: EdgeInsets.fromLTRB(16, 8, 16, 8 + bottomPadding),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.wifi_off, color: Colors.white, size: 16),
+                    Icon(Icons.wifi_off, color: colors.onError, size: 16),
                     const SizedBox(width: 8),
                     Text(
                       context.l10n.translate('no_internet'),
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: colors.onError,
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),

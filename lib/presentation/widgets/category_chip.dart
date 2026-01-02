@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/extensions/context_extensions.dart';
 
 class CategoryChip extends StatelessWidget {
   final String label;
@@ -16,10 +17,12 @@ class CategoryChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Padding(
       padding: const EdgeInsets.only(right: 12),
       child: Material(
-        color: Colors.transparent,
+        color: colors.surface.withValues(alpha: 0),
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(30),
@@ -41,23 +44,23 @@ class CategoryChip extends StatelessWidget {
   }
 
   BoxDecoration _buildDecoration(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final colors = context.colors;
 
     return BoxDecoration(
-      color: isSelected ? colorScheme.primary : colorScheme.secondary,
+      color: isSelected ? colors.primary : colors.surface,
       borderRadius: BorderRadius.circular(30),
       border: Border.all(
         color: isSelected
-            ? colorScheme.primary
-            : colorScheme.primary.withValues(alpha: 0.3),
+            ? colors.primary
+            : colors.primary.withValues(alpha: 0.3),
         width: 1,
       ),
     );
   }
 
   Color _getContentColor(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return isSelected ? colorScheme.onPrimary : colorScheme.primary;
+    final colors = context.colors;
+    return isSelected ? colors.onPrimary : colors.primary;
   }
 
   TextStyle _getTextStyle(BuildContext context) {

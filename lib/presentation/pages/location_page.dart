@@ -7,7 +7,9 @@ import '../../core/providers/home_provider.dart';
 import '../../core/services/location_service.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/extensions/context_extensions.dart';
-import '../theme/app_colors.dart';
+import '../widgets/app_buttons.dart';
+import '../theme/app_dimens.dart';
+import '../theme/app_shadows.dart';
 
 class LocationPage extends StatefulWidget {
   final bool isInitialSelection;
@@ -57,6 +59,7 @@ class _LocationPageState extends State<LocationPage> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<LocationProvider>();
+    final colors = context.colors;
     final currentPos = coords.LatLng(provider.previewLat, provider.previewLon);
     final isDark = context.theme.brightness == Brightness.dark;
 
@@ -102,9 +105,7 @@ class _LocationPageState extends State<LocationPage> {
                           decoration: BoxDecoration(
                             color: context.theme.cardColor,
                             borderRadius: BorderRadius.circular(8),
-                            boxShadow: const [
-                              BoxShadow(color: Colors.black12, blurRadius: 4),
-                            ],
+                            boxShadow: AppShadows.sm(colors.shadow),
                           ),
                           child: Text(
                             provider.results.isNotEmpty
@@ -113,15 +114,15 @@ class _LocationPageState extends State<LocationPage> {
                                 : (provider.city.isEmpty
                                       ? "São Paulo"
                                       : provider.city),
-                            style: context.textTheme.labelMedium?.copyWith(
+                            style: context.bodySmall?.copyWith(
                               fontWeight: FontWeight.bold,
                               fontSize: 10,
                             ),
                           ),
                         ),
-                        const Icon(
+                        Icon(
                           Icons.location_on,
-                          color: AppColors.primary,
+                          color: colors.primary,
                           size: 45,
                         ),
                       ],
@@ -139,16 +140,11 @@ class _LocationPageState extends State<LocationPage> {
                   child: Row(
                     children: [
                       if (!widget.isInitialSelection) ...[
-                        IconButton.filled(
-                          onPressed: () => context.pop(),
-                          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-                          style: IconButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            minimumSize: const Size(55, 55),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(15),
-                            ),
-                          ),
+                        AppSquareIconButton(
+                          icon: Icons.arrow_back_ios_new,
+                          onTap: () => context.pop(),
+                          backgroundColor: colors.primary,
+                          iconColor: colors.onPrimary,
                         ),
                         const SizedBox(width: 12),
                       ],
@@ -158,9 +154,7 @@ class _LocationPageState extends State<LocationPage> {
                           decoration: BoxDecoration(
                             color: context.theme.cardColor,
                             borderRadius: BorderRadius.circular(15),
-                            boxShadow: const [
-                              BoxShadow(color: Colors.black12, blurRadius: 10),
-                            ],
+                            boxShadow: AppShadows.md(colors.shadow),
                           ),
                           child: Center(
                             child: TextField(
@@ -178,16 +172,13 @@ class _LocationPageState extends State<LocationPage> {
                                   _pageController.jumpToPage(0);
                                 }
                               },
-                              style: context.textTheme.displayMedium?.copyWith(
-                                fontSize: 16,
-                              ),
+                              style: context.titleStyle?.copyWith(fontSize: 16),
                               decoration: InputDecoration(
                                 hintText: context.l10n.translate('search'),
-                                hintStyle: context.textTheme.labelMedium
-                                    ?.copyWith(color: Colors.grey),
-                                prefixIcon: const Icon(
+                                hintStyle: context.bodySmall,
+                                prefixIcon: Icon(
                                   Icons.search,
-                                  color: AppColors.primary,
+                                  color: colors.primary,
                                 ),
                                 border: InputBorder.none,
                                 isCollapsed: true,
@@ -215,13 +206,15 @@ class _LocationPageState extends State<LocationPage> {
   }
 
   Widget _buildBottomCard(LocationProvider provider, BuildContext context) {
+    final colors = context.colors;
+
     return Container(
-      margin: const EdgeInsets.all(20),
-      padding: const EdgeInsets.all(24),
+      margin: const EdgeInsets.all(AppDimens.lg),
+      padding: const EdgeInsets.all(AppDimens.xl),
       decoration: BoxDecoration(
         color: context.theme.cardColor,
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 20)],
+        borderRadius: BorderRadius.circular(AppDimens.radiusXl),
+        boxShadow: AppShadows.lg(colors.shadow),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -244,26 +237,24 @@ class _LocationPageState extends State<LocationPage> {
                   children: [
                     Text(
                       item['city'],
-                      style: context.textTheme.displayLarge?.copyWith(
-                        fontSize: 18,
-                      ),
+                      style: context.titleStyle?.copyWith(fontSize: 18),
                     ),
                     Text(
                       "${item['state']}, ${item['country']}",
-                      style: context.textTheme.labelMedium,
+                      style: context.bodyStyle,
                     ),
                   ],
                 );
               },
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: AppDimens.lg),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _NavBtn(
-                Icons.arrow_back_ios_rounded,
-                provider.currentIndex > 0
+              AppSquareIconButton(
+                icon: Icons.arrow_back_ios_rounded,
+                onTap: provider.currentIndex > 0
                     ? () {
                         if (!provider.isLoading) {
                           _pageController.previousPage(
@@ -313,27 +304,27 @@ class _LocationPageState extends State<LocationPage> {
                   width: 75,
                   height: 60,
                   decoration: BoxDecoration(
-                    color: AppColors.primary,
+                    color: colors.primary,
                     borderRadius: BorderRadius.circular(18),
                   ),
                   child: provider.isGpsLoading
-                      ? const Padding(
-                          padding: EdgeInsets.all(18),
+                      ? Padding(
+                          padding: const EdgeInsets.all(18),
                           child: CircularProgressIndicator(
-                            color: Colors.white,
+                            color: colors.onPrimary,
                             strokeWidth: 3,
                           ),
                         )
-                      : const Icon(
+                      : Icon(
                           Icons.gps_fixed,
-                          color: Colors.white,
+                          color: colors.onPrimary,
                           size: 28,
                         ),
                 ),
               ),
-              _NavBtn(
-                Icons.arrow_forward_ios_rounded,
-                provider.currentIndex < provider.results.length - 1
+              AppSquareIconButton(
+                icon: Icons.arrow_forward_ios_rounded,
+                onTap: provider.currentIndex < provider.results.length - 1
                     ? () {
                         if (!provider.isLoading) {
                           _pageController.nextPage(
@@ -346,8 +337,8 @@ class _LocationPageState extends State<LocationPage> {
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          ElevatedButton(
+          const SizedBox(height: AppDimens.lg),
+          AppPrimaryButton(
             onPressed: provider.isLoading
                 ? null
                 : () {
@@ -377,59 +368,10 @@ class _LocationPageState extends State<LocationPage> {
                       context.pop();
                     }
                   },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.6),
-              minimumSize: const Size(double.infinity, 55),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(15),
-              ),
-            ),
-            child: provider.isLoading
-                ? const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2.5,
-                    ),
-                  )
-                : Text(
-                    context.l10n.translate('select_location').toUpperCase(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+            isLoading: provider.isLoading,
+            text: context.l10n.translate('select_location').toUpperCase(),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _NavBtn extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  const _NavBtn(this.icon, this.onTap);
-
-  @override
-  Widget build(BuildContext context) {
-    return IconButton.filled(
-      onPressed: onTap,
-      icon: Icon(icon, size: 20),
-      style: IconButton.styleFrom(
-        backgroundColor: onTap != null
-            ? AppColors.primary.withValues(alpha: 0.1)
-            : (context.theme.brightness == Brightness.dark
-                  ? Colors.grey.shade800
-                  : Colors.grey.shade100),
-        foregroundColor: onTap != null
-            ? AppColors.primary
-            : Colors.grey.shade400,
-        minimumSize: const Size(55, 55),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       ),
     );
   }

@@ -18,9 +18,6 @@ class AppConstants {
       'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
   static const String nominatimUrl = 'https://nominatim.openstreetmap.org';
   static const String userAgent = 'app-ebara/1.0 (contato@seudominio.com)';
-
-  static const String imgLogo = 'assets/images/logo.png';
-  static const String imgEeps = 'assets/images/eeps.png';
 }
 
 class StorageKeys {
@@ -31,4 +28,11 @@ class StorageKeys {
   static const String keyIsDarkMode = 'is_dark_mode';
   static const String keyIsGuest = 'is_guest';
   static const String keyProductHistory = 'product_history';
+}
+
+class AppDurations {
+  static const Duration fast = Duration(milliseconds: 200);
+  static const Duration normal = Duration(milliseconds: 300);
+  static const Duration slow = Duration(milliseconds: 500);
+  static const Duration splash = Duration(milliseconds: 1000);
 }

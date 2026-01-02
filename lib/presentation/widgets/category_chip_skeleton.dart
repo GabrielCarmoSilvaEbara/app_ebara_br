@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_dimens.dart';
 import '../widgets/shimmer.dart';
 
 class CategoryChipSkeleton extends StatelessWidget {
@@ -11,12 +12,12 @@ class CategoryChipSkeleton extends StatelessWidget {
 
     return Shimmer(
       child: Container(
-        margin: const EdgeInsets.only(right: 10),
+        margin: const EdgeInsets.only(right: AppDimens.sm),
         padding: const EdgeInsets.symmetric(horizontal: 14),
         height: 40,
         decoration: BoxDecoration(
           color: baseColor,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppDimens.radiusLg),
         ),
         child: Row(
           children: [
@@ -28,7 +29,7 @@ class CategoryChipSkeleton extends StatelessWidget {
                 borderRadius: BorderRadius.circular(6),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppDimens.xs),
             Container(
               width: 60,
               height: 12,

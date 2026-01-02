@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/models/product_model.dart';
 import '../../core/extensions/context_extensions.dart';
+import '../theme/app_dimens.dart';
 import '../pages/product_details_page.dart';
 import '../widgets/product_card_skeleton.dart';
 import 'image_viewer.dart';
+import 'app_buttons.dart';
 
 class ProductCard extends StatelessWidget {
   final String category;
@@ -20,27 +22,24 @@ class ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = context.theme;
-    final isDark = theme.brightness == Brightness.dark;
+    final colors = context.colors;
     final hasVariants = product.variants.isNotEmpty;
 
     return Card(
       elevation: 0,
-      color: theme.cardColor,
+      color: context.theme.cardColor,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: isDark
-            ? BorderSide.none
-            : BorderSide(
-                color: theme.colorScheme.secondary.withValues(alpha: 0.5),
-                width: 1,
-              ),
+        borderRadius: BorderRadius.circular(AppDimens.radiusMd),
+        side: BorderSide(
+          color: colors.outline.withValues(alpha: 0.2),
+          width: 1,
+        ),
       ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppDimens.radiusMd),
         onTap: () => _navigateToDetails(context),
         child: Padding(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.all(AppDimens.xs),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -51,13 +50,9 @@ class ProductCard extends StatelessWidget {
                   heroTag: product.id,
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppDimens.sm),
               _CategoryLabel(category: category),
-              _ProductFooter(
-                product: product,
-                hasVariants: hasVariants,
-                theme: theme,
-              ),
+              _ProductFooter(product: product, hasVariants: hasVariants),
             ],
           ),
         ),
@@ -120,7 +115,11 @@ class _ErrorIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Icon(Icons.image_not_supported, size: 60, color: Colors.grey[400]);
+    return Icon(
+      Icons.image_not_supported,
+      size: 60,
+      color: context.colors.onSurface.withValues(alpha: 0.3),
+    );
   }
 }
 
@@ -133,7 +132,7 @@ class _CategoryLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       category,
-      style: context.textTheme.labelMedium,
+      style: context.bodyStyle,
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
     );
@@ -143,13 +142,8 @@ class _CategoryLabel extends StatelessWidget {
 class _ProductFooter extends StatelessWidget {
   final ProductModel product;
   final bool hasVariants;
-  final ThemeData theme;
 
-  const _ProductFooter({
-    required this.product,
-    required this.hasVariants,
-    required this.theme,
-  });
+  const _ProductFooter({required this.product, required this.hasVariants});
 
   @override
   Widget build(BuildContext context) {
@@ -158,13 +152,13 @@ class _ProductFooter extends StatelessWidget {
         Expanded(
           child: Text(
             product.name,
-            style: theme.textTheme.displayLarge?.copyWith(fontSize: 16),
+            style: context.textTheme.displayLarge?.copyWith(fontSize: 16),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
         ),
         const SizedBox(width: 6),
-        _ZoomButton(imageUrl: product.image, heroTag: product.id, theme: theme),
+        _ZoomButton(imageUrl: product.image, heroTag: product.id),
       ],
     );
   }
@@ -173,13 +167,8 @@ class _ProductFooter extends StatelessWidget {
 class _ZoomButton extends StatelessWidget {
   final String imageUrl;
   final String heroTag;
-  final ThemeData theme;
 
-  const _ZoomButton({
-    required this.imageUrl,
-    required this.heroTag,
-    required this.theme,
-  });
+  const _ZoomButton({required this.imageUrl, required this.heroTag});
 
   void _openZoom(BuildContext context) {
     if (imageUrl.isEmpty) {
@@ -197,23 +186,15 @@ class _ZoomButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: theme.primaryColor,
-      borderRadius: BorderRadius.circular(8),
-      child: InkWell(
-        onTap: () => _openZoom(context),
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          width: 26,
-          height: 26,
-          alignment: Alignment.center,
-          child: Icon(
-            Icons.zoom_in,
-            size: 18,
-            color: theme.colorScheme.onPrimary,
-          ),
-        ),
-      ),
+    final colors = context.colors;
+
+    return AppSquareIconButton(
+      icon: Icons.zoom_in,
+      onTap: () => _openZoom(context),
+      size: 26,
+      iconSize: 18,
+      backgroundColor: colors.primary,
+      iconColor: colors.onPrimary,
     );
   }
 }

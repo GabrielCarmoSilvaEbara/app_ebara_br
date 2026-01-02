@@ -27,4 +27,33 @@ extension ContextExtensions on BuildContext {
   void pop() {
     Navigator.of(this).pop();
   }
+
+  Future<T?> showAppBottomSheet<T>({
+    required Widget child,
+    bool isScrollControlled = true,
+  }) {
+    return showModalBottomSheet<T>(
+      context: this,
+      backgroundColor: colors.surface.withValues(alpha: 0),
+      isScrollControlled: isScrollControlled,
+      builder: (_) => child,
+    );
+  }
+
+  void showSnackBar(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(this).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? colors.error : colors.primary,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  TextStyle? get titleStyle => textTheme.displayLarge;
+  TextStyle? get subtitleStyle => textTheme.displayMedium;
+  TextStyle? get bodyStyle => textTheme.labelMedium;
+  TextStyle? get bodySmall => textTheme.labelSmall?.copyWith(
+    color: colors.onSurface.withValues(alpha: 0.6),
+  );
 }
