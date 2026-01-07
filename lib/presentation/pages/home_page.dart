@@ -1,400 +1,75 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:animated_theme_switcher/animated_theme_switcher.dart'
-    hide ThemeProvider;
 import '../../core/providers/home_provider.dart';
+import '../../core/providers/products_provider.dart';
+import '../../core/providers/categories_provider.dart';
 import '../../core/providers/location_provider.dart';
-import '../../core/models/category_model.dart';
-import '../../core/models/product_model.dart';
-import '../../core/providers/auth_provider.dart';
-import '../../core/providers/theme_provider.dart';
 import '../../core/extensions/context_extensions.dart';
-import '../../core/models/product_filter_params.dart';
-import '../../core/constants/app_constants.dart';
-import '../../presentation/theme/app_theme.dart';
 import '../theme/app_dimens.dart';
 import '../widgets/category_chip.dart';
-import '../widgets/category_chip_skeleton.dart';
-import '../widgets/custom_search_bar.dart';
+import '../widgets/app_skeletons.dart';
+import '../widgets/app_search_bar.dart';
 import '../widgets/product_card.dart';
-import '../widgets/product_card_skeleton.dart';
-import '../widgets/auth_modal_sheet.dart';
 import '../widgets/app_status_widgets.dart';
-import 'location_page.dart';
+import '../widgets/home_app_bar.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
   @override
-  State<HomePage> createState() => HomePageState();
+  State<HomePage> createState() => _HomePageState();
 }
 
-class HomePageState extends State<HomePage> {
-  final PageController _pageController = PageController();
-  final ItemScrollController _itemScrollController = ItemScrollController();
-  Timer? _debounce;
-
+class _HomePageState extends State<HomePage> {
   @override
-  void dispose() {
-    _pageController.dispose();
-    _debounce?.cancel();
-    super.dispose();
-  }
-
-  void openLocationSelector(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const LocationPage()),
-    );
-  }
-
-  void _scrollToCategory(int index) {
-    if (_itemScrollController.isAttached) {
-      _itemScrollController.scrollTo(
-        index: index,
-        duration: AppDurations.normal,
-        curve: Curves.easeInOut,
-        alignment: 0.38,
-      );
-    }
-  }
-
-  void _showAuthModal(BuildContext context) {
-    context.showAppBottomSheet(child: const AuthModalSheet());
-  }
-
-  bool _onScrollNotification(ScrollNotification notification) {
-    if (notification is ScrollEndNotification &&
-        notification.metrics.axis == Axis.vertical &&
-        notification.metrics.pixels >=
-            notification.metrics.maxScrollExtent - 500) {
-      context.read<HomeProvider>().loadMore();
-      return true;
-    }
-    return false;
+  void initState() {
+    super.initState();
+    context.read<HomeProvider>().resetController();
   }
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.colors;
+    final homeProvider = context.read<HomeProvider>();
+    final productsProvider = context.read<ProductsProvider>();
+    final locProvider = context.read<LocationProvider>();
 
     return Scaffold(
       body: NotificationListener<ScrollNotification>(
-        onNotification: _onScrollNotification,
+        onNotification: (n) {
+          if (n is ScrollEndNotification && n.metrics.axis == Axis.vertical) {
+            if (n.metrics.pixels >= n.metrics.maxScrollExtent - 500) {
+              if (!productsProvider.isLoading &&
+                  productsProvider.hasMoreProducts) {
+                productsProvider.loadMore();
+              }
+              return true;
+            }
+          }
+          return false;
+        },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppDimens.lg,
-                50,
-                AppDimens.lg,
-                0,
-              ),
-              child: SizedBox(
-                width: double.infinity,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Positioned(
-                      left: 0,
-                      child: ThemeSwitcher(
-                        builder: (context) {
-                          return Semantics(
-                            label: context.l10n.translate('dark_mode'),
-                            button: true,
-                            child: GestureDetector(
-                              onTap: () {
-                                final themeProv = context.read<ThemeProvider>();
-                                final isDark = themeProv.isDarkMode;
-                                final nextTheme = isDark
-                                    ? AppTheme.lightTheme
-                                    : AppTheme.darkTheme;
-
-                                themeProv.toggleTheme(!isDark);
-
-                                ThemeSwitcher.of(context).changeTheme(
-                                  theme: nextTheme,
-                                  isReversed: isDark,
-                                );
-                              },
-                              child: Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: context.theme.cardColor,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: colors.shadow.withValues(
-                                        alpha: 0.05,
-                                      ),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
-                                ),
-                                child: Icon(
-                                  ThemeModelInheritedNotifier.of(
-                                            context,
-                                          ).theme.brightness ==
-                                          Brightness.dark
-                                      ? Icons.nightlight_round
-                                      : Icons.wb_sunny,
-                                  color: colors.primary,
-                                  size: 22,
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () => openLocationSelector(context),
-                      child: Selector<LocationProvider, String>(
-                        selector: (_, provider) => provider.city,
-                        builder: (context, city, _) {
-                          return Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.location_on,
-                                    size: 14,
-                                    color: colors.primary,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    context.l10n.translate('location'),
-                                    style: context.bodySmall,
-                                  ),
-                                ],
-                              ),
-                              Text(
-                                city.isEmpty
-                                    ? context.l10n.translate('choose_location')
-                                    : city,
-                                style: context.titleStyle,
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          );
-                        },
-                      ),
-                    ),
-                    Positioned(
-                      right: 0,
-                      child: Semantics(
-                        label: context.l10n.translate('my_account'),
-                        button: true,
-                        child: GestureDetector(
-                          onTap: () => _showAuthModal(context),
-                          child: Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: colors.primary.withValues(alpha: 0.1),
-                            ),
-                            child: Selector<AuthProvider, String?>(
-                              selector: (_, provider) =>
-                                  provider.user?.photoURL,
-                              builder: (context, photoUrl, _) {
-                                final authStatus = context
-                                    .read<AuthProvider>()
-                                    .status;
-                                if (photoUrl != null) {
-                                  return ClipOval(
-                                    child: CachedNetworkImage(
-                                      imageUrl: photoUrl,
-                                      fit: BoxFit.cover,
-                                      placeholder: (context, url) =>
-                                          const Padding(
-                                            padding: EdgeInsets.all(10.0),
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                            ),
-                                          ),
-                                      errorWidget: (context, url, error) =>
-                                          Icon(
-                                            Icons.person,
-                                            color: colors.primary,
-                                          ),
-                                    ),
-                                  );
-                                }
-                                return Icon(
-                                  Icons.person,
-                                  color: authStatus == AuthStatus.authenticated
-                                      ? colors.primary
-                                      : colors.onSurface.withValues(alpha: 0.5),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            const HomeAppBar(),
             Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: AppDimens.lg,
                 vertical: AppDimens.sm,
               ),
-              child: Selector<HomeProvider, String>(
-                selector: (_, provider) => provider.selectedCategoryId,
-                builder: (context, selectedCategoryId, _) {
-                  return CustomSearchBar(
-                    hintText: context.l10n.translate('search'),
-                    selectedCategoryId: selectedCategoryId,
-                    onChanged: (val) {
-                      _debounce?.cancel();
-                      _debounce = Timer(const Duration(milliseconds: 600), () {
-                        context.read<HomeProvider>().setSearchQuery(val);
-                      });
-                    },
-                    onFiltersApplied: (filters) {
-                      final params = ProductFilterParams(
-                        categoryId: selectedCategoryId,
-                        application:
-                            filters['application']?.toString() ?? 'TODOS',
-                        line: filters['line']?.toString() ?? 'TODOS',
-                        flowRate:
-                            double.tryParse(
-                              filters['flow_rate']?.toString() ?? '',
-                            ) ??
-                            0.0,
-                        flowRateMeasure:
-                            filters['flow_rate_measure']?.toString() ?? 'm3/h',
-                        heightGauge:
-                            double.tryParse(
-                              filters['height_gauge']?.toString() ?? '',
-                            ) ??
-                            0.0,
-                        heightGaugeMeasure:
-                            filters['height_gauge_measure']?.toString() ?? 'm',
-                        frequency:
-                            int.tryParse(
-                              filters['frequency']?.toString() ?? '',
-                            ) ??
-                            60,
-                        types:
-                            int.tryParse(filters['types']?.toString() ?? '') ??
-                            0,
-                        wellDiameter: filters['well_diameter']?.toString(),
-                        cableLength: filters['cable_lenght']?.toString(),
-                        activation:
-                            filters['activation']?.toString() ?? 'pressostato',
-                        bombsQuantity: filters['bombs_quantity'] is int
-                            ? filters['bombs_quantity'] as int
-                            : int.tryParse(
-                                    filters['bombs_quantity']?.toString() ?? '',
-                                  ) ??
-                                  1,
-                      );
-                      context.read<HomeProvider>().applyFilters(params);
-                    },
-                  );
-                },
+              child: AppSearchBar(
+                hintText: context.l10n.translate('search'),
+                debounceDuration: AppDimens.durationSlow,
+                onChanged: (val) => productsProvider.onSearchInputChanged(val),
+                onFilterTap: () => homeProvider.openFilters(
+                  context,
+                  locProvider.apiLanguageId,
+                ),
               ),
             ),
-            Selector<HomeProvider, (bool, List<CategoryModel>, String)>(
-              selector: (_, provider) {
-                return (
-                  provider.isLoadingCategories,
-                  provider.categories,
-                  provider.selectedCategory,
-                );
-              },
-              builder: (context, data, _) {
-                final isLoading = data.$1;
-                final categories = data.$2;
-                final selectedCategory = data.$3;
-
-                return _CategorySection(
-                  isLoading: isLoading,
-                  categories: categories,
-                  selectedCategory: selectedCategory,
-                  onCategorySelected: (cat) {
-                    final index = categories.indexOf(cat);
-                    _scrollToCategory(index);
-                    _pageController.animateToPage(
-                      index,
-                      duration: const Duration(milliseconds: 400),
-                      curve: Curves.easeInOut,
-                    );
-                  },
-                  itemScrollController: _itemScrollController,
-                );
-              },
-            ),
-            const SizedBox(height: 8),
-            Expanded(
-              child: Selector<HomeProvider, (bool, List<CategoryModel>)>(
-                selector: (_, provider) =>
-                    (provider.isLoadingCategories, provider.categories),
-                builder: (context, data, _) {
-                  final isLoadingCategories = data.$1;
-                  final categories = data.$2;
-
-                  if (isLoadingCategories) {
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppDimens.lg,
-                      ),
-                      child: _ProductLoadingSkeleton(),
-                    );
-                  }
-
-                  return PageView.builder(
-                    controller: _pageController,
-                    itemCount: categories.length,
-                    onPageChanged: (index) {
-                      context.read<HomeProvider>().updateCategoryByIndex(index);
-                      _scrollToCategory(index);
-                    },
-                    itemBuilder: (context, index) {
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppDimens.lg,
-                        ),
-                        child: Consumer<HomeProvider>(
-                          builder: (context, homeProvider, _) {
-                            return _ProductGrid(
-                              key: PageStorageKey<String>(
-                                homeProvider.selectedCategoryId,
-                              ),
-                              isLoading: homeProvider.isLoadingProducts,
-                              hasError: homeProvider.hasError,
-                              products: homeProvider.visibleProducts,
-                              isPaginating: homeProvider.isPaginating,
-                              selectedCategory: homeProvider.selectedCategory,
-                              onRetry: () => homeProvider.loadProducts(
-                                homeProvider.selectedCategoryId,
-                              ),
-                              onRefresh: () async {
-                                await homeProvider.loadProducts(
-                                  homeProvider.selectedCategoryId,
-                                );
-                              },
-                            );
-                          },
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
+            const _CategoriesSection(),
+            const SizedBox(height: AppDimens.xs),
+            Expanded(child: const _ProductPageView()),
           ],
         ),
       ),
@@ -402,187 +77,170 @@ class HomePageState extends State<HomePage> {
   }
 }
 
-class _CategorySection extends StatelessWidget {
-  final bool isLoading;
-  final List<CategoryModel> categories;
-  final String selectedCategory;
-  final ValueChanged<CategoryModel> onCategorySelected;
-  final ItemScrollController itemScrollController;
-
-  const _CategorySection({
-    required this.isLoading,
-    required this.categories,
-    required this.selectedCategory,
-    required this.onCategorySelected,
-    required this.itemScrollController,
-  });
+class _CategoriesSection extends StatelessWidget {
+  const _CategoriesSection();
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: AppDimens.lg, bottom: 8),
-          child: Text(
-            context.l10n.translate('select_category'),
-            style: context.titleStyle,
-          ),
-        ),
-        SizedBox(
-          height: 44,
-          child: isLoading
-              ? _CategoryLoadingSkeleton()
-              : ScrollablePositionedList.builder(
-                  itemScrollController: itemScrollController,
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: AppDimens.lg),
-                  itemCount: categories.length,
-                  itemBuilder: (context, index) {
-                    final category = categories[index];
-                    return CategoryChip(
-                      label: category.title,
-                      icon: category.icon ?? Icons.category,
-                      isSelected: category.slug == selectedCategory,
-                      onTap: () => onCategorySelected(category),
-                    );
-                  },
-                ),
-        ),
-      ],
-    );
-  }
-}
+    return Selector<CategoriesProvider, (bool, int)>(
+      selector: (_, p) => (p.isLoading, p.categories.length),
+      builder: (context, data, _) {
+        final isLoading = data.$1;
+        final count = data.$2;
+        final provider = context.read<CategoriesProvider>();
+        final homeProvider = context.read<HomeProvider>();
+        final locProvider = context.read<LocationProvider>();
 
-class _CategoryLoadingSkeleton extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return ListView.builder(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: AppDimens.lg),
-      itemCount: 6,
-      itemBuilder: (_, index) => const CategoryChipSkeleton(),
-    );
-  }
-}
-
-class _ProductGrid extends StatefulWidget {
-  final bool isLoading;
-  final bool hasError;
-  final List<ProductModel> products;
-  final bool isPaginating;
-  final String selectedCategory;
-  final VoidCallback onRetry;
-  final Future<void> Function() onRefresh;
-
-  const _ProductGrid({
-    super.key,
-    required this.isLoading,
-    required this.hasError,
-    required this.products,
-    required this.isPaginating,
-    required this.selectedCategory,
-    required this.onRetry,
-    required this.onRefresh,
-  });
-
-  @override
-  State<_ProductGrid> createState() => _ProductGridState();
-}
-
-class _ProductGridState extends State<_ProductGrid>
-    with AutomaticKeepAliveClientMixin {
-  @override
-  bool get wantKeepAlive => true;
-
-  @override
-  Widget build(BuildContext context) {
-    super.build(context);
-    final colors = context.colors;
-
-    if (widget.isLoading) {
-      return _ProductLoadingSkeleton();
-    }
-
-    if (widget.hasError) {
-      return AppErrorState(
-        message: context.l10n.translate('connect_error'),
-        onRetry: widget.onRetry,
-      );
-    }
-
-    if (widget.products.isEmpty) {
-      return RefreshIndicator(
-        onRefresh: widget.onRefresh,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: SizedBox(
-            height: context.height * 0.6,
-            child: AppEmptyState(
-              message: context.l10n.translate('no_products_found'),
-            ),
-          ),
-        ),
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: widget.onRefresh,
-      color: colors.primary,
-      backgroundColor: context.theme.cardColor,
-      child: GridView.builder(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.zero,
-        cacheExtent: 500,
-        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-          maxCrossAxisExtent: 220,
-          childAspectRatio: 0.85,
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 10,
-        ),
-        itemCount: widget.products.length + (widget.isPaginating ? 2 : 0),
-        itemBuilder: (context, index) {
-          if (index >= widget.products.length) {
-            return const ProductCardSkeleton();
-          }
-
-          return TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0.0, end: 1.0),
-            duration: Duration(milliseconds: 400 + (index % 10) * 50),
-            curve: Curves.easeOutQuart,
-            builder: (context, value, child) {
-              return Transform.translate(
-                offset: Offset(0, 50 * (1 - value)),
-                child: Opacity(opacity: value, child: child),
-              );
-            },
-            child: RepaintBoundary(
-              child: ProductCard(
-                category: context.l10n.translate(widget.selectedCategory),
-                product: widget.products[index],
-                onActionPressed: () {},
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(
+                left: AppDimens.lg,
+                bottom: AppDimens.xs,
+              ),
+              child: Text(
+                context.l10n.translate('select_category'),
+                style: context.titleStyle,
               ),
             ),
-          );
-        },
-      ),
+            SizedBox(
+              height: AppDimens.chipHeight,
+              child: isLoading
+                  ? ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppDimens.lg,
+                      ),
+                      itemCount: 6,
+                      itemBuilder: (_, _) => const CategoryChipSkeleton(),
+                    )
+                  : ScrollablePositionedList.builder(
+                      itemScrollController: homeProvider.itemScrollController,
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppDimens.lg,
+                      ),
+                      itemCount: count,
+                      itemBuilder: (context, index) {
+                        final category = provider.categories[index];
+                        return Selector<CategoriesProvider, String>(
+                          selector: (_, p) => p.selectedCategoryId,
+                          builder: (_, selectedId, _) {
+                            return CategoryChip(
+                              label: category.title,
+                              icon: category.icon ?? Icons.category,
+                              isSelected: category.id == selectedId,
+                              onTap: () => homeProvider.onCategorySelected(
+                                category,
+                                index,
+                                locProvider.apiLanguageId,
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ProductPageView extends StatelessWidget {
+  const _ProductPageView();
+
+  @override
+  Widget build(BuildContext context) {
+    final catProvider = context.read<CategoriesProvider>();
+    final homeProvider = context.read<HomeProvider>();
+    final locProvider = context.read<LocationProvider>();
+
+    if (catProvider.isLoading) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppDimens.lg),
+        child: const _ProductLoadingSkeleton(),
+      );
+    }
+
+    return PageView.builder(
+      controller: homeProvider.pageController,
+      itemCount: catProvider.categories.length,
+      onPageChanged: (index) =>
+          homeProvider.onPageChanged(index, locProvider.apiLanguageId),
+      itemBuilder: (context, index) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppDimens.lg),
+          child: Consumer<ProductsProvider>(
+            builder: (context, prodProvider, _) {
+              if (prodProvider.hasError) {
+                return AppErrorState(
+                  message: context.l10n.translate('connect_error'),
+                  onRetry: () => homeProvider.reloadCurrentCategory(
+                    locProvider.apiLanguageId,
+                  ),
+                );
+              }
+              if (prodProvider.isLoading && !prodProvider.isPaginating) {
+                return const _ProductLoadingSkeleton();
+              }
+              if (prodProvider.visibleProducts.isEmpty) {
+                return AppEmptyState(
+                  message: context.l10n.translate('no_products_found'),
+                );
+              }
+
+              return GridView.builder(
+                cacheExtent: 500,
+                padding: EdgeInsets.zero,
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: AppDimens.gridMaxExtent,
+                  childAspectRatio: AppDimens.gridRatio,
+                  crossAxisSpacing: AppDimens.gridSpacing,
+                  mainAxisSpacing: AppDimens.gridSpacing,
+                ),
+                itemCount:
+                    prodProvider.visibleProducts.length +
+                    (prodProvider.isPaginating ? 2 : 0),
+                itemBuilder: (context, idx) {
+                  if (idx >= prodProvider.visibleProducts.length) {
+                    return const ProductCardSkeleton();
+                  }
+                  final product = prodProvider.visibleProducts[idx];
+                  return ProductCard(
+                    category: context.l10n.translate(
+                      catProvider.selectedCategorySlug,
+                    ),
+                    product: product,
+                    onActionPressed: () {},
+                  );
+                },
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }
 
 class _ProductLoadingSkeleton extends StatelessWidget {
+  const _ProductLoadingSkeleton();
+
   @override
   Widget build(BuildContext context) {
     return GridView.builder(
       itemCount: 6,
       padding: EdgeInsets.zero,
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: 220,
-        childAspectRatio: 0.85,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
+        maxCrossAxisExtent: AppDimens.gridMaxExtent,
+        childAspectRatio: AppDimens.gridRatio,
+        crossAxisSpacing: AppDimens.gridSpacing,
+        mainAxisSpacing: AppDimens.gridSpacing,
       ),
-      itemBuilder: (_, index) => const ProductCardSkeleton(),
+      itemBuilder: (_, _) => const ProductCardSkeleton(),
     );
   }
 }

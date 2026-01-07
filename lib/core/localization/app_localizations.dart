@@ -121,6 +121,8 @@ class AppLocalizations {
       'comparison_base': 'Base',
       'comparison_current': 'Current',
       'pump_selector': 'Pump Selector',
+      'required_field': 'Required field',
+      'mandatory': 'Mandatory',
     },
     'pt': {
       'location': 'Localização',
@@ -230,6 +232,8 @@ class AppLocalizations {
       'comparison_base': 'Base',
       'comparison_current': 'Atual',
       'pump_selector': 'Seletor de Bombas',
+      'required_field': 'Campo obrigatório',
+      'mandatory': 'Obrigatório',
     },
     'es': {
       'location': 'Ubicación',
@@ -339,6 +343,8 @@ class AppLocalizations {
       'comparison_base': 'Base',
       'comparison_current': 'Actual',
       'pump_selector': 'Selector de Bombas',
+      'required_field': 'Campo obligatorio',
+      'mandatory': 'Obligatorio',
     },
   };
 

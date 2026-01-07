@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "701048514790",
+    "project_id": "ebas-site",
+    "storage_bucket": "ebas-site.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:701048514790:android:7677c131656cca81697327",
+        "android_client_info": {
+          "package_name": "com.ebara.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC6FwU9z40HhEipNeOzMjo8_rmS546RCbc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

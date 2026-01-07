@@ -10,8 +10,56 @@ class AppFormLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Text(label, style: context.subtitleStyle?.copyWith(fontSize: 14)),
+      padding: const EdgeInsets.only(bottom: AppDimens.xs),
+      child: Text(
+        label,
+        style: context.subtitleStyle?.copyWith(fontSize: AppDimens.fontLg),
+      ),
+    );
+  }
+}
+
+class _InputContainer extends StatelessWidget {
+  final Widget child;
+  final Color borderColor;
+  final Color backgroundColor;
+
+  const _InputContainer({
+    required this.child,
+    required this.borderColor,
+    required this.backgroundColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: AppDimens.md),
+      decoration: BoxDecoration(
+        border: Border.all(color: borderColor, width: 2),
+        borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+        color: backgroundColor,
+      ),
+      child: child,
+    );
+  }
+}
+
+class _ErrorText extends StatelessWidget {
+  final String text;
+  const _ErrorText(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, left: 4),
+      child: Text(
+        text,
+        style: context.bodySmall?.copyWith(
+          color: context.colors.error,
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     );
   }
 }
@@ -24,6 +72,8 @@ class AppTextField extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final bool isInteger;
   final TextInputAction textInputAction;
+  final TextInputType? keyboardType;
+  final String? errorText;
 
   const AppTextField({
     super.key,
@@ -34,11 +84,15 @@ class AppTextField extends StatelessWidget {
     this.onChanged,
     this.isInteger = false,
     this.textInputAction = TextInputAction.done,
+    this.keyboardType,
+    this.errorText,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final hasError = errorText != null && errorText!.isNotEmpty;
+    final borderColor = hasError ? colors.error : colors.primary;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -46,7 +100,7 @@ class AppTextField extends StatelessWidget {
         if (label != null) AppFormLabel(label!),
         Container(
           decoration: BoxDecoration(
-            border: Border.all(color: colors.primary, width: 2),
+            border: Border.all(color: borderColor, width: 2),
             borderRadius: BorderRadius.circular(AppDimens.radiusSm),
             color: context.theme.cardColor,
           ),
@@ -55,22 +109,26 @@ class AppTextField extends StatelessWidget {
               Expanded(
                 child: TextField(
                   controller: controller,
-                  keyboardType: TextInputType.numberWithOptions(
-                    decimal: !isInteger,
-                  ),
+                  keyboardType:
+                      keyboardType ??
+                      TextInputType.numberWithOptions(decimal: !isInteger),
                   textInputAction: textInputAction,
                   inputFormatters: [
-                    isInteger
-                        ? FilteringTextInputFormatter.digitsOnly
-                        : FilteringTextInputFormatter.allow(
-                            RegExp(r'^\d*[.,]?\d*'),
-                          ),
+                    if (isInteger)
+                      FilteringTextInputFormatter.digitsOnly
+                    else
+                      FilteringTextInputFormatter.allow(
+                        RegExp(r'^\d*[.,]?\d*'),
+                      ),
                   ],
                   onChanged: onChanged,
-                  style: context.subtitleStyle?.copyWith(fontSize: 16),
+                  style: context.subtitleStyle?.copyWith(
+                    fontSize: AppDimens.fontXl,
+                  ),
                   decoration: InputDecoration(
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: AppDimens.md,
+                      vertical: AppDimens.sm,
                     ),
                     border: InputBorder.none,
                     hintText: hintText ?? '0,0',
@@ -79,27 +137,22 @@ class AppTextField extends StatelessWidget {
                 ),
               ),
               if (suffixText != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppDimens.md,
-                    vertical: 14,
-                  ),
-                  decoration: BoxDecoration(
-                    border: Border(
-                      left: BorderSide(color: colors.primary, width: 2),
-                    ),
-                  ),
+                _SuffixContainer(
+                  borderColor: borderColor,
                   child: Text(
                     suffixText!,
                     style: context.subtitleStyle?.copyWith(
-                      color: colors.onSurface.withValues(alpha: 0.5),
-                      fontSize: 14,
+                      color: colors.onSurface.withValues(
+                        alpha: AppDimens.opacityHigh,
+                      ),
+                      fontSize: AppDimens.fontLg,
                     ),
                   ),
                 ),
             ],
           ),
         ),
+        if (hasError) _ErrorText(errorText!),
       ],
     );
   }
@@ -111,6 +164,7 @@ class AppDropdown<T> extends StatelessWidget {
   final List<DropdownMenuItem<T>> items;
   final ValueChanged<T?> onChanged;
   final String? hint;
+  final String? errorText;
 
   const AppDropdown({
     super.key,
@@ -119,60 +173,67 @@ class AppDropdown<T> extends StatelessWidget {
     required this.items,
     required this.onChanged,
     this.hint,
+    this.errorText,
   });
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.colors;
+    final hasError = errorText != null && errorText!.isNotEmpty;
+    final borderColor = hasError
+        ? context.colors.error
+        : context.colors.primary;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (label != null) AppFormLabel(label!),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: AppDimens.md),
-          decoration: BoxDecoration(
-            border: Border.all(color: colors.primary, width: 2),
-            borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-            color: context.theme.cardColor,
-          ),
+        _InputContainer(
+          borderColor: borderColor,
+          backgroundColor: context.theme.cardColor,
           child: DropdownButtonHideUnderline(
             child: DropdownButton<T>(
               isExpanded: true,
               value: value,
               dropdownColor: context.theme.cardColor,
-              icon: Icon(Icons.unfold_more, color: colors.primary),
+              icon: Icon(Icons.unfold_more, color: context.colors.primary),
               hint: hint != null ? Text(hint!, style: context.bodySmall) : null,
               items: items,
               onChanged: onChanged,
-              style: context.subtitleStyle?.copyWith(fontSize: 14),
+              style: context.subtitleStyle?.copyWith(
+                fontSize: AppDimens.fontLg,
+              ),
             ),
           ),
         ),
+        if (hasError) _ErrorText(errorText!),
       ],
     );
   }
 }
 
-class AppNumericDropdown extends StatelessWidget {
+class AppCompositeField extends StatelessWidget {
   final String label;
   final TextEditingController controller;
-  final String unitValue;
-  final List<Map<String, dynamic>> unitItems;
-  final ValueChanged<String?> onUnitChanged;
+  final Widget suffixWidget;
+  final TextInputType keyboardType;
+  final List<TextInputFormatter>? formatters;
+  final String? errorText;
 
-  const AppNumericDropdown({
+  const AppCompositeField({
     super.key,
     required this.label,
     required this.controller,
-    required this.unitValue,
-    required this.unitItems,
-    required this.onUnitChanged,
+    required this.suffixWidget,
+    this.keyboardType = const TextInputType.numberWithOptions(decimal: true),
+    this.formatters,
+    this.errorText,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final hasError = errorText != null && errorText!.isNotEmpty;
+    final borderColor = hasError ? colors.error : colors.primary;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -180,7 +241,7 @@ class AppNumericDropdown extends StatelessWidget {
         AppFormLabel(label),
         Container(
           decoration: BoxDecoration(
-            border: Border.all(color: colors.primary, width: 2),
+            border: Border.all(color: borderColor, width: 2),
             borderRadius: BorderRadius.circular(AppDimens.radiusSm),
             color: context.theme.cardColor,
           ),
@@ -189,14 +250,18 @@ class AppNumericDropdown extends StatelessWidget {
               Expanded(
                 child: TextField(
                   controller: controller,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
+                  keyboardType: keyboardType,
                   textInputAction: TextInputAction.next,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'^\d*[.,]?\d*')),
-                  ],
-                  style: context.subtitleStyle?.copyWith(fontSize: 14),
+                  inputFormatters:
+                      formatters ??
+                      [
+                        FilteringTextInputFormatter.allow(
+                          RegExp(r'^\d*[.,]?\d*'),
+                        ),
+                      ],
+                  style: context.subtitleStyle?.copyWith(
+                    fontSize: AppDimens.fontLg,
+                  ),
                   decoration: const InputDecoration(
                     contentPadding: EdgeInsets.symmetric(
                       horizontal: AppDimens.md,
@@ -206,39 +271,32 @@ class AppNumericDropdown extends StatelessWidget {
                   ),
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  border: Border(
-                    left: BorderSide(color: colors.primary, width: 2),
-                  ),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: unitValue,
-                    dropdownColor: context.theme.cardColor,
-                    isDense: true,
-                    items: unitItems
-                        .map(
-                          (u) => DropdownMenuItem(
-                            value: u['value'].toString(),
-                            child: Text(
-                              u['title'].toString(),
-                              style: context.subtitleStyle?.copyWith(
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: onUnitChanged,
-                  ),
-                ),
-              ),
+              _SuffixContainer(borderColor: borderColor, child: suffixWidget),
             ],
           ),
         ),
+        if (hasError) _ErrorText(errorText!),
       ],
+    );
+  }
+}
+
+class _SuffixContainer extends StatelessWidget {
+  final Widget child;
+  final Color borderColor;
+
+  const _SuffixContainer({required this.child, required this.borderColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: AppDimens.sm),
+      height: 48,
+      decoration: BoxDecoration(
+        border: Border(left: BorderSide(color: borderColor, width: 2)),
+      ),
+      alignment: Alignment.center,
+      child: DropdownButtonHideUnderline(child: child),
     );
   }
 }

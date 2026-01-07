@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../core/services/ebara_data_service.dart';
-import '../../core/models/product_filter_params.dart';
+import '../../core/providers/products_provider.dart';
 import '../../core/extensions/context_extensions.dart';
 import 'product_details_page.dart';
 
@@ -23,45 +22,45 @@ class _DeepLinkLoadingPageState extends State<DeepLinkLoadingPage> {
   @override
   void initState() {
     super.initState();
-    _loadAndNavigate();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadAndNavigate();
+    });
   }
 
   Future<void> _loadAndNavigate() async {
-    final dataService = context.read<EbaraDataService>();
+    final productsProvider = context.read<ProductsProvider>();
 
     try {
-      final results = await dataService.searchProducts(
-        ProductFilterParams(categoryId: widget.categoryId, line: 'TODOS'),
+      final product = await productsProvider.fetchProductByDeepLink(
+        widget.categoryId,
+        widget.productId,
       );
 
-      final group = dataService.groupProducts(results);
-      final product = group.firstWhere(
-        (p) =>
-            p.productId == widget.productId ||
-            p.variants.any((v) => v.productId == widget.productId),
-        orElse: () =>
-            throw Exception(context.l10n.translate('product_not_found')),
-      );
+      if (!mounted) return;
 
-      if (mounted) {
+      if (product != null) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (_) => ProductDetailsPage(
               category: widget.categoryId,
-              variants: product.variants.map((e) => e.toMap()).toList(),
+              variants: product.variants,
             ),
           ),
         );
+      } else {
+        _handleError();
       }
-    } catch (e) {
-      if (mounted) {
-        context.pushReplacementNamed('/home');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.l10n.translate('product_not_found'))),
-        );
-      }
+    } catch (_) {
+      if (mounted) _handleError();
     }
+  }
+
+  void _handleError() {
+    context.pushReplacementNamed('/home');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(context.l10n.translate('product_not_found'))),
+    );
   }
 
   @override

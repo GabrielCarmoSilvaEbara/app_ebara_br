@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/extensions/context_extensions.dart';
+import '../theme/app_dimens.dart';
 
 class CategoryChip extends StatelessWidget {
   final String label;
@@ -18,56 +19,48 @@ class CategoryChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final contentColor = isSelected ? colors.onPrimary : colors.primary;
 
     return Padding(
-      padding: const EdgeInsets.only(right: 12),
+      padding: const EdgeInsets.only(right: AppDimens.sm),
       child: Material(
-        color: colors.surface.withValues(alpha: 0),
+        color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(30),
+          borderRadius: BorderRadius.circular(AppDimens.radiusXxl),
           child: Ink(
-            decoration: _buildDecoration(context),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppDimens.md,
+              vertical: AppDimens.xs,
+            ),
+            decoration: BoxDecoration(
+              color: isSelected ? colors.primary : colors.surface,
+              borderRadius: BorderRadius.circular(AppDimens.radiusXxl),
+              border: Border.all(
+                color: isSelected
+                    ? colors.primary
+                    : colors.primary.withValues(alpha: AppDimens.opacityMed),
+                width: 1,
+              ),
+            ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, size: 20, color: _getContentColor(context)),
-                const SizedBox(width: 8),
-                Text(label, style: _getTextStyle(context)),
+                Icon(icon, size: AppDimens.iconLg, color: contentColor),
+                const SizedBox(width: AppDimens.xs),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: contentColor,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                    fontSize: AppDimens.fontLg,
+                  ),
+                ),
               ],
             ),
           ),
         ),
       ),
-    );
-  }
-
-  BoxDecoration _buildDecoration(BuildContext context) {
-    final colors = context.colors;
-
-    return BoxDecoration(
-      color: isSelected ? colors.primary : colors.surface,
-      borderRadius: BorderRadius.circular(30),
-      border: Border.all(
-        color: isSelected
-            ? colors.primary
-            : colors.primary.withValues(alpha: 0.3),
-        width: 1,
-      ),
-    );
-  }
-
-  Color _getContentColor(BuildContext context) {
-    final colors = context.colors;
-    return isSelected ? colors.onPrimary : colors.primary;
-  }
-
-  TextStyle _getTextStyle(BuildContext context) {
-    return TextStyle(
-      color: _getContentColor(context),
-      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-      fontSize: 14,
     );
   }
 }

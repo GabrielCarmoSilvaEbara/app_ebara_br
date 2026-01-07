@@ -1,5 +1,7 @@
 import 'package:geolocator/geolocator.dart';
 import '../services/api_service.dart';
+import '../constants/app_constants.dart';
+import '../utils/parse_util.dart';
 
 class LocationService {
   final ApiService _api;
@@ -8,15 +10,12 @@ class LocationService {
     : _api =
           api ??
           ApiService(
-            baseUrl: 'https://nominatim.openstreetmap.org',
-            defaultHeaders: {
-              'User-Agent': 'app-ebara/1.0 (contato@seudominio.com)',
-            },
+            baseUrl: AppConstants.nominatimUrl,
+            defaultHeaders: {'User-Agent': AppConstants.userAgent},
           );
 
   static const minQueryLength = 3;
   static const searchLimit = 10;
-
   static const List<String> validCityAddresstypes = [
     'city',
     'town',
@@ -27,17 +26,12 @@ class LocationService {
   Future<Map<String, String>?> getCurrentCity() async {
     try {
       final position = await _getCurrentPosition();
-      if (position == null) {
-        return null;
-      }
+      if (position == null) return null;
 
       final locationData = await _reverseGeocode(position);
-      if (locationData.isEmpty) {
-        return null;
-      }
+      if (locationData.isEmpty) return null;
 
       final parsedData = _parseLocationData(locationData);
-
       return {
         ...parsedData,
         'lat': position.latitude.toString(),
@@ -49,23 +43,17 @@ class LocationService {
   }
 
   Future<Position?> _getCurrentPosition() async {
-    if (!await Geolocator.isLocationServiceEnabled()) {
-      return null;
-    }
+    if (!await Geolocator.isLocationServiceEnabled()) return null;
 
     final permission = await _checkAndRequestPermission();
-    if (permission == null) {
-      return null;
-    }
-
-    const LocationSettings locationSettings = LocationSettings(
-      accuracy: LocationAccuracy.high,
-      timeLimit: Duration(seconds: 15),
-    );
+    if (permission == null) return null;
 
     try {
       return await Geolocator.getCurrentPosition(
-        locationSettings: locationSettings,
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 15),
+        ),
       );
     } on Exception {
       return null;
@@ -74,18 +62,11 @@ class LocationService {
 
   Future<LocationPermission?> _checkAndRequestPermission() async {
     var permission = await Geolocator.checkPermission();
-
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        return null;
-      }
+      if (permission == LocationPermission.denied) return null;
     }
-
-    if (permission == LocationPermission.deniedForever) {
-      return null;
-    }
-
+    if (permission == LocationPermission.deniedForever) return null;
     return permission;
   }
 
@@ -101,13 +82,11 @@ class LocationService {
       cacheDuration: const Duration(days: 7),
       parser: (json) => json as Map<String, dynamic>,
     );
-
     return response.dataOrNull ?? {};
   }
 
   Map<String, String> _parseLocationData(Map<String, dynamic> data) {
     final address = data['address'] as Map<String, dynamic>? ?? {};
-
     return {
       'address_type': data['addresstype'] as String? ?? '',
       'city': _extractCity(address),
@@ -135,9 +114,7 @@ class LocationService {
   Future<List<Map<String, String>>> searchCities({
     required String query,
   }) async {
-    if (query.length < minQueryLength) {
-      throw ArgumentError('Query must be at least $minQueryLength characters');
-    }
+    if (query.length < minQueryLength) return [];
 
     final response = await _api.get<List<dynamic>>(
       'search',
@@ -152,10 +129,7 @@ class LocationService {
       parser: (json) => json as List<dynamic>,
     );
 
-    if (!response.isSuccess) {
-      throw Exception('Falha ao buscar cidades');
-    }
-
+    if (!response.isSuccess) throw Exception('Falha ao buscar cidades');
     return _parseCitySearchResults(response.dataOrNull ?? []);
   }
 
@@ -167,15 +141,13 @@ class LocationService {
         })
         .map<Map<String, String>>((item) {
           final address = item['address'] as Map<String, dynamic>? ?? {};
-          final city = _extractCity(address);
-
           return {
             'address_type': item['addresstype'] as String? ?? '',
-            'city': city,
+            'city': _extractCity(address),
             'state': address['state'] as String? ?? '',
             'country': address['country'] as String? ?? '',
-            'lat': item['lat'],
-            'lon': item['lon'],
+            'lat': ParseUtil.toDoubleSafe(item['lat']).toString(),
+            'lon': ParseUtil.toDoubleSafe(item['lon']).toString(),
           };
         })
         .where((item) => item['city']!.isNotEmpty)

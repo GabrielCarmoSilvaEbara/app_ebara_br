@@ -18,17 +18,17 @@ class AppErrorState extends StatelessWidget {
         children: [
           Icon(
             Icons.error_outline,
-            size: 60,
+            size: AppDimens.iconHuge,
             color: colors.error.withValues(alpha: 0.5),
           ),
           const SizedBox(height: AppDimens.md),
-          Text(message, style: context.bodyStyle),
+          Text(message, style: context.bodyStyle, textAlign: TextAlign.center),
           if (onRetry != null) ...[
             const SizedBox(height: AppDimens.md),
             AppPrimaryButton(
               onPressed: onRetry,
               text: context.l10n.translate('try_again'),
-              width: 150,
+              width: AppDimens.buttonWidthSm,
               height: 45,
             ),
           ],
@@ -55,9 +55,13 @@ class AppEmptyState extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 60, color: colors.onSurface.withValues(alpha: 0.3)),
+          Icon(
+            icon,
+            size: AppDimens.iconHuge,
+            color: colors.onSurface.withValues(alpha: AppDimens.opacityMed),
+          ),
           const SizedBox(height: AppDimens.md),
-          Text(message, style: context.bodyStyle),
+          Text(message, style: context.bodyStyle, textAlign: TextAlign.center),
         ],
       ),
     );

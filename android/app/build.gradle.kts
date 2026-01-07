@@ -1,14 +1,16 @@
 plugins {
     id("com.android.application")
     id("kotlin-android")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+
+    id("com.google.gms.google-services")
 }
 
 android {
-    namespace = "com.seudominio.app_ebara"
+    namespace = "com.ebara.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
+    buildToolsVersion = "36.1.0"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -20,7 +22,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.seudominio.app_ebara"
+        applicationId = "com.ebara.app"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

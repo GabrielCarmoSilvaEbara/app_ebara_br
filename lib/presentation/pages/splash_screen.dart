@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
-import 'dart:async';
 import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:provider/provider.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import '../../core/providers/home_provider.dart';
 import '../../core/providers/location_provider.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/providers/history_provider.dart';
 import '../../core/providers/theme_provider.dart';
 import '../../core/providers/connectivity_provider.dart';
+import '../../core/providers/splash_provider.dart';
 import '../../core/extensions/context_extensions.dart';
-import '../../core/constants/app_constants.dart';
 import '../../core/constants/app_assets.dart';
+import '../theme/app_dimens.dart';
 import 'home_page.dart';
 import 'login_page.dart';
 import 'location_page.dart';
@@ -25,126 +24,65 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  bool _startAnimation = false;
-
-  final Completer<void> _apiDataCompleter = Completer<void>();
-  final Completer<void> _textAnimationCompleter = Completer<void>();
+  bool _animationCompleted = false;
 
   @override
   void initState() {
     super.initState();
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadResources();
+      _initServices();
     });
-
-    Future.delayed(AppDurations.normal, () {
-      if (mounted) {
-        setState(() => _startAnimation = true);
-      }
-    });
-
-    _handleTransition();
   }
 
-  void _loadResources() async {
-    try {
-      final locProv = context.read<LocationProvider>();
-      final homeProv = context.read<HomeProvider>();
-      final authProv = context.read<AuthProvider>();
-      final historyProv = context.read<HistoryProvider>();
-      final themeProv = context.read<ThemeProvider>();
-      final connProv = context.read<ConnectivityProvider>();
-
-      await Future.wait([
-        authProv.init(),
-        historyProv.init(),
-        themeProv.init(),
-        connProv.init(),
-        locProv.initLocation(),
-        _initHeavyServices(),
-      ]);
-
-      if (mounted) {
-        await homeProv.reloadData(locProv.apiLanguageId);
-      }
-    } catch (_) {
-    } finally {
-      if (!_apiDataCompleter.isCompleted) {
-        _apiDataCompleter.complete();
-      }
-    }
+  void _initServices() {
+    context.read<SplashProvider>().initApp(
+      authProvider: context.read<AuthProvider>(),
+      historyProvider: context.read<HistoryProvider>(),
+      themeProvider: context.read<ThemeProvider>(),
+      connectivityProvider: context.read<ConnectivityProvider>(),
+      locationProvider: context.read<LocationProvider>(),
+      homeProvider: context.read<HomeProvider>(),
+    );
   }
 
-  Future<void> _initHeavyServices() async {
-    try {
-      await Hive.openBox(StorageKeys.boxApiCache);
-    } catch (e) {
-      await Hive.deleteBoxFromDisk(StorageKeys.boxApiCache);
-      await Hive.openBox(StorageKeys.boxApiCache);
-    }
-  }
+  void _checkNavigation() {
+    if (!_animationCompleted) return;
 
-  Future<void> _handleTransition() async {
-    try {
-      await Future.wait([
-        _apiDataCompleter.future,
-        _textAnimationCompleter.future,
-      ]).timeout(const Duration(seconds: 5));
-    } catch (e) {
-      //
-    } finally {
-      if (mounted) {
-        _decideNextPage();
-      }
-    }
-  }
+    final splashProvider = context.read<SplashProvider>();
+    if (!splashProvider.isInitialized) return;
 
-  void _decideNextPage() {
     final locationProvider = context.read<LocationProvider>();
     final authProvider = context.read<AuthProvider>();
-
     final String chooseLocationText = context.l10n.translate('choose_location');
 
     if (locationProvider.city == chooseLocationText ||
         locationProvider.city.isEmpty) {
-      _navigateToPage(const LocationPage(isInitialSelection: true));
+      _navigate(const LocationPage(isInitialSelection: true));
     } else {
-      if (authProvider.status == AuthStatus.authenticated ||
-          authProvider.status == AuthStatus.guest) {
-        _navigateToPage(const HomePage());
-      } else {
-        _navigateToPage(const LoginPage());
-      }
+      final isAuth =
+          authProvider.status == AuthStatus.authenticated ||
+          authProvider.status == AuthStatus.guest;
+      _navigate(isAuth ? const HomePage() : const LoginPage());
     }
   }
 
-  void _navigateToPage(Widget page) {
+  void _navigate(Widget page) {
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => page,
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-        transitionDuration: const Duration(milliseconds: 800),
+        pageBuilder: (_, animation, _) => page,
+        transitionsBuilder: (_, animation, _, child) =>
+            FadeTransition(opacity: animation, child: child),
+        transitionDuration: AppDimens.durationPage,
       ),
     );
   }
 
   @override
-  void dispose() {
-    if (!_apiDataCompleter.isCompleted) {
-      _apiDataCompleter.complete();
-    }
-    if (!_textAnimationCompleter.isCompleted) {
-      _textAnimationCompleter.complete();
-    }
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+
+    context.watch<SplashProvider>();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkNavigation());
 
     return Scaffold(
       body: Container(
@@ -163,70 +101,69 @@ class _SplashScreenState extends State<SplashScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  AnimatedScale(
-                    scale: _startAnimation ? 1.0 : 0.7,
-                    duration: AppDurations.splash,
+                  TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0.7, end: 1.0),
+                    duration: AppDimens.durationShimmer,
                     curve: Curves.easeOutBack,
-                    child: AnimatedOpacity(
-                      opacity: _startAnimation ? 1.0 : 0.0,
-                      duration: const Duration(milliseconds: 800),
-                      child: Shimmer.fromColors(
-                        baseColor: colors.onPrimary,
-                        highlightColor: colors.onPrimary.withValues(
-                          alpha: 0.47,
-                        ),
-                        period: const Duration(seconds: 2),
-                        child: Image.asset(
-                          AppAssets.logo,
-                          height: 140,
-                          width: 131,
-                        ),
+                    builder: (context, scale, child) {
+                      return Transform.scale(scale: scale, child: child);
+                    },
+                    child: Shimmer.fromColors(
+                      baseColor: colors.onPrimary,
+                      highlightColor: colors.onPrimary.withValues(alpha: 0.47),
+                      period: const Duration(seconds: 2),
+                      child: Image.asset(
+                        AppAssets.logo,
+                        height: AppDimens.splashLogoSize,
+                        width: AppDimens.splashLogoWidth,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 30),
-                  if (_startAnimation)
-                    SizedBox(
-                      height: 40,
-                      child: DefaultTextStyle(
-                        style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.bold,
-                          color: colors.onPrimary,
-                          letterSpacing: 3,
-                          shadows: [
-                            Shadow(
-                              blurRadius: 10,
-                              color: colors.shadow.withValues(alpha: 0.26),
-                              offset: const Offset(2, 2),
-                            ),
-                          ],
-                        ),
-                        child: AnimatedTextKit(
-                          animatedTexts: [
-                            TypewriterAnimatedText(
-                              context.l10n.translate('pump_selector'),
-                              speed: const Duration(milliseconds: 150),
-                              cursor: '',
-                            ),
-                          ],
-                          isRepeatingAnimation: false,
-                          onFinished: () {
-                            if (!_textAnimationCompleter.isCompleted) {
-                              _textAnimationCompleter.complete();
-                            }
-                          },
-                        ),
+                  const SizedBox(height: AppDimens.radiusXxl),
+                  SizedBox(
+                    height: AppDimens.xxxl,
+                    child: DefaultTextStyle(
+                      style: TextStyle(
+                        fontSize: AppDimens.fontSplash,
+                        fontWeight: FontWeight.bold,
+                        color: colors.onPrimary,
+                        letterSpacing: 3,
+                        shadows: [
+                          Shadow(
+                            blurRadius: AppDimens.gridSpacing,
+                            color: colors.shadow.withValues(alpha: 0.26),
+                            offset: const Offset(2, 2),
+                          ),
+                        ],
+                      ),
+                      child: AnimatedTextKit(
+                        animatedTexts: [
+                          TypewriterAnimatedText(
+                            context.l10n.translate('pump_selector'),
+                            speed: const Duration(milliseconds: 150),
+                            cursor: '',
+                          ),
+                        ],
+                        isRepeatingAnimation: false,
+                        onFinished: () {
+                          if (mounted) {
+                            setState(() => _animationCompleted = true);
+                            _checkNavigation();
+                          }
+                        },
                       ),
                     ),
+                  ),
                 ],
               ),
             ),
             Positioned(
               left: 0,
               right: 0,
-              bottom: 40,
-              child: Center(child: Image.asset(AppAssets.eeps, height: 40)),
+              bottom: AppDimens.xxxl,
+              child: Center(
+                child: Image.asset(AppAssets.eeps, height: AppDimens.xxxl),
+              ),
             ),
           ],
         ),

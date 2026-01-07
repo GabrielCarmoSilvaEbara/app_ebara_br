@@ -1,10 +1,9 @@
 import 'dart:math';
 
 class CalculatorUtil {
-  static String convertFlow(double value, String from, String to) {
+  static double convertFlow(double value, String from, String to) {
     double base = 0;
 
-    // Converte para base (m3/h)
     if (from == 'm3h') {
       base = value;
     } else if (from == 'ls') {
@@ -15,23 +14,21 @@ class CalculatorUtil {
       base = value * 0.2271;
     }
 
-    // Converte da base para destino
     if (to == 'm3h') {
-      return base.toStringAsFixed(2);
+      return base;
     } else if (to == 'ls') {
-      return (base / 3.6).toStringAsFixed(2);
+      return base / 3.6;
     } else if (to == 'lmin') {
-      return (base / 0.06).toStringAsFixed(2);
+      return base / 0.06;
     } else if (to == 'gpm') {
-      return (base / 0.2271).toStringAsFixed(2);
+      return base / 0.2271;
     }
-    return "0.00";
+    return 0.0;
   }
 
-  static String convertPressure(double value, String from, String to) {
+  static double convertPressure(double value, String from, String to) {
     double base = 0;
 
-    // Converte para base (mca)
     if (from == 'mca') {
       base = value;
     } else if (from == 'bar') {
@@ -42,23 +39,21 @@ class CalculatorUtil {
       base = value * 10;
     }
 
-    // Converte da base para destino
     if (to == 'mca') {
-      return base.toStringAsFixed(2);
+      return base;
     } else if (to == 'bar') {
-      return (base / 10.197).toStringAsFixed(2);
+      return base / 10.197;
     } else if (to == 'psi') {
-      return (base / 0.703).toStringAsFixed(2);
+      return base / 0.703;
     } else if (to == 'kgfcm2') {
-      return (base / 10).toStringAsFixed(2);
+      return base / 10;
     }
-    return "0.00";
+    return 0.0;
   }
 
-  static String convertPower(double value, String from, String to) {
+  static double convertPower(double value, String from, String to) {
     double base = 0;
 
-    // Converte para base (kW)
     if (from == 'cv') {
       base = value * 0.7355;
     } else if (from == 'hp') {
@@ -67,15 +62,14 @@ class CalculatorUtil {
       base = value;
     }
 
-    // Converte da base para destino
     if (to == 'cv') {
-      return (base / 0.7355).toStringAsFixed(2);
+      return base / 0.7355;
     } else if (to == 'hp') {
-      return (base / 0.7457).toStringAsFixed(2);
+      return base / 0.7457;
     } else if (to == 'kw') {
-      return base.toStringAsFixed(2);
+      return base;
     }
-    return "0.00";
+    return 0.0;
   }
 
   static double calculateHydraulicHeadLoss({
@@ -92,28 +86,24 @@ class CalculatorUtil {
     final dm = diameterMm / 1000.0;
     final qm3s = flowM3h / 3600.0;
 
-    // Fórmula de Hazen-Williams
     final j = 10.643 * pow(qm3s, 1.852) * pow(c, -1.852) * pow(dm, -4.87);
     return j * lengthM;
   }
 
-  static Map<String, String> calculateVoltageDrop({
+  static Map<String, double> calculateVoltageDrop({
     required double current,
     required double voltage,
     required double length,
     required double section,
   }) {
     if (current <= 0 || voltage <= 0 || length <= 0 || section <= 0) {
-      return {'drop': '0.00', 'percent': '0.00'};
+      return {'drop': 0.0, 'percent': 0.0};
     }
 
-    const rho = 0.0172; // Resistividade do cobre
+    const rho = 0.0172;
     final drop = (sqrt(3) * rho * length * current) / section;
     final percent = (drop / voltage) * 100;
 
-    return {
-      'drop': drop.toStringAsFixed(2),
-      'percent': percent.toStringAsFixed(2),
-    };
+    return {'drop': drop, 'percent': percent};
   }
 }

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/extensions/context_extensions.dart';
+import '../../core/utils/ui_util.dart';
+import '../theme/app_dimens.dart';
 
 class ImageViewer extends StatefulWidget {
   final String imageUrl;
@@ -24,12 +26,10 @@ class _ImageViewerState extends State<ImageViewer>
     super.initState();
     _transformationController = TransformationController();
     _animationController =
-        AnimationController(
-          vsync: this,
-          duration: const Duration(milliseconds: 200),
-        )..addListener(() {
-          _transformationController.value = _animation!.value;
-        });
+        AnimationController(vsync: this, duration: AppDimens.durationFast)
+          ..addListener(() {
+            _transformationController.value = _animation!.value;
+          });
   }
 
   @override
@@ -42,7 +42,6 @@ class _ImageViewerState extends State<ImageViewer>
   void _zoom(bool zoomIn) {
     final double scale = zoomIn ? 1.5 : 0.8;
     final Matrix4 matrix = _transformationController.value.clone();
-
     final double currentScale = matrix.getMaxScaleOnAxis();
     final double targetScale = (currentScale * scale).clamp(1.0, 4.0);
 
@@ -70,62 +69,56 @@ class _ImageViewerState extends State<ImageViewer>
       body: Stack(
         children: [
           Center(
-            child: InteractiveViewer(
-              transformationController: _transformationController,
-              minScale: 1.0,
-              maxScale: 4.0,
-              child: Hero(
-                tag: widget.heroTag,
-                child: CachedNetworkImage(
-                  imageUrl: widget.imageUrl,
-                  fit: BoxFit.contain,
-                  memCacheHeight:
-                      (context.height * context.mediaQuery.devicePixelRatio)
-                          .toInt(),
-                  placeholder: (context, url) => Center(
-                    child: CircularProgressIndicator(color: colors.onPrimary),
-                  ),
-                  errorWidget: (context, url, error) => Icon(
-                    Icons.broken_image,
-                    color: colors.onPrimary,
-                    size: 50,
+            child: RepaintBoundary(
+              child: InteractiveViewer(
+                transformationController: _transformationController,
+                minScale: 1.0,
+                maxScale: 4.0,
+                child: Hero(
+                  tag: widget.heroTag,
+                  child: CachedNetworkImage(
+                    imageUrl: widget.imageUrl,
+                    fit: BoxFit.contain,
+                    memCacheHeight: UiUtil.cacheSize(context, context.height),
+                    placeholder: (context, url) => Center(
+                      child: CircularProgressIndicator(color: colors.onPrimary),
+                    ),
+                    errorWidget: (context, url, error) => Icon(
+                      Icons.broken_image,
+                      color: colors.onPrimary,
+                      size: 50,
+                    ),
                   ),
                 ),
               ),
             ),
           ),
           Positioned(
-            top: 40,
-            right: 20,
-            child: _buildButton(
-              icon: Icons.close,
-              onTap: () => context.pop(),
-              context: context,
-            ),
+            top: AppDimens.viewerButtonMargin,
+            right: AppDimens.viewerButtonRight,
+            child: _ViewerButton(icon: Icons.close, onTap: () => context.pop()),
           ),
           Positioned(
-            bottom: 40,
-            left: 0,
-            right: 0,
+            bottom: AppDimens.viewerButtonMargin,
+            left: AppDimens.zero,
+            right: AppDimens.zero,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _buildButton(
+                _ViewerButton(
                   icon: Icons.remove,
                   onTap: () {
                     HapticFeedback.selectionClick();
                     _zoom(false);
                   },
-                  context: context,
                 ),
-                const SizedBox(width: 20),
-                _buildButton(
+                const SizedBox(width: AppDimens.lg),
+                _ViewerButton(
                   icon: Icons.add,
                   onTap: () {
                     HapticFeedback.selectionClick();
                     _zoom(true);
                   },
-                  context: context,
                 ),
               ],
             ),
@@ -134,25 +127,29 @@ class _ImageViewerState extends State<ImageViewer>
       ),
     );
   }
+}
 
-  Widget _buildButton({
-    required IconData icon,
-    required VoidCallback onTap,
-    required BuildContext context,
-  }) {
+class _ViewerButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _ViewerButton({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
     final colors = context.colors;
 
     return Material(
-      color: colors.onPrimary.withValues(alpha: 0.2),
-      borderRadius: BorderRadius.circular(30),
-      elevation: 0,
+      color: colors.onPrimary.withValues(alpha: AppDimens.opacityLow),
+      borderRadius: BorderRadius.circular(AppDimens.radiusXxl),
+      elevation: AppDimens.zero,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(30),
+        borderRadius: BorderRadius.circular(AppDimens.radiusXxl),
         child: Container(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(AppDimens.sm),
           decoration: const BoxDecoration(shape: BoxShape.circle),
-          child: Icon(icon, color: colors.onPrimary, size: 28),
+          child: Icon(icon, color: colors.onPrimary, size: AppDimens.iconXxl),
         ),
       ),
     );

@@ -32,48 +32,58 @@ class AppPrimaryButton extends StatelessWidget {
     final bg = backgroundColor ?? colors.primary;
     final fg = foregroundColor ?? colors.onPrimary;
 
-    return SizedBox(
-      height: height,
-      width: width,
-      child: ElevatedButton(
-        onPressed: isLoading ? null : onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: bg,
-          foregroundColor: fg,
-          disabledBackgroundColor: bg.withValues(alpha: 0.6),
-          disabledForegroundColor: fg.withValues(alpha: 0.6),
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(borderRadius),
+    return AppBouncingButton(
+      onTap: isLoading ? null : onPressed,
+      child: SizedBox(
+        height: height,
+        width: width,
+        child: ElevatedButton(
+          onPressed: isLoading ? null : onPressed,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: bg,
+            foregroundColor: fg,
+            disabledBackgroundColor: bg.withValues(
+              alpha: AppDimens.opacityDisabled,
+            ),
+            disabledForegroundColor: fg.withValues(
+              alpha: AppDimens.opacityDisabled,
+            ),
+            elevation: AppDimens.zero,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(borderRadius),
+            ),
           ),
-        ),
-        child: isLoading
-            ? SizedBox(
-                height: 24,
-                width: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.5,
-                  valueColor: AlwaysStoppedAnimation<Color>(fg),
-                ),
-              )
-            : Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (icon != null) ...[
-                    Icon(icon, size: 22),
-                    const SizedBox(width: AppDimens.sm),
-                  ],
-                  Text(
-                    text,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.3,
-                    ),
+          child: isLoading
+              ? SizedBox(
+                  height: AppDimens.iconXl,
+                  width: AppDimens.iconXl,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    valueColor: AlwaysStoppedAnimation<Color>(fg),
                   ),
-                ],
-              ),
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (icon != null) ...[
+                      Icon(icon, size: 22),
+                      const SizedBox(width: AppDimens.sm),
+                    ],
+                    Flexible(
+                      child: Text(
+                        text,
+                        style: const TextStyle(
+                          fontSize: AppDimens.fontXl,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.3,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+        ),
       ),
     );
   }
@@ -100,23 +110,26 @@ class AppOutlinedButton extends StatelessWidget {
     final theme = context.theme;
     final colors = context.colors;
 
-    return SizedBox(
-      height: height,
-      width: double.infinity,
-      child: OutlinedButton(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          side: BorderSide(color: borderColor ?? theme.dividerColor),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppDimens.radiusMd),
+    return AppBouncingButton(
+      onTap: onPressed,
+      child: SizedBox(
+        height: height,
+        width: double.infinity,
+        child: OutlinedButton(
+          onPressed: onPressed,
+          style: OutlinedButton.styleFrom(
+            side: BorderSide(color: borderColor ?? theme.dividerColor),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppDimens.radiusMd),
+            ),
           ),
-        ),
-        child: Text(
-          text,
-          style: TextStyle(
-            color: textColor ?? colors.error,
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
+          child: Text(
+            text,
+            style: TextStyle(
+              color: textColor ?? colors.error,
+              fontSize: AppDimens.fontXl,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
       ),
@@ -150,9 +163,9 @@ class AppSquareIconButton extends StatelessWidget {
     final isDark = context.theme.brightness == Brightness.dark;
 
     final defaultBg = onTap != null
-        ? colors.primary.withValues(alpha: 0.1)
+        ? colors.primary.withValues(alpha: AppDimens.opacityLow)
         : (isDark
-              ? colors.onSurface.withValues(alpha: 0.1)
+              ? colors.onSurface.withValues(alpha: AppDimens.opacityLow)
               : colors.onSurface.withValues(alpha: 0.05));
 
     final defaultIconColor = onTap != null
@@ -160,14 +173,14 @@ class AppSquareIconButton extends StatelessWidget {
         : colors.onSurface.withValues(alpha: 0.2);
 
     return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(15),
+      onTap: isEnabled ? onTap : null,
+      borderRadius: BorderRadius.circular(AppDimens.radiusLg),
       child: Container(
         width: size,
         height: size,
         decoration: BoxDecoration(
           color: backgroundColor ?? defaultBg,
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(AppDimens.radiusLg),
         ),
         child: Icon(icon, size: iconSize, color: iconColor ?? defaultIconColor),
       ),
@@ -230,11 +243,13 @@ class _AppBouncingButtonState extends State<AppBouncingButton>
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: _handleTapDown,
-      onTapUp: _handleTapUp,
-      onTapCancel: _handleTapCancel,
-      child: ScaleTransition(scale: _scaleAnimation, child: widget.child),
+    return RepaintBoundary(
+      child: GestureDetector(
+        onTapDown: _handleTapDown,
+        onTapUp: _handleTapUp,
+        onTapCancel: _handleTapCancel,
+        child: ScaleTransition(scale: _scaleAnimation, child: widget.child),
+      ),
     );
   }
 }

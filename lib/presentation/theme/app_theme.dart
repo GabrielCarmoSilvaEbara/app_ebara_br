@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'app_colors.dart';
+import 'app_dimens.dart';
 import 'app_text_styles.dart';
 
 class AppTheme {
@@ -83,7 +84,10 @@ class AppTheme {
       appBarTheme: const AppBarTheme(
         backgroundColor: Color(0xFF121212),
         iconTheme: IconThemeData(color: Colors.white),
-        titleTextStyle: TextStyle(color: Colors.white, fontSize: 20),
+        titleTextStyle: TextStyle(
+          color: Colors.white,
+          fontSize: AppDimens.fontDisplay,
+        ),
       ),
     );
   }

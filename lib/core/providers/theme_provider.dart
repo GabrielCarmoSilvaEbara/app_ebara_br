@@ -1,17 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../constants/app_constants.dart';
+import '../../presentation/theme/app_theme.dart';
 
 class ThemeProvider with ChangeNotifier {
-  final Box _settingsBox = Hive.box(StorageKeys.boxSettings);
+  late Box _settingsBox;
   bool _isDarkMode = false;
+  bool _isInitialized = false;
 
   bool get isDarkMode => _isDarkMode;
 
-  ThemeProvider();
+  ThemeProvider() {
+    if (Hive.isBoxOpen(StorageKeys.boxSettings)) {
+      _settingsBox = Hive.box(StorageKeys.boxSettings);
+      _isDarkMode = _settingsBox.get(
+        StorageKeys.keyIsDarkMode,
+        defaultValue: false,
+      );
+      _isInitialized = true;
+    }
+  }
 
   Future<void> init() async {
-    _loadTheme();
+    if (_isInitialized) return;
+    try {
+      if (!Hive.isBoxOpen(StorageKeys.boxSettings)) {
+        _settingsBox = await Hive.openBox(StorageKeys.boxSettings);
+      } else {
+        _settingsBox = Hive.box(StorageKeys.boxSettings);
+      }
+      _loadTheme();
+      _isInitialized = true;
+    } catch (_) {
+      _isDarkMode = false;
+    }
   }
 
   void _loadTheme() {
@@ -24,7 +46,13 @@ class ThemeProvider with ChangeNotifier {
 
   void toggleTheme(bool value) {
     _isDarkMode = value;
-    _settingsBox.put(StorageKeys.keyIsDarkMode, value);
+    if (_isInitialized) {
+      _settingsBox.put(StorageKeys.keyIsDarkMode, value);
+    }
     notifyListeners();
+  }
+
+  ThemeData getThemeData(bool isDark) {
+    return isDark ? AppTheme.darkTheme : AppTheme.lightTheme;
   }
 }

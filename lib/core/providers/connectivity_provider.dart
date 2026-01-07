@@ -8,8 +8,6 @@ class ConnectivityProvider with ChangeNotifier {
 
   bool get isOnline => _isOnline;
 
-  ConnectivityProvider();
-
   Future<void> init() async {
     if (_subscription != null) return;
     try {
@@ -22,6 +20,16 @@ class ConnectivityProvider with ChangeNotifier {
     _subscription = Connectivity().onConnectivityChanged.listen((results) {
       _updateConnectionStatus(results);
     });
+  }
+
+  Future<bool> checkNow() async {
+    try {
+      final results = await Connectivity().checkConnectivity();
+      _updateConnectionStatus(results);
+      return _isOnline;
+    } catch (_) {
+      return false;
+    }
   }
 
   void _updateConnectionStatus(List<ConnectivityResult> results) {

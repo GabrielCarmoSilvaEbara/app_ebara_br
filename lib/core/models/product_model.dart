@@ -1,3 +1,5 @@
+import '../utils/parse_util.dart';
+
 class ProductModel {
   final String id;
   final String productId;
@@ -6,13 +8,13 @@ class ProductModel {
   final String image;
   final String slugCategory;
   final String? slugProduct;
-  final dynamic power;
-  final dynamic frequency;
-  final dynamic rpm;
-  final dynamic rateMin;
-  final dynamic rateMax;
-  final dynamic mcaMin;
-  final dynamic mcaMax;
+  final double power;
+  final double frequency;
+  final double rpm;
+  final double rateMin;
+  final double rateMax;
+  final double mcaMin;
+  final double mcaMax;
   final String? ecommerceLink;
   final List<ProductModel> variants;
 
@@ -24,13 +26,13 @@ class ProductModel {
     required this.image,
     required this.slugCategory,
     this.slugProduct,
-    this.power,
-    this.frequency,
-    this.rpm,
-    this.rateMin,
-    this.rateMax,
-    this.mcaMin,
-    this.mcaMax,
+    this.power = 0.0,
+    this.frequency = 0.0,
+    this.rpm = 0.0,
+    this.rateMin = 0.0,
+    this.rateMax = 0.0,
+    this.mcaMin = 0.0,
+    this.mcaMax = 0.0,
     this.ecommerceLink,
     this.variants = const [],
   });
@@ -44,25 +46,15 @@ class ProductModel {
       image: json['file'] ?? json['image'] ?? '',
       slugCategory: json['slug_category'] ?? '',
       slugProduct: json['slug_product'],
-      power: _parseNumeric(json['power']),
-      frequency: _parseNumeric(json['frequency']),
-      rpm: _parseNumeric(json['rpm']),
-      rateMin: _parseNumeric(json['rate_min']),
-      rateMax: _parseNumeric(json['rate_max']),
-      mcaMin: _parseNumeric(json['mca_min']),
-      mcaMax: _parseNumeric(json['mca_max']),
+      power: ParseUtil.toDoubleSafe(json['power']) ?? 0.0,
+      frequency: ParseUtil.toDoubleSafe(json['frequency']) ?? 0.0,
+      rpm: ParseUtil.toDoubleSafe(json['rpm']) ?? 0.0,
+      rateMin: ParseUtil.toDoubleSafe(json['rate_min']) ?? 0.0,
+      rateMax: ParseUtil.toDoubleSafe(json['rate_max']) ?? 0.0,
+      mcaMin: ParseUtil.toDoubleSafe(json['mca_min']) ?? 0.0,
+      mcaMax: ParseUtil.toDoubleSafe(json['mca_max']) ?? 0.0,
       ecommerceLink: json['ecommerce_link'],
     );
-  }
-
-  static dynamic _parseNumeric(dynamic value) {
-    if (value == null) return null;
-    if (value is num) return value;
-    if (value is String) {
-      if (value.isEmpty) return null;
-      return double.tryParse(value.replaceAll(',', '.')) ?? value;
-    }
-    return value;
   }
 
   ProductModel copyWith({List<ProductModel>? variants}) {

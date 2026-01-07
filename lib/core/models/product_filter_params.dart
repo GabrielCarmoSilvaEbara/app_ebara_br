@@ -1,3 +1,6 @@
+import '../constants/app_constants.dart';
+import '../enums/app_enums.dart';
+
 class ProductFilterParams {
   final String categoryId;
   final String application;
@@ -19,12 +22,12 @@ class ProductFilterParams {
 
   ProductFilterParams({
     required this.categoryId,
-    this.application = 'TODOS',
-    this.line = 'TODOS',
+    this.application = AppConstantsStrings.all,
+    this.line = AppConstantsStrings.all,
     this.flowRate = 0.0,
-    this.flowRateMeasure = 'm3/h',
+    this.flowRateMeasure = AppConstantsStrings.m3h,
     this.heightGauge = 0.0,
-    this.heightGaugeMeasure = 'm',
+    this.heightGaugeMeasure = AppConstantsStrings.m,
     this.frequency = 60,
     this.types = 0,
     this.wellDiameter,
@@ -32,7 +35,7 @@ class ProductFilterParams {
     this.sunExposure = 5.0,
     this.activation = 'pressostato',
     this.bombsQuantity = 1,
-    this.inverter = 'TODOS',
+    this.inverter = AppConstantsStrings.all,
     this.alignedEquipment = 0,
     this.idLanguage = 1,
   });
@@ -49,11 +52,12 @@ class ProductFilterParams {
     };
 
     final bool isPressurizer =
-        categoryId == '27' || categoryId == 'sistemas-de-pressurizacao-1';
+        categoryId == CategoryIds.pressurizer ||
+        categoryId == CategoryIds.pressurizerSlug;
 
     if (isPressurizer) {
       params['activation'] = activation;
-      if (activation == 'inversor') {
+      if (activation == ActivationType.inversor.name) {
         params['bombs_quantity'] = bombsQuantity;
       }
     } else {

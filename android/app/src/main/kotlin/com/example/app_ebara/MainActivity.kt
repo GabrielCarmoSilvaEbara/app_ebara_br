@@ -1,4 +1,4 @@
-package com.seudominio.app_ebara
+package com.ebara.app
 
 import io.flutter.embedding.android.FlutterActivity
 
