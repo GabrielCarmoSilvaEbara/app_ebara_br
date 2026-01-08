@@ -54,6 +54,11 @@ class ProductModel {
       mcaMin: ParseUtil.toDoubleSafe(json['mca_min']) ?? 0.0,
       mcaMax: ParseUtil.toDoubleSafe(json['mca_max']) ?? 0.0,
       ecommerceLink: json['ecommerce_link'],
+      variants: json['variants'] != null
+          ? (json['variants'] as List)
+                .map((v) => ProductModel.fromJson(v))
+                .toList()
+          : [],
     );
   }
 
@@ -91,6 +96,7 @@ class ProductModel {
       'rate_max': rateMax,
       'frequency': frequency,
       'ecommerce_link': ecommerceLink,
+      'variants': variants.map((x) => x.toMap()).toList(),
     };
   }
 }

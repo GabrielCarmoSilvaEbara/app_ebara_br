@@ -32,10 +32,20 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   @override
   void initState() {
     super.initState();
+
+    if (widget.variants.isEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        context.pop();
+      });
+      _pageController = PageController();
+      return;
+    }
+
     final provider = context.read<ProductDetailsProvider>();
     final locProvider = context.read<LocationProvider>();
     final historyProvider = context.read<HistoryProvider>();
-    final product = widget.variants.first;
+
+    final product = widget.variants.first.copyWith(variants: widget.variants);
 
     _pageController = PageController(initialPage: 0);
 
