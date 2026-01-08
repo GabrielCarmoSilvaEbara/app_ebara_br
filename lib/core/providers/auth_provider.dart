@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+import 'package:google_sign_in/google_sign_in.dart' as google_libs;
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../services/analytics_service.dart';
@@ -10,7 +10,8 @@ enum AuthStatus { initial, authenticated, guest, unauthenticated }
 
 class AuthProvider with ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
+  final google_libs.GoogleSignIn _googleSignIn =
+      google_libs.GoogleSignIn.instance;
   final Box _settingsBox = Hive.box(StorageKeys.boxSettings);
 
   User? _user;
@@ -24,19 +25,32 @@ class AuthProvider with ChangeNotifier {
   AuthProvider();
 
   Future<void> init() async {
-    await Future.delayed(Duration.zero);
+    try {
+      await _googleSignIn.initialize(
+        serverClientId:
+            '701048514790-4dn7k8t8le0at7rbqfdejvd3hk6ovb71.apps.googleusercontent.com',
+      );
+    } catch (_) {}
 
-    if (!kIsWeb) {
+    _user = _auth.currentUser;
+
+    if (_user == null && !kIsWeb) {
       try {
-        await _googleSignIn.initialize();
+        final googleUser = await _googleSignIn
+            .attemptLightweightAuthentication();
+
+        if (googleUser != null) {
+          final googleAuth = await googleUser.authentication;
+          final credential = GoogleAuthProvider.credential(
+            accessToken: null,
+            idToken: googleAuth.idToken,
+          );
+
+          final userCredential = await _auth.signInWithCredential(credential);
+          _user = userCredential.user;
+        }
       } catch (_) {}
     }
-
-    await _checkCurrentUser();
-  }
-
-  Future<void> _checkCurrentUser() async {
-    _user = _auth.currentUser;
 
     if (_user != null) {
       _status = AuthStatus.authenticated;
@@ -62,11 +76,14 @@ class AuthProvider with ChangeNotifier {
         final GoogleAuthProvider googleProvider = GoogleAuthProvider();
         userCredential = await _auth.signInWithPopup(googleProvider);
       } else {
-        final GoogleSignInAccount googleUser = await _googleSignIn
-            .authenticate();
-        final GoogleSignInAuthentication googleAuth = googleUser.authentication;
+        final google_libs.GoogleSignInAccount googleUser = await _googleSignIn
+            .authenticate(scopeHint: ['email', 'profile']);
+
+        final google_libs.GoogleSignInAuthentication googleAuth =
+            await googleUser.authentication;
 
         final AuthCredential credential = GoogleAuthProvider.credential(
+          accessToken: null,
           idToken: googleAuth.idToken,
         );
 
@@ -88,9 +105,7 @@ class AuthProvider with ChangeNotifier {
   Future<void> continueAsGuest() async {
     await _settingsBox.put(StorageKeys.keyIsGuest, true);
     _status = AuthStatus.guest;
-
     await AnalyticsService.logLogin('guest');
-
     notifyListeners();
   }
 
@@ -101,10 +116,11 @@ class AuthProvider with ChangeNotifier {
       } catch (_) {}
     }
     await _auth.signOut();
-
     await _settingsBox.put(StorageKeys.keyIsGuest, false);
+
     _user = null;
     _status = AuthStatus.unauthenticated;
+
     notifyListeners();
   }
 }

@@ -187,13 +187,10 @@ class _AuthModalSheetState extends State<AuthModalSheet> {
                 AppOutlinedButton(
                   onPressed: _isLoading
                       ? null
-                      : () async {
-                          final auth = context.read<AuthProvider>();
+                      : () {
                           context.pop();
-                          await auth.signOut();
-                          if (context.mounted) {
-                            context.pushReplacementNamed('/login');
-                          }
+                          context.pushReplacementNamed('/login');
+                          context.read<AuthProvider>().signOut();
                         },
                   text: isGuest
                       ? context.l10n.translate('back_login')
