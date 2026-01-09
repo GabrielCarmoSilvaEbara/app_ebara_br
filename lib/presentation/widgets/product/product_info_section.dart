@@ -260,6 +260,8 @@ class _ApplicationIcons extends StatelessWidget {
 
           return Tooltip(
             message: app['application_name'] ?? '',
+            triggerMode: TooltipTriggerMode.tap,
+            showDuration: const Duration(seconds: 3),
             child: Container(
               padding: const EdgeInsets.all(AppDimens.xs),
               width: 48,

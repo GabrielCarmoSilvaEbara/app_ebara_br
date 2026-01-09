@@ -12,16 +12,16 @@ class FilterProvider with ChangeNotifier {
 
   String _currentCategoryId = '';
 
-  List<String> _applications = [];
-  List<String> _models = [];
+  List<Map<String, dynamic>> _applications = [];
+  List<Map<String, dynamic>> _models = [];
   List<String> _frequencies = [];
   List<Map<String, dynamic>> _systemTypes = [];
   List<String> _wellDiameters = [];
   List<Map<String, dynamic>> _flowUnits = [];
   List<Map<String, dynamic>> _headUnits = [];
 
-  List<String> get applications => _applications;
-  List<String> get models => _models;
+  List<Map<String, dynamic>> get applications => _applications;
+  List<Map<String, dynamic>> get models => _models;
   List<String> get frequencies => _frequencies;
   List<Map<String, dynamic>> get systemTypes => _systemTypes;
   List<String> get wellDiameters => _wellDiameters;
@@ -73,7 +73,12 @@ class FilterProvider with ChangeNotifier {
           : <String>[];
 
       _applications = (results[0] as List)
-          .map((e) => e['title'].toString())
+          .map(
+            (e) => {
+              'value': e['id']?.toString() ?? '',
+              'title': e['title']?.toString() ?? '',
+            },
+          )
           .toList();
       _frequencies = (results[1] as List)
           .map((e) => e['value'].toString())
@@ -84,22 +89,19 @@ class FilterProvider with ChangeNotifier {
             if (!isSolar && e['value'].toString() == 'md') return false;
             return true;
           })
-          .map(
-            (e) => {
-              'value': e['value'].toString(),
-              'title': e['label'].toString(),
-            },
-          )
+          .map((e) {
+            String label = e['label'].toString();
+            String value = ParseUtil.normalizeSpecialChars(label);
+            return {'value': value, 'title': label};
+          })
           .toList();
 
-      _headUnits = (results[3] as List)
-          .map(
-            (e) => {
-              'value': e['value'].toString(),
-              'title': e['label'].toString(),
-            },
-          )
-          .toList();
+      _headUnits = (results[3] as List).map((e) {
+        String label = e['label'].toString();
+        String value = ParseUtil.normalizeSpecialChars(label);
+
+        return {'value': value, 'title': label};
+      }).toList();
 
       _systemTypes = systemTypes;
       _wellDiameters = wellDiametersRaw.isNotEmpty
@@ -107,7 +109,7 @@ class FilterProvider with ChangeNotifier {
           : [];
 
       if (_applications.isNotEmpty) {
-        selectedApplication = _applications.first;
+        selectedApplication = _applications.first['value'];
         await fetchModels(categoryId, selectedApplication!);
       }
 
@@ -142,8 +144,16 @@ class FilterProvider with ChangeNotifier {
       categoryId,
       application: application,
     );
-    _models = data.map((e) => e['title_product'].toString()).toList();
-    if (_models.isNotEmpty) selectedModel = _models.first;
+    _models = data
+        .map(
+          (e) => {
+            'value': e['title_product'].toString(),
+            'title': e['title_product'].toString(),
+          },
+        )
+        .toList();
+
+    if (_models.isNotEmpty) selectedModel = _models.first['value'];
     notifyListeners();
   }
 
@@ -220,8 +230,13 @@ class FilterProvider with ChangeNotifier {
     final isSubmersible = _currentCategoryId == CategoryIds.submersible;
 
     final Map<String, dynamic> result = {
-      'application': selectedApplication,
-      'line': selectedModel,
+      'application':
+          (selectedApplication == null || selectedApplication!.isEmpty)
+          ? 'TODOS'
+          : selectedApplication,
+      'line': (selectedModel == null || selectedModel!.isEmpty)
+          ? 'TODOS'
+          : selectedModel,
       'flow_rate': ParseUtil.toDoubleSafe(flow)?.toString() ?? '0',
       'flow_rate_measure': selectedFlowUnit,
       'height_gauge': ParseUtil.toDoubleSafe(head)?.toString() ?? '0',

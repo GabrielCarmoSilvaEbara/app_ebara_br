@@ -57,4 +57,13 @@ class ParseUtil {
         .where((item) => item.isNotEmpty)
         .toList();
   }
+
+  static String normalizeSpecialChars(String text) {
+    if (text.isEmpty) return text;
+    return text
+        .replaceAll('³', '3')
+        .replaceAll('²', '2')
+        .replaceAll('¹', '1')
+        .replaceAll('⁰', '0');
+  }
 }

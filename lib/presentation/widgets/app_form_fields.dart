@@ -19,51 +19,6 @@ class AppFormLabel extends StatelessWidget {
   }
 }
 
-class _InputContainer extends StatelessWidget {
-  final Widget child;
-  final Color borderColor;
-  final Color backgroundColor;
-
-  const _InputContainer({
-    required this.child,
-    required this.borderColor,
-    required this.backgroundColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppDimens.md),
-      decoration: BoxDecoration(
-        border: Border.all(color: borderColor, width: 2),
-        borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-        color: backgroundColor,
-      ),
-      child: child,
-    );
-  }
-}
-
-class _ErrorText extends StatelessWidget {
-  final String text;
-  const _ErrorText(this.text);
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 4, left: 4),
-      child: Text(
-        text,
-        style: context.bodySmall?.copyWith(
-          color: context.colors.error,
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-}
-
 class AppTextField extends StatelessWidget {
   final TextEditingController controller;
   final String? label;
@@ -73,7 +28,9 @@ class AppTextField extends StatelessWidget {
   final bool isInteger;
   final TextInputAction textInputAction;
   final TextInputType? keyboardType;
-  final String? errorText;
+  final FocusNode? focusNode;
+  final ValueChanged<String>? onFieldSubmitted;
+  final String? Function(String?)? validator;
 
   const AppTextField({
     super.key,
@@ -85,74 +42,75 @@ class AppTextField extends StatelessWidget {
     this.isInteger = false,
     this.textInputAction = TextInputAction.done,
     this.keyboardType,
-    this.errorText,
+    this.focusNode,
+    this.onFieldSubmitted,
+    this.validator,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final hasError = errorText != null && errorText!.isNotEmpty;
-    final borderColor = hasError ? colors.error : colors.primary;
+    final borderSide = BorderSide(color: colors.primary, width: 2);
+    final errorBorderSide = BorderSide(color: colors.error, width: 2);
+    final radius = BorderRadius.circular(AppDimens.radiusSm);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (label != null) AppFormLabel(label!),
-        Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: borderColor, width: 2),
-            borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-            color: context.theme.cardColor,
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: controller,
-                  keyboardType:
-                      keyboardType ??
-                      TextInputType.numberWithOptions(decimal: !isInteger),
-                  textInputAction: textInputAction,
-                  inputFormatters: [
-                    if (isInteger)
-                      FilteringTextInputFormatter.digitsOnly
-                    else
-                      FilteringTextInputFormatter.allow(
-                        RegExp(r'^\d*[.,]?\d*'),
-                      ),
-                  ],
-                  onChanged: onChanged,
-                  style: context.subtitleStyle?.copyWith(
-                    fontSize: AppDimens.fontXl,
-                  ),
-                  decoration: InputDecoration(
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: AppDimens.md,
-                      vertical: AppDimens.sm,
-                    ),
-                    border: InputBorder.none,
-                    hintText: hintText ?? '0,0',
-                    hintStyle: context.bodySmall,
-                  ),
-                ),
-              ),
-              if (suffixText != null)
-                _SuffixContainer(
-                  borderColor: borderColor,
-                  child: Text(
-                    suffixText!,
-                    style: context.subtitleStyle?.copyWith(
-                      color: colors.onSurface.withValues(
-                        alpha: AppDimens.opacityHigh,
-                      ),
-                      fontSize: AppDimens.fontLg,
-                    ),
-                  ),
-                ),
-            ],
+        TextFormField(
+          controller: controller,
+          focusNode: focusNode,
+          keyboardType:
+              keyboardType ??
+              TextInputType.numberWithOptions(decimal: !isInteger),
+          textInputAction: textInputAction,
+          onFieldSubmitted: onFieldSubmitted,
+          validator: validator,
+          inputFormatters: [
+            if (isInteger)
+              FilteringTextInputFormatter.digitsOnly
+            else
+              FilteringTextInputFormatter.allow(RegExp(r'^\d*[.,]?\d*')),
+          ],
+          onChanged: onChanged,
+          style: context.subtitleStyle?.copyWith(fontSize: AppDimens.fontXl),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: context.theme.cardColor,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: AppDimens.md,
+              vertical: AppDimens.sm,
+            ),
+            hintText: hintText ?? '0,0',
+            hintStyle: context.bodySmall,
+            suffixText: suffixText,
+            suffixStyle: context.subtitleStyle?.copyWith(
+              color: colors.onSurface.withValues(alpha: AppDimens.opacityHigh),
+              fontSize: AppDimens.fontLg,
+            ),
+            border: OutlineInputBorder(
+              borderSide: borderSide,
+              borderRadius: radius,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderSide: borderSide,
+              borderRadius: radius,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderSide: borderSide,
+              borderRadius: radius,
+            ),
+            errorBorder: OutlineInputBorder(
+              borderSide: errorBorderSide,
+              borderRadius: radius,
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderSide: errorBorderSide,
+              borderRadius: radius,
+            ),
           ),
         ),
-        if (hasError) _ErrorText(errorText!),
       ],
     );
   }
@@ -164,7 +122,7 @@ class AppDropdown<T> extends StatelessWidget {
   final List<DropdownMenuItem<T>> items;
   final ValueChanged<T?> onChanged;
   final String? hint;
-  final String? errorText;
+  final String? Function(T?)? validator;
 
   const AppDropdown({
     super.key,
@@ -173,39 +131,58 @@ class AppDropdown<T> extends StatelessWidget {
     required this.items,
     required this.onChanged,
     this.hint,
-    this.errorText,
+    this.validator,
   });
 
   @override
   Widget build(BuildContext context) {
-    final hasError = errorText != null && errorText!.isNotEmpty;
-    final borderColor = hasError
-        ? context.colors.error
-        : context.colors.primary;
+    final colors = context.colors;
+    final borderSide = BorderSide(color: colors.primary, width: 2);
+    final errorBorderSide = BorderSide(color: colors.error, width: 2);
+    final radius = BorderRadius.circular(AppDimens.radiusSm);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (label != null) AppFormLabel(label!),
-        _InputContainer(
-          borderColor: borderColor,
-          backgroundColor: context.theme.cardColor,
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<T>(
-              isExpanded: true,
-              value: value,
-              dropdownColor: context.theme.cardColor,
-              icon: Icon(Icons.unfold_more, color: context.colors.primary),
-              hint: hint != null ? Text(hint!, style: context.bodySmall) : null,
-              items: items,
-              onChanged: onChanged,
-              style: context.subtitleStyle?.copyWith(
-                fontSize: AppDimens.fontLg,
-              ),
+        DropdownButtonFormField<T>(
+          initialValue: value,
+          items: items,
+          onChanged: onChanged,
+          validator: validator,
+          dropdownColor: context.theme.cardColor,
+          icon: Icon(Icons.unfold_more, color: colors.primary),
+          hint: hint != null ? Text(hint!, style: context.bodySmall) : null,
+          style: context.subtitleStyle?.copyWith(fontSize: AppDimens.fontLg),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: context.theme.cardColor,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: AppDimens.md,
+              vertical: 12,
+            ),
+            border: OutlineInputBorder(
+              borderSide: borderSide,
+              borderRadius: radius,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderSide: borderSide,
+              borderRadius: radius,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderSide: borderSide,
+              borderRadius: radius,
+            ),
+            errorBorder: OutlineInputBorder(
+              borderSide: errorBorderSide,
+              borderRadius: radius,
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderSide: errorBorderSide,
+              borderRadius: radius,
             ),
           ),
         ),
-        if (hasError) _ErrorText(errorText!),
       ],
     );
   }
@@ -217,7 +194,10 @@ class AppCompositeField extends StatelessWidget {
   final Widget suffixWidget;
   final TextInputType keyboardType;
   final List<TextInputFormatter>? formatters;
-  final String? errorText;
+  final FocusNode? focusNode;
+  final ValueChanged<String>? onFieldSubmitted;
+  final TextInputAction? textInputAction;
+  final String? Function(String?)? validator;
 
   const AppCompositeField({
     super.key,
@@ -226,56 +206,96 @@ class AppCompositeField extends StatelessWidget {
     required this.suffixWidget,
     this.keyboardType = const TextInputType.numberWithOptions(decimal: true),
     this.formatters,
-    this.errorText,
+    this.focusNode,
+    this.onFieldSubmitted,
+    this.textInputAction,
+    this.validator,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final hasError = errorText != null && errorText!.isNotEmpty;
-    final borderColor = hasError ? colors.error : colors.primary;
+    final borderSide = BorderSide(color: colors.primary, width: 2);
+    final errorBorderSide = BorderSide(color: colors.error, width: 2);
+    final radius = BorderRadius.circular(AppDimens.radiusSm);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         AppFormLabel(label),
-        Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: borderColor, width: 2),
-            borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-            color: context.theme.cardColor,
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: controller,
-                  keyboardType: keyboardType,
-                  textInputAction: TextInputAction.next,
-                  inputFormatters:
-                      formatters ??
-                      [
-                        FilteringTextInputFormatter.allow(
-                          RegExp(r'^\d*[.,]?\d*'),
-                        ),
-                      ],
-                  style: context.subtitleStyle?.copyWith(
-                    fontSize: AppDimens.fontLg,
-                  ),
-                  decoration: const InputDecoration(
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: AppDimens.md,
+        FormField<String>(
+          validator: validator,
+          initialValue: controller.text,
+          builder: (FormFieldState<String> state) {
+            final hasError = state.hasError;
+            final effectiveBorderSide = hasError ? errorBorderSide : borderSide;
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: effectiveBorderSide.color,
+                      width: effectiveBorderSide.width,
                     ),
-                    border: InputBorder.none,
-                    hintText: '0,0',
+                    borderRadius: radius,
+                    color: context.theme.cardColor,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: controller,
+                          focusNode: focusNode,
+                          keyboardType: keyboardType,
+                          textInputAction:
+                              textInputAction ?? TextInputAction.next,
+                          onFieldSubmitted: onFieldSubmitted,
+                          onChanged: (val) {
+                            state.didChange(val);
+                          },
+                          inputFormatters:
+                              formatters ??
+                              [
+                                FilteringTextInputFormatter.allow(
+                                  RegExp(r'^\d*[.,]?\d*'),
+                                ),
+                              ],
+                          style: context.subtitleStyle?.copyWith(
+                            fontSize: AppDimens.fontLg,
+                          ),
+                          decoration: const InputDecoration(
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: AppDimens.md,
+                            ),
+                            border: InputBorder.none,
+                            hintText: '0,0',
+                          ),
+                        ),
+                      ),
+                      _SuffixContainer(
+                        borderColor: effectiveBorderSide.color,
+                        child: suffixWidget,
+                      ),
+                    ],
                   ),
                 ),
-              ),
-              _SuffixContainer(borderColor: borderColor, child: suffixWidget),
-            ],
-          ),
+                if (hasError)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6, left: 12),
+                    child: Text(
+                      state.errorText!,
+                      style: context.bodySmall?.copyWith(
+                        color: colors.error,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
         ),
-        if (hasError) _ErrorText(errorText!),
       ],
     );
   }

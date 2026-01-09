@@ -21,12 +21,18 @@ class FiltersBottomSheet extends StatefulWidget {
 }
 
 class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
+  final _formKey = GlobalKey<FormState>();
   final _flowController = TextEditingController();
   final _headController = TextEditingController();
   final _cableLengthController = TextEditingController();
   final _bombsQuantityController = TextEditingController(text: '1');
+
+  final FocusNode _flowFocus = FocusNode();
+  final FocusNode _headFocus = FocusNode();
+  final FocusNode _cableFocus = FocusNode();
+  final FocusNode _bombsFocus = FocusNode();
+
   late final FilterStrategy _strategy;
-  bool _showErrors = false;
 
   @override
   void initState() {
@@ -40,10 +46,18 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
     _headController.dispose();
     _cableLengthController.dispose();
     _bombsQuantityController.dispose();
+    _flowFocus.dispose();
+    _headFocus.dispose();
+    _cableFocus.dispose();
+    _bombsFocus.dispose();
     super.dispose();
   }
 
   void _submit(BuildContext context) {
+    if (_formKey.currentState?.validate() != true) {
+      return;
+    }
+
     final provider = context.read<FilterProvider>();
     final result = provider.getFilterResult(
       flow: _flowController.text,
@@ -54,8 +68,6 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
 
     if (result != null) {
       Navigator.of(context).pop(result);
-    } else {
-      setState(() => _showErrors = true);
     }
   }
 
@@ -69,42 +81,48 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
         builder: (context, provider, _) {
           return AppModalWrapper(
             title: context.l10n.translate('filters'),
-            child: Column(
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppDimens.lg,
-                      vertical: AppDimens.sm,
-                    ),
-                    child: provider.isLoading
-                        ? const FilterSkeleton()
-                        : Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: _strategy.buildFields(
-                              context,
-                              provider,
-                              _flowController,
-                              _headController,
-                              _cableLengthController,
-                              _bombsQuantityController,
-                              showErrors: _showErrors,
+            child: Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppDimens.lg,
+                        vertical: AppDimens.sm,
+                      ),
+                      child: provider.isLoading
+                          ? const FilterSkeleton()
+                          : Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: _strategy.buildFields(
+                                context,
+                                provider,
+                                _flowController,
+                                _headController,
+                                _cableLengthController,
+                                _bombsQuantityController,
+                                flowFocus: _flowFocus,
+                                headFocus: _headFocus,
+                                cableFocus: _cableFocus,
+                                bombsFocus: _bombsFocus,
+                              ),
                             ),
-                          ),
+                    ),
                   ),
-                ),
-                if (!provider.isLoading)
-                  _ActionArea(
-                    onPressed: () => _submit(context),
-                    controllers: [
-                      _flowController,
-                      _headController,
-                      if (widget.categoryId == CategoryIds.solar)
-                        _cableLengthController,
-                      _bombsQuantityController,
-                    ],
-                  ),
-              ],
+                  if (!provider.isLoading)
+                    _ActionArea(
+                      onPressed: () => _submit(context),
+                      controllers: [
+                        _flowController,
+                        _headController,
+                        if (widget.categoryId == CategoryIds.solar)
+                          _cableLengthController,
+                        _bombsQuantityController,
+                      ],
+                    ),
+                ],
+              ),
             ),
           );
         },

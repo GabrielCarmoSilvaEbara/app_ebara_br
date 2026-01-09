@@ -15,15 +15,17 @@ abstract class FilterStrategy {
     TextEditingController headCtrl,
     TextEditingController cableCtrl,
     TextEditingController bombsCtrl, {
-    bool showErrors = false,
+    required FocusNode flowFocus,
+    required FocusNode headFocus,
+    required FocusNode cableFocus,
+    required FocusNode bombsFocus,
   });
 
   Widget buildCommonDropdowns(
     BuildContext context,
     FilterProvider provider,
-    String categoryId, {
-    bool showErrors = false,
-  }) {
+    String categoryId,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -36,14 +38,13 @@ abstract class FilterStrategy {
                 label: context.l10n.translate('applications'),
                 hint: context.l10n.translate('pick_one'),
                 value: selected,
-                errorText: showErrors && selected == null
-                    ? context.l10n.translate('required_field')
-                    : null,
+                validator: (v) =>
+                    v == null ? context.l10n.translate('required_field') : null,
                 items: provider.applications
                     .map(
                       (e) => DropdownMenuItem(
-                        value: e,
-                        child: _buildText(context, e),
+                        value: e['value'].toString(),
+                        child: _buildText(context, e['title'].toString()),
                       ),
                     )
                     .toList(),
@@ -61,14 +62,13 @@ abstract class FilterStrategy {
                 label: context.l10n.translate('models'),
                 hint: context.l10n.translate('pick_one'),
                 value: selected,
-                errorText: showErrors && selected == null
-                    ? context.l10n.translate('required_field')
-                    : null,
+                validator: (v) =>
+                    v == null ? context.l10n.translate('required_field') : null,
                 items: provider.models
                     .map(
                       (e) => DropdownMenuItem(
-                        value: e,
-                        child: _buildText(context, e),
+                        value: e['value'].toString(),
+                        child: _buildText(context, e['title'].toString()),
                       ),
                     )
                     .toList(),
@@ -86,7 +86,10 @@ abstract class FilterStrategy {
     FilterProvider provider,
     TextEditingController flowCtrl,
     TextEditingController headCtrl, {
-    bool showErrors = false,
+    required FocusNode flowFocus,
+    required FocusNode headFocus,
+    TextInputAction headAction = TextInputAction.done,
+    VoidCallback? onHeadSubmitted,
   }) {
     return Column(
       children: [
@@ -98,7 +101,10 @@ abstract class FilterStrategy {
               child: AppCompositeField(
                 label: context.l10n.translate('flow'),
                 controller: flowCtrl,
-                errorText: showErrors && flowCtrl.text.isEmpty
+                focusNode: flowFocus,
+                textInputAction: TextInputAction.next,
+                onFieldSubmitted: (_) => headFocus.requestFocus(),
+                validator: (v) => v == null || v.isEmpty
                     ? context.l10n.translate('required_field')
                     : null,
                 suffixWidget: DropdownButton<String>(
@@ -136,7 +142,10 @@ abstract class FilterStrategy {
               child: AppCompositeField(
                 label: context.l10n.translate('manometric_head'),
                 controller: headCtrl,
-                errorText: showErrors && headCtrl.text.isEmpty
+                focusNode: headFocus,
+                textInputAction: headAction,
+                onFieldSubmitted: (_) => onHeadSubmitted?.call(),
+                validator: (v) => v == null || v.isEmpty
                     ? context.l10n.translate('required_field')
                     : null,
                 suffixWidget: DropdownButton<String>(
@@ -190,25 +199,25 @@ class StandardFilterStrategy extends FilterStrategy {
     TextEditingController headCtrl,
     TextEditingController cableCtrl,
     TextEditingController bombsCtrl, {
-    bool showErrors = false,
+    required FocusNode flowFocus,
+    required FocusNode headFocus,
+    required FocusNode cableFocus,
+    required FocusNode bombsFocus,
   }) {
     final isSubmersible = categoryId == CategoryIds.submersible;
 
     return [
-      buildCommonDropdowns(
-        context,
-        provider,
-        categoryId,
-        showErrors: showErrors,
-      ),
-      _FrequencySelector(showErrors: showErrors),
+      buildCommonDropdowns(context, provider, categoryId),
+      _FrequencySelector(),
       if (isSubmersible) _WellDiameterSelector(),
       buildFlowAndHead(
         context,
         provider,
         flowCtrl,
         headCtrl,
-        showErrors: showErrors,
+        flowFocus: flowFocus,
+        headFocus: headFocus,
+        headAction: TextInputAction.done,
       ),
     ];
   }
@@ -223,15 +232,13 @@ class SolarFilterStrategy extends FilterStrategy {
     TextEditingController headCtrl,
     TextEditingController cableCtrl,
     TextEditingController bombsCtrl, {
-    bool showErrors = false,
+    required FocusNode flowFocus,
+    required FocusNode headFocus,
+    required FocusNode cableFocus,
+    required FocusNode bombsFocus,
   }) {
     return [
-      buildCommonDropdowns(
-        context,
-        provider,
-        CategoryIds.solar,
-        showErrors: showErrors,
-      ),
+      buildCommonDropdowns(context, provider, CategoryIds.solar),
       Selector<FilterProvider, String?>(
         selector: (_, p) => p.selectedSystemType,
         builder: (context, selected, _) {
@@ -242,9 +249,8 @@ class SolarFilterStrategy extends FilterStrategy {
               label: context.l10n.translate('system_type'),
               hint: context.l10n.translate('pick_one'),
               value: selected,
-              errorText: showErrors && selected == null
-                  ? context.l10n.translate('required_field')
-                  : null,
+              validator: (v) =>
+                  v == null ? context.l10n.translate('required_field') : null,
               items: provider.systemTypes
                   .map(
                     (item) => DropdownMenuItem(
@@ -267,13 +273,18 @@ class SolarFilterStrategy extends FilterStrategy {
         provider,
         flowCtrl,
         headCtrl,
-        showErrors: showErrors,
+        flowFocus: flowFocus,
+        headFocus: headFocus,
+        headAction: TextInputAction.next,
+        onHeadSubmitted: () => cableFocus.requestFocus(),
       ),
       Padding(
         padding: const EdgeInsets.only(bottom: AppDimens.xl),
         child: AppTextField(
           label: context.l10n.translate('cable_length'),
           controller: cableCtrl,
+          focusNode: cableFocus,
+          textInputAction: TextInputAction.done,
         ),
       ),
     ];
@@ -289,21 +300,28 @@ class PressurizerFilterStrategy extends FilterStrategy {
     TextEditingController headCtrl,
     TextEditingController cableCtrl,
     TextEditingController bombsCtrl, {
-    bool showErrors = false,
+    required FocusNode flowFocus,
+    required FocusNode headFocus,
+    required FocusNode cableFocus,
+    required FocusNode bombsFocus,
   }) {
     return [
-      buildCommonDropdowns(
-        context,
-        provider,
-        CategoryIds.pressurizer,
-        showErrors: showErrors,
-      ),
+      buildCommonDropdowns(context, provider, CategoryIds.pressurizer),
       buildFlowAndHead(
         context,
         provider,
         flowCtrl,
         headCtrl,
-        showErrors: showErrors,
+        flowFocus: flowFocus,
+        headFocus: headFocus,
+        headAction: provider.activationType == ActivationType.inversor.name
+            ? TextInputAction.next
+            : TextInputAction.done,
+        onHeadSubmitted: () {
+          if (provider.activationType == ActivationType.inversor.name) {
+            bombsFocus.requestFocus();
+          }
+        },
       ),
       Selector<FilterProvider, String>(
         selector: (_, p) => p.activationType,
@@ -349,8 +367,10 @@ class PressurizerFilterStrategy extends FilterStrategy {
             child: AppTextField(
               label: context.l10n.translate('pumps_quantity'),
               controller: bombsCtrl,
+              focusNode: bombsFocus,
+              textInputAction: TextInputAction.done,
               isInteger: true,
-              errorText: showErrors && bombsCtrl.text.isEmpty
+              validator: (v) => v == null || v.isEmpty
                   ? context.l10n.translate('required_field')
                   : null,
             ),
@@ -362,87 +382,100 @@ class PressurizerFilterStrategy extends FilterStrategy {
 }
 
 class _FrequencySelector extends StatelessWidget {
-  final bool showErrors;
-  const _FrequencySelector({this.showErrors = false});
-
   @override
   Widget build(BuildContext context) {
     final provider = context.read<FilterProvider>();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return FormField<String>(
+      initialValue: provider.selectedFrequency,
+      validator: (val) {
+        if (provider.selectedFrequency == null) {
+          return context.l10n.translate('mandatory');
+        }
+        return null;
+      },
+      builder: (state) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              context.l10n.translate('frequency'),
-              style: context.subtitleStyle?.copyWith(
-                fontSize: AppDimens.fontLg,
-              ),
-            ),
-            if (showErrors && provider.selectedFrequency == null)
-              Text(
-                context.l10n.translate('mandatory'),
-                style: context.bodySmall?.copyWith(
-                  color: context.colors.error,
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  context.l10n.translate('frequency'),
+                  style: context.subtitleStyle?.copyWith(
+                    fontSize: AppDimens.fontLg,
+                  ),
                 ),
-              ),
-          ],
-        ),
-        const SizedBox(height: AppDimens.sm),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Selector<FilterProvider, String?>(
-            selector: (_, p) => p.selectedFrequency,
-            builder: (context, selected, _) {
-              final hasError = showErrors && selected == null;
-              final borderColor = hasError
-                  ? context.colors.error
-                  : context.colors.primary;
+                if (state.hasError)
+                  Text(
+                    state.errorText!,
+                    style: context.bodySmall?.copyWith(
+                      color: context.colors.error,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: AppDimens.sm),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Selector<FilterProvider, String?>(
+                selector: (_, p) => p.selectedFrequency,
+                builder: (context, selected, _) {
+                  final hasError = state.hasError;
+                  final borderColor = hasError
+                      ? context.colors.error
+                      : context.colors.primary;
 
-              return Row(
-                children: provider.frequencies.map((f) {
-                  final isSel = selected == f;
-                  final colors = context.colors;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: AppDimens.sm),
-                    child: InkWell(
-                      onTap: () => provider.setFrequency(f),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: AppDimens.sm,
-                          horizontal: AppDimens.xl,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isSel
-                              ? colors.primary
-                              : context.theme.cardColor,
-                          border: Border.all(color: borderColor, width: 2),
-                          borderRadius: BorderRadius.circular(
-                            AppDimens.radiusSm,
-                          ),
-                        ),
-                        child: Center(
-                          child: Text(
-                            "${f}Hz",
-                            style: context.subtitleStyle?.copyWith(
-                              color: isSel ? colors.onPrimary : colors.primary,
-                              fontSize: AppDimens.fontLg,
+                  return Row(
+                    children: provider.frequencies.map((f) {
+                      final isSel = selected == f;
+                      final colors = context.colors;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: AppDimens.sm),
+                        child: InkWell(
+                          onTap: () {
+                            provider.setFrequency(f);
+                            state.didChange(f);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: AppDimens.sm,
+                              horizontal: AppDimens.xl,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isSel
+                                  ? colors.primary
+                                  : context.theme.cardColor,
+                              border: Border.all(color: borderColor, width: 2),
+                              borderRadius: BorderRadius.circular(
+                                AppDimens.radiusSm,
+                              ),
+                            ),
+                            child: Center(
+                              child: Text(
+                                "${f}Hz",
+                                style: context.subtitleStyle?.copyWith(
+                                  color: isSel
+                                      ? colors.onPrimary
+                                      : colors.primary,
+                                  fontSize: AppDimens.fontLg,
+                                ),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ),
+                      );
+                    }).toList(),
                   );
-                }).toList(),
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: AppDimens.lg),
-      ],
+                },
+              ),
+            ),
+            const SizedBox(height: AppDimens.lg),
+          ],
+        );
+      },
     );
   }
 }
