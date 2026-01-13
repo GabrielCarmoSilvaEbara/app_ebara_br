@@ -80,9 +80,7 @@ class _ImageViewerState extends State<ImageViewer>
                     imageUrl: widget.imageUrl,
                     fit: BoxFit.contain,
                     memCacheHeight: UiUtil.cacheSize(context, context.height),
-                    placeholder: (context, url) => Center(
-                      child: CircularProgressIndicator(color: colors.onPrimary),
-                    ),
+                    placeholder: (context, url) => const SizedBox.shrink(),
                     errorWidget: (context, url, error) => Icon(
                       Icons.broken_image,
                       color: colors.onPrimary,

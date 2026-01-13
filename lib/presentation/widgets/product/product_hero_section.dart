@@ -51,11 +51,7 @@ class ProductHeroSection extends StatelessWidget {
                         context,
                         AppDimens.heroImageHeight,
                       ),
-                      placeholder: (context, url) => Center(
-                        child: CircularProgressIndicator(
-                          color: context.colors.onPrimary,
-                        ),
-                      ),
+                      placeholder: (context, url) => const SizedBox.shrink(),
                       errorWidget: (_, _, _) => Icon(
                         Icons.image_not_supported,
                         size: AppDimens.iconHuge,
