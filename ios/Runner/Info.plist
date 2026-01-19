@@ -47,8 +47,11 @@
 		<true/>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		
+		<key>NSLocationWhenInUseUsageDescription</key>
 		<string>O aplicativo precisa da sua localização para encontrar assistências técnicas e distribuidores próximos a você.</string>
-        <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-        <string>O aplicativo precisa da sua localização para encontrar assistências técnicas e distribuidores próximos a você.</string>
-	</dict> 
+		
+		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+		<string>O aplicativo precisa da sua localização para encontrar assistências técnicas e distribuidores próximos a você.</string>
+	</dict>
 </plist>
