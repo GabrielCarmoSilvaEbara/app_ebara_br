@@ -47,11 +47,20 @@
 		<true/>
 		<key>UIStatusBarHidden</key>
 		<false/>
-		
 		<key>NSLocationWhenInUseUsageDescription</key>
 		<string>O aplicativo precisa da sua localização para encontrar assistências técnicas e distribuidores próximos a você.</string>
-		
 		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 		<string>O aplicativo precisa da sua localização para encontrar assistências técnicas e distribuidores próximos a você.</string>
+		<key>CFBundleURLTypes</key>
+		<array>
+			<dict>
+				<key>CFBundleTypeRole</key>
+				<string>Editor</string>
+				<key>CFBundleURLSchemes</key>
+				<array>
+					<string>com.googleusercontent.apps.701048514790-t5sf0scogm124d65l7alnmt7kjs4edot</string>
+				</array>
+			</dict>
+		</array>
 	</dict>
 </plist>
