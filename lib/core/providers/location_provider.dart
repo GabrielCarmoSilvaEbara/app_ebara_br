@@ -5,6 +5,7 @@ import '../services/analytics_service.dart';
 import '../constants/app_constants.dart';
 
 class LocationProvider with ChangeNotifier {
+  static const String _recentLocationsKey = 'recent_locations';
   final LocationService _locationService;
   final Box _settingsBox = Hive.box(StorageKeys.boxSettings);
 
@@ -92,7 +93,7 @@ class LocationProvider with ChangeNotifier {
 
   void _loadRecentLocations() {
     try {
-      final List<dynamic>? stored = _settingsBox.get('recent_locations');
+      final List<dynamic>? stored = _settingsBox.get(_recentLocationsKey);
       if (stored != null) {
         _recentLocations = stored
             .map((e) => Map<String, String>.from(e))
@@ -107,7 +108,7 @@ class LocationProvider with ChangeNotifier {
     );
     _recentLocations.insert(0, location);
     if (_recentLocations.length > 5) _recentLocations.removeLast();
-    _settingsBox.put('recent_locations', _recentLocations);
+    _settingsBox.put(_recentLocationsKey, _recentLocations);
     notifyListeners();
   }
 

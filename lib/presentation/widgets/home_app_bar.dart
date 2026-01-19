@@ -6,8 +6,8 @@ import '../../core/providers/location_provider.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/providers/theme_provider.dart' as app_theme;
 import '../../core/extensions/context_extensions.dart';
+import '../../core/router/app_router.dart';
 import '../theme/app_dimens.dart';
-import '../pages/location_page.dart';
 import 'auth_modal_sheet.dart';
 
 class HomeAppBar extends StatelessWidget {
@@ -76,10 +76,7 @@ class HomeAppBar extends StatelessWidget {
             ),
             GestureDetector(
               onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LocationPage()),
-                );
+                context.pushNamed(AppRoutes.location);
               },
               child: Selector<LocationProvider, String>(
                 selector: (_, provider) => provider.city,

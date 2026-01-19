@@ -13,4 +13,5 @@ class ApiEndpoints {
   static const String getTypes = 'busca-bombas/get_types';
   static const String getDiameters = 'busca-bombas/diametros';
   static const String applicationsList = 'aplicacoes';
+  static const String update = 'update';
 }

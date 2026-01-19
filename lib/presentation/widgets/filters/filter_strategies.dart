@@ -499,7 +499,9 @@ class _WellDiameterSelector extends StatelessWidget {
                   (val) => DropdownMenuItem(
                     value: val,
                     child: Text(
-                      val == '0' ? context.l10n.translate('all') : val,
+                      val == SystemConstants.defaultValueZero
+                          ? context.l10n.translate('all')
+                          : val,
                       style: context.subtitleStyle?.copyWith(
                         fontSize: AppDimens.fontLg,
                       ),
@@ -517,10 +519,10 @@ class _WellDiameterSelector extends StatelessWidget {
 
 class FilterStrategyFactory {
   static FilterStrategy create(String categoryId) {
-    if (categoryId == CategoryIds.solar) {
+    if (categoryId == CategoryIds.solar || categoryId == CategorySlugs.solar) {
       return SolarFilterStrategy();
     } else if (categoryId == CategoryIds.pressurizer ||
-        categoryId == CategoryIds.pressurizerSlug) {
+        categoryId == CategorySlugs.pressurizer) {
       return PressurizerFilterStrategy();
     } else {
       return StandardFilterStrategy(categoryId);

@@ -1,44 +1,68 @@
-import '../services/api_service.dart';
+import 'package:flutter/foundation.dart';
 import '../models/category_model.dart';
-import '../models/product_model.dart';
 import '../models/product_filter_params.dart';
+import '../models/product_model.dart';
+import '../services/api_service.dart';
+import '../services/cache_service.dart';
+import '../services/ebara_data_service.dart';
+import '../providers/connectivity_provider.dart';
 import '../constants/api_endpoints.dart';
 import '../constants/app_constants.dart';
-import '../services/ebara_data_service.dart';
-import 'package:flutter/foundation.dart';
 
 class ProductRepository {
   final ApiService _api;
+  final CacheService cache;
+  final ConnectivityProvider connectivity;
 
-  ProductRepository({required ApiService api}) : _api = api;
+  static const Duration _freshCacheDuration = Duration(days: 7);
+  static const Duration _shortCacheDuration = Duration(hours: 4);
+  static const Duration _offlineCacheDuration = Duration(days: 365);
+
+  ProductRepository({
+    required ApiService api,
+    required this.cache,
+    required this.connectivity,
+  }) : _api = api;
 
   Future<List<CategoryModel>> fetchCategories({int idLanguage = 1}) async {
+    final queryParams = {'id_language': idLanguage};
+
     final response = await _api.get<dynamic>(
       ApiEndpoints.categories,
-      queryParams: {'id_language': idLanguage},
-      cacheDuration: const Duration(days: 7),
+      queryParams: queryParams,
+      cacheDuration: _freshCacheDuration,
+      offlineCacheDuration: _offlineCacheDuration,
     );
-    if (!response.isSuccess) return [];
 
-    return compute(parseCategoriesIsolate, response.data);
+    if (response.isSuccess && response.data != null) {
+      return compute(parseCategoriesIsolate, response.data);
+    }
+
+    return [];
   }
 
   Future<List<ProductModel>> searchProducts(ProductFilterParams params) async {
     String endpoint = ApiEndpoints.searchBomb;
     final bool isPressurizer =
         params.categoryId == CategoryIds.pressurizer ||
-        params.categoryId == CategoryIds.pressurizerSlug;
+        params.categoryId == CategorySlugs.pressurizer;
 
     if (isPressurizer) endpoint = ApiEndpoints.searchPressurization;
 
+    final queryParams = params.toMap();
+
     final response = await _api.get<dynamic>(
       endpoint,
-      queryParams: params.toMap(),
-      cacheDuration: const Duration(hours: 4),
+      queryParams: queryParams,
+      cacheDuration: _shortCacheDuration,
+      offlineCacheDuration: _offlineCacheDuration,
     );
 
-    if (!response.isSuccess) return [];
-    return compute(parseProductsIsolate, response.data);
+    if (response.isSuccess && response.data != null) {
+      return compute(parseProductsIsolate, response.data);
+    }
+
+    return [];
   }
 }
 

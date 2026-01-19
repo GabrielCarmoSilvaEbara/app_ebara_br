@@ -27,32 +27,18 @@ class _UnitConverterTabState extends State<UnitConverterTab> {
   }
 
   String _getUnitLabel(String key) {
-    switch (key) {
-      case 'm3h':
-        return 'm³/h';
-      case 'ls':
-        return 'l/s';
-      case 'lmin':
-        return 'l/min';
-      case 'gpm':
-        return 'GPM';
-      case 'mca':
-        return 'm.c.a';
-      case 'bar':
-        return 'bar';
-      case 'psi':
-        return 'psi';
-      case 'kgfcm2':
-        return 'kgf/cm²';
-      case 'cv':
-        return 'CV';
-      case 'hp':
-        return 'HP';
-      case 'kw':
-        return 'kW';
-      default:
-        return key;
-    }
+    if (key == FlowUnit.m3h.name) return 'm³/h';
+    if (key == FlowUnit.ls.name) return 'l/s';
+    if (key == FlowUnit.lmin.name) return 'l/min';
+    if (key == FlowUnit.gpm.name) return 'GPM';
+    if (key == PressureUnit.mca.name) return 'm.c.a';
+    if (key == PressureUnit.bar.name) return 'bar';
+    if (key == PressureUnit.psi.name) return 'psi';
+    if (key == PressureUnit.kgfcm2.name) return 'kgf/cm²';
+    if (key == PowerUnit.cv.name) return 'CV';
+    if (key == PowerUnit.hp.name) return 'HP';
+    if (key == PowerUnit.kw.name) return 'kW';
+    return key;
   }
 
   @override

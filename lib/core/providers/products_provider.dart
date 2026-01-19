@@ -5,6 +5,7 @@ import '../services/ebara_data_service.dart';
 import '../models/product_model.dart';
 import '../models/product_filter_params.dart';
 import '../services/analytics_service.dart';
+import '../constants/app_constants.dart';
 
 List<ProductModel> _filterProductsIsolate(Map<String, dynamic> params) {
   final List<ProductModel> all = params['products'];
@@ -107,7 +108,7 @@ class ProductsProvider with ChangeNotifier {
 
   void onSearchInputChanged(String query) {
     if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
-    _debounceTimer = Timer(const Duration(milliseconds: 600), () {
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
       _searchQuery = query;
       _currentPage = 1;
       _updateFilteredProducts().then((_) {
@@ -159,7 +160,7 @@ class ProductsProvider with ChangeNotifier {
   ) async {
     try {
       final results = await _repository.searchProducts(
-        ProductFilterParams(categoryId: categoryId, line: 'TODOS'),
+        ProductFilterParams(categoryId: categoryId, line: SystemConstants.all),
       );
       final group = await _dataService.groupProducts(results);
 

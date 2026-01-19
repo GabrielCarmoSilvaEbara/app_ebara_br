@@ -1,4 +1,5 @@
 import 'package:html_unescape/html_unescape.dart';
+import 'package:intl/intl.dart';
 
 class ParseUtil {
   static final _htmlUnescape = HtmlUnescape();
@@ -7,7 +8,7 @@ class ParseUtil {
     if (value == null || value.toString().isEmpty) return "0.00";
     try {
       final double parsed = double.parse(value.toString());
-      return parsed.toStringAsFixed(2);
+      return NumberFormat.decimalPattern(Intl.defaultLocale).format(parsed);
     } catch (e) {
       return value.toString();
     }

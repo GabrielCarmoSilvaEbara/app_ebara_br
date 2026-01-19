@@ -5,9 +5,9 @@ import '../../../../../core/extensions/context_extensions.dart';
 import '../../../../../core/utils/ui_util.dart';
 import '../../../../../core/providers/product_details_provider.dart';
 import '../../../../../core/models/product_model.dart';
+import '../../../../../core/router/app_router.dart';
 import '../../theme/app_dimens.dart';
 import '../app_buttons.dart';
-import '../image_viewer.dart';
 
 class ProductHeroSection extends StatelessWidget {
   final ProductModel product;
@@ -142,12 +142,9 @@ class ProductHeroSection extends StatelessWidget {
             bottom: btnPadding,
             right: btnPadding,
             child: AppBouncingButton(
-              onTap: () => Navigator.of(context).push(
-                PageRouteBuilder(
-                  opaque: false,
-                  pageBuilder: (_, _, _) =>
-                      ImageViewer(imageUrl: imageUrl, heroTag: heroTag),
-                ),
+              onTap: () => context.pushNamed(
+                AppRoutes.imageViewer,
+                extra: {'imageUrl': imageUrl, 'heroTag': heroTag},
               ),
               child: _IconContainer(
                 icon: Icons.zoom_in,

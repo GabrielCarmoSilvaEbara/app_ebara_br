@@ -100,21 +100,44 @@ class CategoryChipSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final baseColor = isDark ? Colors.grey.shade800 : Colors.grey.shade300;
+
     return Padding(
       padding: const EdgeInsets.only(right: AppDimens.sm),
-      child: Row(
-        children: [
-          const SkeletonContainer.square(
-            size: AppDimens.skeletonSmallBox,
-            borderRadius: 6,
+      child: Shimmer(
+        child: Container(
+          height: AppDimens.chipHeight,
+          width: 120,
+          padding: const EdgeInsets.symmetric(horizontal: AppDimens.md),
+          decoration: BoxDecoration(
+            color: baseColor,
+            borderRadius: BorderRadius.circular(AppDimens.radiusXxl),
+            border: Border.all(color: baseColor, width: 1),
           ),
-          const SizedBox(width: AppDimens.xs),
-          const SkeletonContainer(
-            width: AppDimens.skeletonChipWidth,
-            height: AppDimens.skeletonLineHeight,
-            borderRadius: 4,
+          child: Row(
+            children: [
+              Container(
+                width: AppDimens.iconLg,
+                height: AppDimens.iconLg,
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.grey.shade700 : Colors.grey.shade400,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: AppDimens.xs),
+              Expanded(
+                child: Container(
+                  height: AppDimens.skeletonLineHeight,
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.grey.shade700 : Colors.grey.shade400,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

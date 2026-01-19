@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/providers/home_provider.dart';
 import '../../core/providers/location_provider.dart';
 import '../../core/providers/auth_provider.dart';
@@ -11,10 +12,8 @@ import '../../core/providers/connectivity_provider.dart';
 import '../../core/providers/splash_provider.dart';
 import '../../core/extensions/context_extensions.dart';
 import '../../core/constants/app_assets.dart';
+import '../../core/router/app_router.dart';
 import '../theme/app_dimens.dart';
-import 'home_page.dart';
-import 'login_page.dart';
-import 'location_page.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -57,24 +56,13 @@ class _SplashScreenState extends State<SplashScreen> {
 
     if (locationProvider.city == chooseLocationText ||
         locationProvider.city.isEmpty) {
-      _navigate(const LocationPage(isInitialSelection: true));
+      context.goNamed(AppRoutes.location, extra: {'isInitialSelection': true});
     } else {
       final isAuth =
           authProvider.status == AuthStatus.authenticated ||
           authProvider.status == AuthStatus.guest;
-      _navigate(isAuth ? const HomePage() : const LoginPage());
+      context.goNamed(isAuth ? AppRoutes.home : AppRoutes.login);
     }
-  }
-
-  void _navigate(Widget page) {
-    Navigator.of(context).pushReplacement(
-      PageRouteBuilder(
-        pageBuilder: (_, animation, _) => page,
-        transitionsBuilder: (_, animation, _, child) =>
-            FadeTransition(opacity: animation, child: child),
-        transitionDuration: AppDimens.durationPage,
-      ),
-    );
   }
 
   @override

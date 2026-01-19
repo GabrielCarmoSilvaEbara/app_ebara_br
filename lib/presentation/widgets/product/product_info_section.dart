@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../../core/extensions/context_extensions.dart';
@@ -9,9 +10,8 @@ import '../../../../../core/utils/file_type_util.dart';
 import '../../../../../core/models/product_model.dart';
 import '../../theme/app_dimens.dart';
 import '../app_skeletons.dart';
-import '../auth_modal_sheet.dart';
-import '../../../../../core/providers/auth_provider.dart';
 import '../../../../../core/services/analytics_service.dart';
+import '../../../../../core/services/download_service.dart';
 import '../app_expansion_tile.dart';
 
 class ProductInfoSection extends StatefulWidget {
@@ -24,6 +24,13 @@ class ProductInfoSection extends StatefulWidget {
 }
 
 class _ProductInfoSectionState extends State<ProductInfoSection> {
+  static const String _keyApps = "Aplicações";
+  static const String _keyTechSheet = "Ficha Técnica";
+  static const String _keyFeatures = "Características";
+  static const String _keySpecs = "Especificações";
+  static const String _keyOptions = "Opções";
+  static const String _keyDocs = "Documentos";
+
   final ExpansibleController _featuresCtrl = ExpansibleController();
   final ExpansibleController _specsCtrl = ExpansibleController();
   final ExpansibleController _optionsCtrl = ExpansibleController();
@@ -70,13 +77,13 @@ class _ProductInfoSectionState extends State<ProductInfoSection> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _SectionTitle(title: context.l10n.translate("Aplicações")),
+                _SectionTitle(title: context.l10n.translate(_keyApps)),
                 AppDimens.md.vGap,
                 Selector<ProductDetailsProvider, List<Map<String, dynamic>>>(
                   selector: (_, p) => p.applications,
                   builder: (_, apps, _) => _ApplicationIcons(apps: apps),
                 ),
-                _SectionTitle(title: context.l10n.translate("Ficha Técnica")),
+                _SectionTitle(title: context.l10n.translate(_keyTechSheet)),
                 AppDimens.md.vGap,
                 _TechnicalSpecs(product: widget.product),
                 Selector<ProductDetailsProvider, Map<String, dynamic>?>(
@@ -87,20 +94,20 @@ class _ProductInfoSectionState extends State<ProductInfoSection> {
                       children: [
                         _buildListSection(
                           context,
-                          title: "Características",
-                          items: descriptions['description'],
+                          title: _keyFeatures,
+                          items: descriptions[ProductDescKeys.description],
                           controller: _featuresCtrl,
                         ),
                         _buildListSection(
                           context,
-                          title: "Especificações",
-                          items: descriptions['specifications'],
+                          title: _keySpecs,
+                          items: descriptions[ProductDescKeys.specifications],
                           controller: _specsCtrl,
                         ),
                         _buildListSection(
                           context,
-                          title: "Opções",
-                          items: descriptions['options'],
+                          title: _keyOptions,
+                          items: descriptions[ProductDescKeys.options],
                           controller: _optionsCtrl,
                         ),
                       ],
@@ -109,7 +116,7 @@ class _ProductInfoSectionState extends State<ProductInfoSection> {
                 ),
                 AppExpansionTile(
                   controller: _docsCtrl,
-                  title: context.l10n.translate("Documentos"),
+                  title: context.l10n.translate(_keyDocs),
                   onExpansionChanged: (isOpen) {
                     if (isOpen) _handleSectionExpansion(_docsCtrl);
                   },
@@ -148,9 +155,11 @@ class _ProductInfoSectionState extends State<ProductInfoSection> {
   Widget _buildListSection(
     BuildContext context, {
     required String title,
-    required List<dynamic> items,
+    required List<dynamic>? items,
     required ExpansibleController controller,
   }) {
+    if (items == null || items.isEmpty) return const SizedBox.shrink();
+
     final isDark = context.theme.brightness == Brightness.dark;
     final textColor = isDark
         ? context.colors.onPrimary
@@ -255,8 +264,9 @@ class _ApplicationIcons extends StatelessWidget {
         runSpacing: AppDimens.sm,
         children: apps.map((app) {
           final String iconFile = app['icon_file'] ?? '';
-          final String fullUrl =
-              "https://ebara.com.br/userfiles/aplicacoes/$iconFile";
+          final String fullUrl = iconFile.isNotEmpty
+              ? "https://ebara.com.br/userfiles/aplicacoes/$iconFile"
+              : '';
 
           return Tooltip(
             message: app['application_name'] ?? '',
@@ -270,8 +280,9 @@ class _ApplicationIcons extends StatelessWidget {
                 color: bgColor,
                 borderRadius: BorderRadius.circular(AppDimens.gridSpacing),
                 border: Border.all(
-                  color: isDark ? colors.outline : colors.primary
-                    ..withValues(alpha: AppDimens.opacityLow),
+                  color: isDark
+                      ? colors.outline
+                      : colors.primary.withValues(alpha: AppDimens.opacityLow),
                 ),
               ),
               child: iconFile.isNotEmpty
@@ -281,8 +292,9 @@ class _ApplicationIcons extends StatelessWidget {
                       errorWidget: (_, _, _) => Icon(
                         Icons.image_not_supported_outlined,
                         size: AppDimens.iconLg,
-                        color: iconColor
-                          ..withValues(alpha: AppDimens.opacityHigh),
+                        color: iconColor.withValues(
+                          alpha: AppDimens.opacityHigh,
+                        ),
                       ),
                     )
                   : Icon(Icons.apps, color: iconColor),
@@ -384,8 +396,9 @@ class _EmptyDocuments extends StatelessWidget {
           Icon(
             Icons.folder_off_outlined,
             size: AppDimens.xxxl,
-            color: context.colors.onSurface
-              ..withValues(alpha: AppDimens.opacityMed),
+            color: context.colors.onSurface.withValues(
+              alpha: AppDimens.opacityMed,
+            ),
           ),
           const SizedBox(height: AppDimens.xs),
           Text(
@@ -398,11 +411,110 @@ class _EmptyDocuments extends StatelessWidget {
   }
 }
 
-class _FileLinkItem extends StatelessWidget {
+class _FileLinkItem extends StatefulWidget {
   final Map<String, dynamic> file;
   final String productName;
 
   const _FileLinkItem({required this.file, required this.productName});
+
+  @override
+  State<_FileLinkItem> createState() => _FileLinkItemState();
+}
+
+class _FileLinkItemState extends State<_FileLinkItem> {
+  bool _isDownloading = false;
+  bool _isDownloaded = false;
+  bool _isBusy = false;
+  double _progress = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkFileStatus();
+  }
+
+  Future<void> _checkFileStatus() async {
+    final downloadService = context.read<DownloadService>();
+    final exists = await downloadService.isFileDownloaded(widget.file['file']);
+    if (mounted) {
+      setState(() {
+        _isDownloaded = exists;
+      });
+    }
+  }
+
+  Future<void> _handleAction() async {
+    if (_isBusy) return;
+    setState(() => _isBusy = true);
+
+    try {
+      final downloadService = context.read<DownloadService>();
+
+      if (_isDownloaded) {
+        await downloadService.openFile(
+          widget.file['file'],
+          widget.file['full_url'],
+        );
+      } else {
+        if (_isDownloading) return;
+
+        setState(() {
+          _isDownloading = true;
+          _progress = 0.0;
+        });
+
+        AnalyticsService.logDownloadDocument(
+          widget.file['name'],
+          widget.productName,
+        );
+
+        if (kIsWeb) {
+          await downloadService.openFile(
+            widget.file['file'],
+            widget.file['full_url'],
+          );
+          if (mounted) {
+            setState(() {
+              _isDownloading = false;
+              _isDownloaded = true;
+            });
+          }
+          return;
+        }
+
+        try {
+          await downloadService.downloadFile(
+            url: widget.file['full_url'],
+            filename: widget.file['file'],
+            onProgress: (progress) {
+              if (mounted) {
+                setState(() {
+                  _progress = progress;
+                });
+              }
+            },
+          );
+          if (mounted) {
+            setState(() {
+              _isDownloading = false;
+              _isDownloaded = true;
+            });
+            await downloadService.openFile(
+              widget.file['file'],
+              widget.file['full_url'],
+            );
+          }
+        } catch (e) {
+          if (mounted) {
+            setState(() => _isDownloading = false);
+            context.showSnackBar("Erro ao baixar arquivo", isError: true);
+          }
+        }
+      }
+    } finally {
+      if (mounted) setState(() => _isBusy = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -412,16 +524,7 @@ class _FileLinkItem extends StatelessWidget {
         : context.colors.primary;
 
     return GestureDetector(
-      onTap: () async {
-        if (context.read<AuthProvider>().status != AuthStatus.authenticated) {
-          context.showAppBottomSheet(child: const AuthModalSheet());
-          return;
-        }
-        AnalyticsService.logDownloadDocument(file['name'], productName);
-        await context.read<ProductDetailsProvider>().launchEcommerce(
-          file['full_url'],
-        );
-      },
+      onTap: _handleAction,
       child: Container(
         margin: const EdgeInsets.only(bottom: AppDimens.xs),
         padding: const EdgeInsets.all(AppDimens.sm),
@@ -429,25 +532,51 @@ class _FileLinkItem extends StatelessWidget {
           color: context.colors.surfaceContainer,
           borderRadius: BorderRadius.circular(AppDimens.radiusMd),
           border: Border.all(
-            color: isDark ? context.colors.outline : context.colors.primary
-              ..withValues(alpha: AppDimens.opacityLow),
+            color: isDark
+                ? context.colors.outline
+                : context.colors.primary.withValues(
+                    alpha: AppDimens.opacityLow,
+                  ),
           ),
         ),
         child: Row(
           children: [
-            Icon(FileTypeUtil.icon(file['extension']), color: textColor),
+            Icon(FileTypeUtil.icon(widget.file['extension']), color: textColor),
             AppDimens.sm.hGap,
             Expanded(
               child: Text(
-                file['name'],
+                widget.file['name'],
                 overflow: TextOverflow.ellipsis,
                 style: context.bodySmall?.copyWith(fontWeight: FontWeight.bold),
               ),
             ),
-            Icon(
-              Icons.open_in_new_rounded,
-              color: textColor,
-              size: AppDimens.iconLg,
+            SizedBox(
+              width: 48,
+              height: 48,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  if (_isDownloading)
+                    SizedBox(
+                      width: 32,
+                      height: 32,
+                      child: CircularProgressIndicator(
+                        value: _progress,
+                        strokeWidth: 3,
+                        color: textColor,
+                      ),
+                    ),
+                  Icon(
+                    _isDownloaded
+                        ? Icons.file_open_outlined
+                        : (_isDownloading
+                              ? Icons.stop_rounded
+                              : Icons.file_download_outlined),
+                    color: textColor,
+                    size: AppDimens.iconLg,
+                  ),
+                ],
+              ),
             ),
           ],
         ),

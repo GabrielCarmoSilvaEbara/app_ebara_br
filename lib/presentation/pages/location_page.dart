@@ -7,6 +7,8 @@ import '../../core/providers/home_provider.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/extensions/context_extensions.dart';
 import '../../core/extensions/widget_extensions.dart';
+import '../../core/router/app_router.dart';
+import '../../core/constants/app_constants.dart';
 import '../widgets/app_buttons.dart';
 import '../widgets/app_search_bar.dart';
 import '../theme/app_dimens.dart';
@@ -144,8 +146,8 @@ class _LocationMapLayers extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = context.theme.brightness == Brightness.dark;
     final tileUrl = isDark
-        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-        : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+        ? AppConstants.mapTileUrlDark
+        : AppConstants.mapTileUrlLight;
 
     return Selector<LocationProvider, (double, double)>(
       selector: (_, p) => (p.previewLat, p.previewLon),
@@ -266,15 +268,14 @@ class BottomLocationCard extends StatelessWidget {
                   if (provider.isLoading) return;
                   final homeProvider = context.read<HomeProvider>();
                   final apiLanguageId = provider.apiLanguageId;
-                  final navigator = Navigator.of(context);
                   final success = await provider.useCurrentLocation();
 
                   if (success && context.mounted) {
                     homeProvider.reloadData(apiLanguageId);
                     if (isInitialSelection) {
-                      context.pushReplacementNamed('/home');
+                      context.pushReplacementNamed(AppRoutes.home);
                     } else {
-                      navigator.pop();
+                      context.pop();
                     }
                   }
                 },
@@ -338,9 +339,9 @@ class BottomLocationCard extends StatelessWidget {
                           final authProvider = context.read<AuthProvider>();
                           if (authProvider.status ==
                               AuthStatus.unauthenticated) {
-                            context.pushReplacementNamed('/login');
+                            context.pushReplacementNamed(AppRoutes.login);
                           } else {
-                            context.pushReplacementNamed('/home');
+                            context.pushReplacementNamed(AppRoutes.home);
                           }
                         } else {
                           context.pop();

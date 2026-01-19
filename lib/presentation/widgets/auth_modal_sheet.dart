@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/extensions/context_extensions.dart';
+import '../../core/router/app_router.dart';
 import '../theme/app_dimens.dart';
 import 'app_modal_wrapper.dart';
 import 'history_modal_sheet.dart';
@@ -189,7 +190,7 @@ class _AuthModalSheetState extends State<AuthModalSheet> {
                       ? null
                       : () {
                           context.pop();
-                          context.pushReplacementNamed('/login');
+                          context.pushReplacementNamed(AppRoutes.login);
                           context.read<AuthProvider>().signOut();
                         },
                   text: isGuest

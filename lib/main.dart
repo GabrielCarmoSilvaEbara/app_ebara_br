@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:animated_theme_switcher/animated_theme_switcher.dart' as anim;
 import 'package:firebase_core/firebase_core.dart';
+import 'package:intl/intl.dart';
 import 'presentation/theme/app_theme.dart';
 import 'core/providers/auth_provider.dart';
 import 'core/providers/categories_provider.dart';
@@ -21,6 +22,8 @@ import 'core/services/ebara_data_service.dart';
 import 'core/services/api_service.dart';
 import 'core/services/location_service.dart';
 import 'core/services/cache_service.dart';
+import 'core/services/download_service.dart';
+import 'core/services/notification_service.dart';
 import 'core/repositories/product_repository.dart';
 import 'core/constants/app_constants.dart';
 import 'core/router/app_router.dart';
@@ -81,11 +84,30 @@ class _AppBootstrapState extends State<AppBootstrap> {
       },
     );
 
+    final connectivityProvider = ConnectivityProvider();
+    await connectivityProvider.init();
+
     final ebaraDataService = EbaraDataService(api: apiService);
     final locationService = LocationService();
-    final productRepository = ProductRepository(api: apiService);
+    final downloadService = DownloadService();
 
-    return [ebaraDataService, locationService, productRepository];
+    final notificationService = NotificationService();
+    await notificationService.init();
+
+    final productRepository = ProductRepository(
+      api: apiService,
+      cache: cacheService,
+      connectivity: connectivityProvider,
+    );
+
+    return [
+      ebaraDataService,
+      locationService,
+      productRepository,
+      connectivityProvider,
+      downloadService,
+      notificationService,
+    ];
   }
 
   Future<void> _initHiveBox(String boxName, {bool isCritical = false}) async {
@@ -119,12 +141,18 @@ class _AppBootstrapState extends State<AppBootstrap> {
         final ebaraDataService = services[0] as EbaraDataService;
         final locationService = services[1] as LocationService;
         final productRepository = services[2] as ProductRepository;
+        final connectivityProvider = services[3] as ConnectivityProvider;
+        final downloadService = services[4] as DownloadService;
+        final notificationService = services[5] as NotificationService;
 
         return MultiProvider(
           providers: [
             Provider<EbaraDataService>.value(value: ebaraDataService),
             Provider<LocationService>.value(value: locationService),
             Provider<ProductRepository>.value(value: productRepository),
+            Provider<DownloadService>.value(value: downloadService),
+            Provider<NotificationService>.value(value: notificationService),
+            ChangeNotifierProvider.value(value: connectivityProvider),
             ChangeNotifierProvider(create: (_) => AuthProvider()),
             ChangeNotifierProvider(
               create: (_) => CategoriesProvider(repository: productRepository),
@@ -139,6 +167,7 @@ class _AppBootstrapState extends State<AppBootstrap> {
               create: (ctx) => HomeProvider(
                 productsProvider: ctx.read<ProductsProvider>(),
                 categoriesProvider: ctx.read<CategoriesProvider>(),
+                dataService: ebaraDataService,
               ),
             ),
             ChangeNotifierProvider(
@@ -151,7 +180,6 @@ class _AppBootstrapState extends State<AppBootstrap> {
             ),
             ChangeNotifierProvider(create: (_) => HistoryProvider()),
             ChangeNotifierProvider(create: (_) => ThemeProvider()),
-            ChangeNotifierProvider(create: (_) => ConnectivityProvider()),
             ChangeNotifierProvider(create: (_) => SplashProvider()),
           ],
           child: const MyApp(),
@@ -176,7 +204,7 @@ class MyApp extends StatelessWidget {
           ? AppTheme.darkTheme
           : AppTheme.lightTheme,
       builder: (context, theme) {
-        return MaterialApp(
+        return MaterialApp.router(
           title: 'Ebara Brasil',
           theme: theme,
           debugShowCheckedModeBanner: false,
@@ -192,11 +220,11 @@ class MyApp extends StatelessWidget {
             Locale('en', ''),
             Locale('es', ''),
           ],
-          initialRoute: '/',
+          routerConfig: AppRouter.router,
           builder: (context, child) {
+            Intl.defaultLocale = locale.toString();
             return OfflineBannerWrapper(child: child!);
           },
-          onGenerateRoute: AppRouter.generateRoute,
         );
       },
     );

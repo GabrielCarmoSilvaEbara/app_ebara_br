@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import '../constants/app_constants.dart';
 
 class AppLocalizations {
   final Locale locale;
@@ -123,6 +125,11 @@ class AppLocalizations {
       'pump_selector': 'Pump Selector',
       'required_field': 'Required field',
       'mandatory': 'Mandatory',
+      'update_available': 'Update Available',
+      'update_desc':
+          'A new version of the app is available. Update now to access new features.',
+      'update_now': 'Update Now',
+      'later': 'Later',
     },
     'pt': {
       'location': 'Localização',
@@ -234,6 +241,11 @@ class AppLocalizations {
       'pump_selector': 'Seletor de Bombas',
       'required_field': 'Campo obrigatório',
       'mandatory': 'Obrigatório',
+      'update_available': 'Atualização Disponível',
+      'update_desc':
+          'Uma nova versão do aplicativo está disponível. Atualize agora para acessar novos recursos.',
+      'update_now': 'Atualizar Agora',
+      'later': 'Depois',
     },
     'es': {
       'location': 'Ubicación',
@@ -345,29 +357,36 @@ class AppLocalizations {
       'pump_selector': 'Selector de Bombas',
       'required_field': 'Campo obligatorio',
       'mandatory': 'Obligatorio',
+      'update_available': 'Actualización Disponible',
+      'update_desc':
+          'Hay una nueva versión de la aplicación disponible. Actualice ahora para acceder a nuevas funciones.',
+      'update_now': 'Actualizar Ahora',
+      'later': 'Más tarde',
     },
   };
 
   String translate(String key, {Map<String, String>? params}) {
     String value;
-    if (key == 'bombas-centrifugas' || key == 'centrifugal-pumps') {
-      value = locale.languageCode == 'pt' || locale.languageCode == 'es'
+    final code = locale.languageCode;
+
+    if (key == CategorySlugs.centrifugal || key == 'centrifugal-pumps') {
+      value = (code == 'pt' || code == 'es')
           ? 'BOMBAS CENTRÍFUGAS'
           : 'CENTRIFUGAL PUMPS';
-    } else if (key == 'bombas-submersas' || key == 'deep-well-pumps') {
-      value = locale.languageCode == 'pt'
+    } else if (key == CategorySlugs.submerged || key == 'deep-well-pumps') {
+      value = code == 'pt'
           ? 'BOMBAS SUBMERSAS'
-          : locale.languageCode == 'es'
+          : code == 'es'
           ? 'BOMBAS SUMERGIBLES'
           : 'DEEP WELL PUMPS';
-    } else if (key == 'bombas-submersiveis' || key == 'submersible-pumps') {
-      value = locale.languageCode == 'pt'
+    } else if (key == CategorySlugs.submersible || key == 'submersible-pumps') {
+      value = code == 'pt'
           ? 'BOMBAS SUBMERSÍVEIS'
-          : locale.languageCode == 'es'
+          : code == 'es'
           ? 'BOMBAS SUMERGIBLES'
           : 'SUBMERSIBLE PUMPS';
     } else {
-      value = _localizedValues[locale.languageCode]?[key] ?? key;
+      value = _localizedValues[code]?[key] ?? key;
     }
 
     if (params != null) {
@@ -389,6 +408,7 @@ class _AppLocalizationsDelegate
 
   @override
   Future<AppLocalizations> load(Locale locale) {
+    Intl.defaultLocale = locale.toString();
     return SynchronousFuture<AppLocalizations>(AppLocalizations(locale));
   }
 

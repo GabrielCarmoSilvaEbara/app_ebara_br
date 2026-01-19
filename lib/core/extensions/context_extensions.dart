@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../localization/app_localizations.dart';
 
 extension ContextExtensions on BuildContext {
@@ -16,16 +17,36 @@ extension ContextExtensions on BuildContext {
 
   double get width => mediaQuery.size.width;
 
-  void pushNamed(String routeName, {Object? arguments}) {
-    Navigator.of(this).pushNamed(routeName, arguments: arguments);
+  void pushNamed(
+    String routeName, {
+    Map<String, String> pathParameters = const <String, String>{},
+    Map<String, dynamic> queryParameters = const <String, dynamic>{},
+    Object? extra,
+  }) {
+    GoRouter.of(this).pushNamed(
+      routeName,
+      pathParameters: pathParameters,
+      queryParameters: queryParameters,
+      extra: extra,
+    );
   }
 
-  void pushReplacementNamed(String routeName, {Object? arguments}) {
-    Navigator.of(this).pushReplacementNamed(routeName, arguments: arguments);
+  void pushReplacementNamed(
+    String routeName, {
+    Map<String, String> pathParameters = const <String, String>{},
+    Map<String, dynamic> queryParameters = const <String, dynamic>{},
+    Object? extra,
+  }) {
+    GoRouter.of(this).pushReplacementNamed(
+      routeName,
+      pathParameters: pathParameters,
+      queryParameters: queryParameters,
+      extra: extra,
+    );
   }
 
-  void pop() {
-    Navigator.of(this).pop();
+  void pop([Object? result]) {
+    GoRouter.of(this).pop(result);
   }
 
   Future<T?> showAppBottomSheet<T>({

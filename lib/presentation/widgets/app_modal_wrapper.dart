@@ -7,6 +7,7 @@ class AppModalWrapper extends StatelessWidget {
   final String? title;
   final Widget? headerAction;
   final double? maxHeightFactor;
+  final Color? backgroundColor;
 
   const AppModalWrapper({
     super.key,
@@ -14,6 +15,7 @@ class AppModalWrapper extends StatelessWidget {
     this.title,
     this.headerAction,
     this.maxHeightFactor = 0.9,
+    this.backgroundColor,
   });
 
   @override
@@ -26,7 +28,7 @@ class AppModalWrapper extends StatelessWidget {
         maxHeight: context.height * (maxHeightFactor ?? 0.9),
       ),
       decoration: BoxDecoration(
-        color: context.theme.scaffoldBackgroundColor,
+        color: backgroundColor ?? context.theme.scaffoldBackgroundColor,
         borderRadius: const BorderRadius.vertical(
           top: Radius.circular(AppDimens.radiusXl),
         ),

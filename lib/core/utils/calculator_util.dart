@@ -1,26 +1,27 @@
 import 'dart:math';
+import '../enums/app_enums.dart';
 
 class CalculatorUtil {
   static double convertFlow(double value, String from, String to) {
     double base = 0;
 
-    if (from == 'm3h') {
+    if (from == FlowUnit.m3h.name) {
       base = value;
-    } else if (from == 'ls') {
+    } else if (from == FlowUnit.ls.name) {
       base = value * 3.6;
-    } else if (from == 'lmin') {
+    } else if (from == FlowUnit.lmin.name) {
       base = value * 0.06;
-    } else if (from == 'gpm') {
+    } else if (from == FlowUnit.gpm.name) {
       base = value * 0.2271;
     }
 
-    if (to == 'm3h') {
+    if (to == FlowUnit.m3h.name) {
       return base;
-    } else if (to == 'ls') {
+    } else if (to == FlowUnit.ls.name) {
       return base / 3.6;
-    } else if (to == 'lmin') {
+    } else if (to == FlowUnit.lmin.name) {
       return base / 0.06;
-    } else if (to == 'gpm') {
+    } else if (to == FlowUnit.gpm.name) {
       return base / 0.2271;
     }
     return 0.0;
@@ -29,23 +30,23 @@ class CalculatorUtil {
   static double convertPressure(double value, String from, String to) {
     double base = 0;
 
-    if (from == 'mca') {
+    if (from == PressureUnit.mca.name) {
       base = value;
-    } else if (from == 'bar') {
+    } else if (from == PressureUnit.bar.name) {
       base = value * 10.197;
-    } else if (from == 'psi') {
+    } else if (from == PressureUnit.psi.name) {
       base = value * 0.703;
-    } else if (from == 'kgfcm2') {
+    } else if (from == PressureUnit.kgfcm2.name) {
       base = value * 10;
     }
 
-    if (to == 'mca') {
+    if (to == PressureUnit.mca.name) {
       return base;
-    } else if (to == 'bar') {
+    } else if (to == PressureUnit.bar.name) {
       return base / 10.197;
-    } else if (to == 'psi') {
+    } else if (to == PressureUnit.psi.name) {
       return base / 0.703;
-    } else if (to == 'kgfcm2') {
+    } else if (to == PressureUnit.kgfcm2.name) {
       return base / 10;
     }
     return 0.0;
@@ -54,19 +55,19 @@ class CalculatorUtil {
   static double convertPower(double value, String from, String to) {
     double base = 0;
 
-    if (from == 'cv') {
+    if (from == PowerUnit.cv.name) {
       base = value * 0.7355;
-    } else if (from == 'hp') {
+    } else if (from == PowerUnit.hp.name) {
       base = value * 0.7457;
-    } else if (from == 'kw') {
+    } else if (from == PowerUnit.kw.name) {
       base = value;
     }
 
-    if (to == 'cv') {
+    if (to == PowerUnit.cv.name) {
       return base / 0.7355;
-    } else if (to == 'hp') {
+    } else if (to == PowerUnit.hp.name) {
       return base / 0.7457;
-    } else if (to == 'kw') {
+    } else if (to == PowerUnit.kw.name) {
       return base;
     }
     return 0.0;
@@ -82,7 +83,7 @@ class CalculatorUtil {
       return 0.0;
     }
 
-    final c = material == 'pvc' ? 150 : 100;
+    final c = material == MaterialType.pvc.name ? 150 : 100;
     final dm = diameterMm / 1000.0;
     final qm3s = flowM3h / 3600.0;
 

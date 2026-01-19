@@ -27,10 +27,11 @@ class SplashProvider with ChangeNotifier {
         historyProvider.init(),
         themeProvider.init(),
         connectivityProvider.init(),
-        locationProvider.initLocation(),
       ]);
 
-      unawaited(homeProvider.reloadData(locationProvider.apiLanguageId));
+      locationProvider.initLocation().then((_) {
+        homeProvider.reloadData(locationProvider.apiLanguageId);
+      });
     } catch (e) {
       debugPrint("Initialization error: $e");
     } finally {

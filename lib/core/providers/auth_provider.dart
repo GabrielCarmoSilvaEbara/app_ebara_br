@@ -94,7 +94,7 @@ class AuthProvider with ChangeNotifier {
       await _settingsBox.put(StorageKeys.keyIsGuest, false);
       _status = AuthStatus.authenticated;
 
-      await AnalyticsService.logLogin('google');
+      await AnalyticsService.logLogin(AnalyticsEvents.login);
 
       notifyListeners();
     } catch (e) {

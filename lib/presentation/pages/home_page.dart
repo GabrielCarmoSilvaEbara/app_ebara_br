@@ -26,6 +26,9 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     context.read<HomeProvider>().resetController();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<HomeProvider>().checkForUpdate(context);
+    });
   }
 
   @override
@@ -170,58 +173,79 @@ class _ProductPageView extends StatelessWidget {
       itemCount: catProvider.categories.length,
       onPageChanged: (index) =>
           homeProvider.onPageChanged(index, locProvider.apiLanguageId),
-      itemBuilder: (context, index) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppDimens.lg),
-          child: Consumer<ProductsProvider>(
-            builder: (context, prodProvider, _) {
-              if (prodProvider.hasError) {
-                return AppErrorState(
-                  message: context.l10n.translate('connect_error'),
-                  onRetry: () => homeProvider.reloadCurrentCategory(
-                    locProvider.apiLanguageId,
-                  ),
-                );
-              }
-              if (prodProvider.isLoading && !prodProvider.isPaginating) {
-                return const _ProductLoadingSkeleton();
-              }
-              if (prodProvider.visibleProducts.isEmpty) {
-                return AppEmptyState(
-                  message: context.l10n.translate('no_products_found'),
-                );
-              }
+      itemBuilder: (context, index) => _ProductPageItem(index: index),
+    );
+  }
+}
 
-              return GridView.builder(
-                cacheExtent: 500,
-                padding: EdgeInsets.zero,
-                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: AppDimens.gridMaxExtent,
-                  childAspectRatio: AppDimens.gridRatio,
-                  crossAxisSpacing: AppDimens.gridSpacing,
-                  mainAxisSpacing: AppDimens.gridSpacing,
+class _ProductPageItem extends StatefulWidget {
+  final int index;
+  const _ProductPageItem({required this.index});
+
+  @override
+  State<_ProductPageItem> createState() => _ProductPageItemState();
+}
+
+class _ProductPageItemState extends State<_ProductPageItem>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    final catProvider = context.read<CategoriesProvider>();
+    final homeProvider = context.read<HomeProvider>();
+    final locProvider = context.read<LocationProvider>();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppDimens.lg),
+      child: Consumer<ProductsProvider>(
+        builder: (context, prodProvider, _) {
+          if (prodProvider.hasError) {
+            return AppErrorState(
+              message: context.l10n.translate('connect_error'),
+              onRetry: () =>
+                  homeProvider.reloadCurrentCategory(locProvider.apiLanguageId),
+            );
+          }
+          if (prodProvider.isLoading && !prodProvider.isPaginating) {
+            return const _ProductLoadingSkeleton();
+          }
+          if (prodProvider.visibleProducts.isEmpty) {
+            return AppEmptyState(
+              message: context.l10n.translate('no_products_found'),
+            );
+          }
+
+          return GridView.builder(
+            cacheExtent: 500,
+            padding: EdgeInsets.zero,
+            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+              maxCrossAxisExtent: AppDimens.gridMaxExtent,
+              childAspectRatio: AppDimens.gridRatio,
+              crossAxisSpacing: AppDimens.gridSpacing,
+              mainAxisSpacing: AppDimens.gridSpacing,
+            ),
+            itemCount:
+                prodProvider.visibleProducts.length +
+                (prodProvider.isPaginating ? 2 : 0),
+            itemBuilder: (context, idx) {
+              if (idx >= prodProvider.visibleProducts.length) {
+                return const ProductCardSkeleton();
+              }
+              final product = prodProvider.visibleProducts[idx];
+              return ProductCard(
+                category: context.l10n.translate(
+                  catProvider.selectedCategorySlug,
                 ),
-                itemCount:
-                    prodProvider.visibleProducts.length +
-                    (prodProvider.isPaginating ? 2 : 0),
-                itemBuilder: (context, idx) {
-                  if (idx >= prodProvider.visibleProducts.length) {
-                    return const ProductCardSkeleton();
-                  }
-                  final product = prodProvider.visibleProducts[idx];
-                  return ProductCard(
-                    category: context.l10n.translate(
-                      catProvider.selectedCategorySlug,
-                    ),
-                    product: product,
-                    onActionPressed: () {},
-                  );
-                },
+                product: product,
+                onActionPressed: () {},
               );
             },
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }

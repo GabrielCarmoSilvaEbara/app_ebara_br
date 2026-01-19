@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/providers/products_provider.dart';
 import '../../core/extensions/context_extensions.dart';
-import 'product_details_page.dart';
+import '../../core/router/app_router.dart';
 
 class DeepLinkLoadingPage extends StatefulWidget {
   final String categoryId;
@@ -39,14 +39,9 @@ class _DeepLinkLoadingPageState extends State<DeepLinkLoadingPage> {
       if (!mounted) return;
 
       if (product != null) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ProductDetailsPage(
-              category: widget.categoryId,
-              variants: product.variants,
-            ),
-          ),
+        context.pushReplacementNamed(
+          AppRoutes.productDetails,
+          extra: {'category': widget.categoryId, 'variants': product.variants},
         );
       } else {
         _handleError();
@@ -57,7 +52,7 @@ class _DeepLinkLoadingPageState extends State<DeepLinkLoadingPage> {
   }
 
   void _handleError() {
-    context.pushReplacementNamed('/home');
+    context.pushReplacementNamed(AppRoutes.home);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(context.l10n.translate('product_not_found'))),
     );

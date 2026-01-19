@@ -14,11 +14,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "701048514790-51amsc6k0rufenoiivsln2orfish7b4m.apps.googleusercontent.com",
+          "client_id": "701048514790-p3pjlcp64trdogacu3sil6vtlralfn31.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.ebara.app",
-            "certificate_hash": "00158f619dc3c5ca5bbebac6f81f03630f4f16a7"
+            "certificate_hash": "b72d3b5ed9ed81f8728b5489dae4b938e6377a55"
           }
         },
         {

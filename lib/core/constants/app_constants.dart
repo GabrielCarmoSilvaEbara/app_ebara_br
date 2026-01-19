@@ -1,5 +1,5 @@
 class AppConstants {
-  static const String apiBaseUrl = 'https://ebara.com.br/api';
+  static const String apiBaseUrl = 'https://ebara.com.br/api/';
   static const String ebaraBaseUrl = 'https://ebara.com.br';
   static const String ebaraFilesUrl =
       'https://ebara.com.br/userfiles/aplicacoes';
@@ -20,18 +20,38 @@ class AppConstants {
       'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
   static const String mapTileUrlDark =
       'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-  static const String nominatimUrl = 'https://nominatim.openstreetmap.org';
+  static const String nominatimUrl = 'https://nominatim.openstreetmap.org/';
   static const String userAgent = 'app-ebara/1.0 (contato@seudominio.com)';
 }
 
 class CategoryIds {
+  static const String centrifugal = '22';
   static const String submersible = '23';
+  static const String deepWell = '24';
   static const String solar = '26';
   static const String pressurizer = '27';
-  static const String pressurizerSlug = 'sistemas-de-pressurizacao-1';
   static const String industrial = '28';
   static const String residential = '29';
-  static const String centrifugal = '22';
+}
+
+class CategorySlugs {
+  static const String centrifugal = 'bombas-centrifugas';
+  static const String submerged = 'bombas-submersas';
+  static const String submersible = 'bombas-submersiveis';
+  static const String solar = 'sistema-solar-ecaros-1';
+  static const String pressurizer = 'sistemas-de-pressurizacao-1';
+  static const String industrial = 'industrial';
+  static const String residential = 'residencial';
+}
+
+class SystemConstants {
+  static const String all = 'TODOS';
+  static const String pressostat = 'pressostato';
+  static const String inverter = 'inversor';
+  static const String defaultValueZero = '0';
+  static const String defaultFlowMeasure = 'm3/h';
+  static const String defaultHeadMeasure = 'm';
+  static const int defaultFrequency = 60;
 }
 
 class StorageKeys {

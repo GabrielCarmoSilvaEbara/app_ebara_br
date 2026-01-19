@@ -1,5 +1,31 @@
 import 'package:firebase_analytics/firebase_analytics.dart';
 
+class AnalyticsEvents {
+  static const String login = 'login';
+  static const String viewItem = 'view_item';
+  static const String pumpSearch = 'pump_search';
+  static const String changeLocation = 'change_location';
+  static const String compareProducts = 'compare_products';
+  static const String downloadDocument = 'download_document';
+}
+
+class AnalyticsParams {
+  static const String method = 'login_method';
+  static const String flowRate = 'flow_rate';
+  static const String headGauge = 'head_gauge';
+  static const String application = 'application';
+  static const String categoryId = 'category_id';
+  static const String city = 'city';
+  static const String state = 'state';
+  static const String userCity = 'user_city';
+  static const String userState = 'user_state';
+  static const String baseProductId = 'base_product_id';
+  static const String compareProductId = 'compare_product_id';
+  static const String fileName = 'file_name';
+  static const String productName = 'product_name';
+  static const String currency = 'BRL';
+}
+
 class AnalyticsService {
   static final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
 
@@ -13,7 +39,7 @@ class AnalyticsService {
     String category,
   ) async {
     await _analytics.logViewItem(
-      currency: 'BRL',
+      currency: AnalyticsParams.currency,
       items: [
         AnalyticsEventItem(itemId: id, itemName: name, itemCategory: category),
       ],
@@ -27,22 +53,28 @@ class AnalyticsService {
     required String categoryId,
   }) async {
     await _analytics.logEvent(
-      name: 'pump_search',
+      name: AnalyticsEvents.pumpSearch,
       parameters: {
-        'flow_rate': flowRate,
-        'head_gauge': head,
-        'application': application,
-        'category_id': categoryId,
+        AnalyticsParams.flowRate: flowRate,
+        AnalyticsParams.headGauge: head,
+        AnalyticsParams.application: application,
+        AnalyticsParams.categoryId: categoryId,
       },
     );
   }
 
   static Future<void> setUserLocation(String city, String state) async {
-    await _analytics.setUserProperty(name: 'user_city', value: city);
-    await _analytics.setUserProperty(name: 'user_state', value: state);
+    await _analytics.setUserProperty(
+      name: AnalyticsParams.userCity,
+      value: city,
+    );
+    await _analytics.setUserProperty(
+      name: AnalyticsParams.userState,
+      value: state,
+    );
     await _analytics.logEvent(
-      name: 'change_location',
-      parameters: {'city': city, 'state': state},
+      name: AnalyticsEvents.changeLocation,
+      parameters: {AnalyticsParams.city: city, AnalyticsParams.state: state},
     );
   }
 
@@ -51,8 +83,11 @@ class AnalyticsService {
     String compareId,
   ) async {
     await _analytics.logEvent(
-      name: 'compare_products',
-      parameters: {'base_product_id': baseId, 'compare_product_id': compareId},
+      name: AnalyticsEvents.compareProducts,
+      parameters: {
+        AnalyticsParams.baseProductId: baseId,
+        AnalyticsParams.compareProductId: compareId,
+      },
     );
   }
 
@@ -61,8 +96,11 @@ class AnalyticsService {
     String productName,
   ) async {
     await _analytics.logEvent(
-      name: 'download_document',
-      parameters: {'file_name': fileName, 'product_name': productName},
+      name: AnalyticsEvents.downloadDocument,
+      parameters: {
+        AnalyticsParams.fileName: fileName,
+        AnalyticsParams.productName: productName,
+      },
     );
   }
 }

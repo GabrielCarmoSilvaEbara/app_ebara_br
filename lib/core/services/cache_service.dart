@@ -20,7 +20,11 @@ class CacheService {
     }
   }
 
-  T? get<T>(String key, {Duration? validDuration}) {
+  T? get<T>(
+    String key, {
+    Duration? validDuration,
+    bool deleteIfExpired = true,
+  }) {
     if (!_box.containsKey(key)) return null;
 
     try {
@@ -39,10 +43,14 @@ class CacheService {
         }
         return rawData as T;
       } else {
-        _box.delete(key);
+        if (deleteIfExpired) {
+          _box.delete(key);
+        }
       }
     } catch (_) {
-      _box.delete(key);
+      if (deleteIfExpired) {
+        _box.delete(key);
+      }
     }
     return null;
   }

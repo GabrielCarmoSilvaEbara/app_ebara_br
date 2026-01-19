@@ -16,6 +16,7 @@ class ComparisonSheet extends StatelessWidget {
     return AppModalWrapper(
       title: context.l10n.translate('technical_comparison'),
       maxHeightFactor: AppDimens.modalHeightMd,
+      backgroundColor: context.colors.surface,
       child: ListView(
         padding: const EdgeInsets.all(AppDimens.lg),
         children: [
@@ -24,6 +25,12 @@ class ComparisonSheet extends StatelessWidget {
             baseValue: base.power,
             currentValue: current.power,
             unit: "CV",
+          ),
+          ComparisonItem(
+            label: context.l10n.translate('rotation'),
+            baseValue: base.rpm,
+            currentValue: current.rpm,
+            unit: "RPM",
           ),
           ComparisonItem(
             label: context.l10n.translate('max_pressure'),
@@ -60,6 +67,8 @@ class ComparisonItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final isDark = context.theme.brightness == Brightness.dark;
+    final textColor = isDark ? colors.onPrimary : colors.primary;
 
     final maxVal = (baseValue > currentValue ? baseValue : currentValue);
     final safeMax = maxVal == 0 ? 1.0 : maxVal;
@@ -72,10 +81,10 @@ class ComparisonItem extends StatelessWidget {
       padding: const EdgeInsets.all(AppDimens.md),
       decoration: BoxDecoration(
         color: colors.surfaceContainer,
-        borderRadius: BorderRadius.circular(AppDimens.radiusLg),
+        borderRadius: BorderRadius.circular(AppDimens.radiusMd),
         border: baseValue != currentValue
             ? Border.all(
-                color: colors.primary..withValues(alpha: AppDimens.opacityLow),
+                color: colors.primary.withValues(alpha: AppDimens.opacityLow),
               )
             : null,
       ),
@@ -87,7 +96,7 @@ class ComparisonItem extends StatelessWidget {
               Text(
                 label,
                 style: TextStyle(
-                  color: colors.primary,
+                  color: textColor,
                   fontWeight: FontWeight.bold,
                   fontSize: AppDimens.fontMd,
                 ),
@@ -146,8 +155,11 @@ class StatBar extends StatelessWidget {
             label,
             style: TextStyle(
               fontSize: AppDimens.fontXs,
-              color: labelColor ?? context.colors.onSurface
-                ..withValues(alpha: AppDimens.opacityHigh),
+              color:
+                  labelColor ??
+                  context.colors.onSurface.withValues(
+                    alpha: AppDimens.opacityHigh,
+                  ),
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -158,8 +170,9 @@ class StatBar extends StatelessWidget {
               Container(
                 height: AppDimens.lg,
                 decoration: BoxDecoration(
-                  color: context.colors.onSurface
-                    ..withValues(alpha: AppDimens.opacityLow),
+                  color: context.colors.onSurface.withValues(
+                    alpha: AppDimens.opacityLow,
+                  ),
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),

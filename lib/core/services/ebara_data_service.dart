@@ -97,6 +97,9 @@ List<Map<String, dynamic>> _parseGenericList(dynamic json) {
 class EbaraDataService {
   final ApiService _api;
 
+  static const Duration _shortCache = Duration(hours: 4);
+  static const Duration _longCache = Duration(days: 365);
+
   EbaraDataService({ApiService? api})
     : _api =
           api ??
@@ -110,20 +113,20 @@ class EbaraDataService {
           );
 
   static const Map<String, IconData> categoryIcons = {
-    'bombas-centrifugas': Icons.tune,
-    'bombas-submersas': Icons.water,
-    'bombas-submersiveis': Icons.water_drop,
-    'sistema-solar-ecaros-1': Icons.wb_sunny,
-    'sistemas-de-pressurizacao-1': Icons.compress,
-    'industrial': Icons.factory,
-    'residencial': Icons.home,
-    '22': Icons.tune,
-    '23': Icons.water,
-    '24': Icons.water_drop,
-    '26': Icons.wb_sunny,
-    '27': Icons.compress,
-    '28': Icons.factory,
-    '29': Icons.home,
+    CategorySlugs.centrifugal: Icons.tune,
+    CategorySlugs.submerged: Icons.water,
+    CategorySlugs.submersible: Icons.water_drop,
+    CategorySlugs.solar: Icons.wb_sunny,
+    CategorySlugs.pressurizer: Icons.compress,
+    CategorySlugs.industrial: Icons.factory,
+    CategorySlugs.residential: Icons.home,
+    CategoryIds.centrifugal: Icons.tune,
+    CategoryIds.submersible: Icons.water,
+    CategoryIds.deepWell: Icons.water_drop,
+    CategoryIds.solar: Icons.wb_sunny,
+    CategoryIds.pressurizer: Icons.compress,
+    CategoryIds.industrial: Icons.factory,
+    CategoryIds.residential: Icons.home,
   };
 
   Future<List<CategoryModel>> fetchCategories({int idLanguage = 1}) async {
@@ -131,6 +134,7 @@ class EbaraDataService {
       ApiEndpoints.categories,
       queryParams: {'id_language': idLanguage},
       cacheDuration: const Duration(days: 7),
+      offlineCacheDuration: _longCache,
     );
     if (!response.isSuccess) return [];
     return compute(_parseCategories, response.data);
@@ -139,15 +143,16 @@ class EbaraDataService {
   Future<List<ProductModel>> searchProducts(ProductFilterParams params) async {
     String endpoint = ApiEndpoints.searchBomb;
     final bool isPressurizer =
-        params.categoryId == '27' ||
-        params.categoryId == 'sistemas-de-pressurizacao-1';
+        params.categoryId == CategoryIds.pressurizer ||
+        params.categoryId == CategorySlugs.pressurizer;
 
     if (isPressurizer) endpoint = ApiEndpoints.searchPressurization;
 
     final response = await _api.get<dynamic>(
       endpoint,
       queryParams: params.toMap(),
-      cacheDuration: const Duration(hours: 4),
+      cacheDuration: _shortCache,
+      offlineCacheDuration: _longCache,
     );
 
     if (!response.isSuccess) return [];
@@ -166,6 +171,7 @@ class EbaraDataService {
       ApiEndpoints.getDescriptions,
       queryParams: {'id_product': productId, 'id_language': idLanguage ?? 1},
       cacheDuration: const Duration(hours: 12),
+      offlineCacheDuration: _longCache,
     );
     if (!response.isSuccess) return null;
     return compute(_parseDescriptions, response.data);
@@ -178,7 +184,8 @@ class EbaraDataService {
     final response = await _api.get<dynamic>(
       ApiEndpoints.getArchives,
       queryParams: {'id_product': productId, 'id_language': idLanguage ?? 1},
-      cacheDuration: const Duration(hours: 4),
+      cacheDuration: _shortCache,
+      offlineCacheDuration: _longCache,
     );
     if (!response.isSuccess) return [];
     return compute(_parseFiles, response.data);
@@ -191,7 +198,8 @@ class EbaraDataService {
     final response = await _api.get<dynamic>(
       ApiEndpoints.getApplications,
       queryParams: {'id_product': productId, 'id_language': idLanguage ?? 1},
-      cacheDuration: const Duration(hours: 4),
+      cacheDuration: _shortCache,
+      offlineCacheDuration: _longCache,
     );
     if (!response.isSuccess) return [];
     return compute(_parseGenericList, response.data);
@@ -203,7 +211,8 @@ class EbaraDataService {
     final response = await _api.get<dynamic>(
       ApiEndpoints.applicationsList,
       queryParams: {'id_category': categoryId},
-      cacheDuration: const Duration(hours: 4),
+      cacheDuration: _shortCache,
+      offlineCacheDuration: _longCache,
     );
     if (!response.isSuccess) return [];
     return compute(_parseGenericList, response.data);
@@ -216,7 +225,8 @@ class EbaraDataService {
     final response = await _api.get<dynamic>(
       endpoint,
       queryParams: params,
-      cacheDuration: const Duration(hours: 4),
+      cacheDuration: _shortCache,
+      offlineCacheDuration: _longCache,
     );
     if (!response.isSuccess) return [];
     return compute(_parseGenericList, response.data);
@@ -224,7 +234,7 @@ class EbaraDataService {
 
   Future<List<Map<String, dynamic>>> getLines(
     String categoryId, {
-    String application = 'TODOS',
+    String application = SystemConstants.all,
   }) {
     return _getSimpleList(
       ApiEndpoints.getLines,
@@ -248,9 +258,24 @@ class EbaraDataService {
     final response = await _api.get<List<dynamic>>(
       ApiEndpoints.getDiameters,
       cacheDuration: const Duration(days: 30),
+      offlineCacheDuration: _longCache,
     );
 
     if (!response.isSuccess) return [];
     return response.data!.map((e) => e.toString()).toList();
+  }
+
+  Future<String?> getAppVersionInfo() async {
+    final response = await _api.get<dynamic>(
+      ApiEndpoints.update,
+      cacheDuration: const Duration(minutes: 30),
+    );
+
+    if (response.isSuccess && response.data != null) {
+      if (response.data is Map && response.data['data'] != null) {
+        return response.data['data'].toString();
+      }
+    }
+    return null;
   }
 }

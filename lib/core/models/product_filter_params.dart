@@ -22,20 +22,20 @@ class ProductFilterParams {
 
   ProductFilterParams({
     required this.categoryId,
-    this.application = AppConstantsStrings.all,
-    this.line = AppConstantsStrings.all,
+    this.application = SystemConstants.all,
+    this.line = SystemConstants.all,
     this.flowRate = 0.0,
-    this.flowRateMeasure = AppConstantsStrings.m3h,
+    this.flowRateMeasure = SystemConstants.defaultFlowMeasure,
     this.heightGauge = 0.0,
-    this.heightGaugeMeasure = AppConstantsStrings.m,
-    this.frequency = 60,
+    this.heightGaugeMeasure = SystemConstants.defaultHeadMeasure,
+    this.frequency = SystemConstants.defaultFrequency,
     this.types = 0,
     this.wellDiameter,
     this.cableLength,
     this.sunExposure = 5.0,
-    this.activation = 'pressostato',
+    this.activation = SystemConstants.pressostat,
     this.bombsQuantity = 1,
-    this.inverter = AppConstantsStrings.all,
+    this.inverter = SystemConstants.all,
     this.alignedEquipment = 0,
     this.idLanguage = 1,
   });
@@ -53,7 +53,7 @@ class ProductFilterParams {
 
     final bool isPressurizer =
         categoryId == CategoryIds.pressurizer ||
-        categoryId == CategoryIds.pressurizerSlug;
+        categoryId == CategorySlugs.pressurizer;
 
     if (isPressurizer) {
       params['activation'] = activation;

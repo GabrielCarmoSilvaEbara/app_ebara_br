@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/extensions/context_extensions.dart';
 import '../../core/constants/app_assets.dart';
+import '../../core/router/app_router.dart';
 import '../widgets/app_buttons.dart';
 import '../theme/app_dimens.dart';
 
@@ -22,7 +23,7 @@ class _LoginPageState extends State<LoginPage> {
     try {
       await auth.signInWithGoogle();
       if (!mounted) return;
-      context.pushReplacementNamed('/home');
+      context.pushReplacementNamed(AppRoutes.home);
     } catch (e) {
       if (!mounted) return;
       context.showSnackBar(
@@ -38,7 +39,7 @@ class _LoginPageState extends State<LoginPage> {
     final auth = context.read<AuthProvider>();
     await auth.continueAsGuest();
     if (!mounted) return;
-    context.pushReplacementNamed('/home');
+    context.pushReplacementNamed(AppRoutes.home);
   }
 
   @override
@@ -109,7 +110,7 @@ class LoginHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final logoSize = AppDimens.xxxl * 2; // 80
+    final logoSize = AppDimens.xxxl * 2;
 
     return Column(
       children: [

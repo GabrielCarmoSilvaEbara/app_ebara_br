@@ -1,6 +1,6 @@
 import 'dart:convert';
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'cache_service.dart';
 
 class ApiService {
@@ -8,7 +8,7 @@ class ApiService {
   final Map<String, String> defaultHeaders;
   final Duration timeout;
   final CacheService? _cacheService;
-  final http.Client _client = http.Client();
+  late final Dio _dio;
 
   ApiService({
     required this.baseUrl,
@@ -16,7 +16,17 @@ class ApiService {
     this.timeout = const Duration(seconds: 30),
     CacheService? cacheService,
   }) : defaultHeaders = defaultHeaders ?? {},
-       _cacheService = cacheService;
+       _cacheService = cacheService {
+    _dio = Dio(
+      BaseOptions(
+        baseUrl: baseUrl,
+        connectTimeout: timeout,
+        receiveTimeout: timeout,
+        headers: this.defaultHeaders,
+        responseType: ResponseType.plain,
+      ),
+    );
+  }
 
   Future<ApiResponse<T>> get<T>(
     String endpoint, {
@@ -25,14 +35,16 @@ class ApiService {
     T Function(dynamic)? parser,
     bool useCache = true,
     Duration? cacheDuration,
+    Duration? offlineCacheDuration,
   }) async {
     final uri = _buildUri(endpoint, queryParams);
     final cacheKey = uri.toString();
 
-    if (useCache && _cacheService != null) {
+    if (useCache && _cacheService != null && cacheDuration != null) {
       final cached = _cacheService.get<dynamic>(
         cacheKey,
         validDuration: cacheDuration,
+        deleteIfExpired: false,
       );
       if (cached != null) {
         final data = parser != null ? parser(cached) : cached as T;
@@ -41,27 +53,47 @@ class ApiService {
     }
 
     try {
-      final response = await _client
-          .get(uri, headers: {...defaultHeaders, ...?headers})
-          .timeout(timeout);
+      final response = await _dio.getUri<String>(
+        uri,
+        options: Options(headers: headers),
+      );
 
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        final body = response.body;
-        if (useCache && _cacheService != null) {
+      if (response.statusCode != null &&
+          response.statusCode! >= 200 &&
+          response.statusCode! < 300) {
+        final body = response.data;
+        if (useCache && _cacheService != null && body != null) {
           await _cacheService.put(cacheKey, body);
         }
 
-        final decoded = await compute(jsonDecode, body);
+        final decoded = await compute(jsonDecode, body!);
         final data = parser != null ? parser(decoded) : decoded as T;
         return ApiResponse.success(data, response.statusCode);
       }
 
-      return ApiResponse.error(
-        'Erro ${response.statusCode}: ${response.reasonPhrase}',
-        response.statusCode,
+      throw DioException(
+        requestOptions: response.requestOptions,
+        response: response,
+        type: DioExceptionType.badResponse,
       );
     } catch (e) {
-      return ApiResponse.error('Erro de conexão: $e');
+      if (useCache && _cacheService != null && offlineCacheDuration != null) {
+        final staleCache = _cacheService.get<dynamic>(
+          cacheKey,
+          validDuration: offlineCacheDuration,
+          deleteIfExpired: false,
+        );
+
+        if (staleCache != null) {
+          final data = parser != null ? parser(staleCache) : staleCache as T;
+          return ApiResponse.success(data, 200);
+        }
+      }
+
+      if (e is DioException) {
+        return ApiResponse.error('Erro de conexão: ${e.message}');
+      }
+      return ApiResponse.error('Erro: $e');
     }
   }
 
@@ -71,17 +103,12 @@ class ApiService {
     T Function(dynamic)? parser,
   }) async {
     try {
-      final uri = _buildUri(endpoint, null);
-      final response = await _client
-          .post(
-            uri,
-            headers: defaultHeaders,
-            body: body != null ? jsonEncode(body) : null,
-          )
-          .timeout(timeout);
+      final response = await _dio.post<String>(endpoint, data: body);
 
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        final decoded = await compute(jsonDecode, response.body);
+      if (response.statusCode != null &&
+          response.statusCode! >= 200 &&
+          response.statusCode! < 300) {
+        final decoded = await compute(jsonDecode, response.data!);
         final data = parser != null ? parser(decoded) : decoded as T;
         return ApiResponse.success(data, response.statusCode);
       }
@@ -89,6 +116,8 @@ class ApiService {
         'Erro ${response.statusCode}',
         response.statusCode,
       );
+    } on DioException catch (e) {
+      return ApiResponse.error('Erro: ${e.message}');
     } catch (e) {
       return ApiResponse.error('Erro: $e');
     }

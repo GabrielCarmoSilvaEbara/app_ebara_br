@@ -7,6 +7,13 @@ import '../services/analytics_service.dart';
 import '../models/product_model.dart';
 import 'history_provider.dart';
 
+class ProductDescKeys {
+  static const String description = 'description';
+  static const String specifications = 'specifications';
+  static const String options = 'options';
+  static const String apps = 'apps';
+}
+
 class ProductDetailsProvider with ChangeNotifier {
   final EbaraDataService _dataService;
 
