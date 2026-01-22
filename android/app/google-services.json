@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "701048514790-tpodagftspan0br5knhjmjriggvqvi23.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.ebara.app",
+            "certificate_hash": "38ffb9b3e2b4247521348475f9cec0dbd8823d67"
+          }
+        },
+        {
           "client_id": "701048514790-2u6k9dn5d120h4lpedpifjcs3dv93up4.apps.googleusercontent.com",
           "client_type": 3
         }

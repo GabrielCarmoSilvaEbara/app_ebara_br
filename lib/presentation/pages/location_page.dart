@@ -67,6 +67,7 @@ class _LocationPageState extends State<LocationPage> {
 
   @override
   Widget build(BuildContext context) {
+    final locationProvider = context.watch<LocationProvider>();
     return Scaffold(
       extendBodyBehindAppBar: true,
       body: Stack(
@@ -94,17 +95,21 @@ class _LocationPageState extends State<LocationPage> {
                         AppDimens.sm.hGap,
                       ],
                       Expanded(
-                        child: Consumer<LocationProvider>(
-                          builder: (context, provider, _) {
-                            return AppSearchBar(
-                              controller: _searchController,
-                              hintText: context.l10n.translate('search'),
-                              showFilterButton: false,
-                              enabled:
-                                  !provider.isGpsLoading && !provider.isLoading,
-                              onSubmitted: _onSearchSubmitted,
-                            );
+                        child: AppSearchBar(
+                          controller: _searchController,
+                          hintText: context.l10n.translate('search'),
+                          showFilterButton: false,
+                          enabled:
+                              !locationProvider.isGpsLoading &&
+                              !locationProvider.isLoading,
+                          searchHistory: locationProvider.locationSearchHistory,
+                          onSubmitted: _onSearchSubmitted,
+                          onHistorySelect: (val) {
+                            _searchController.text = val;
+                            _onSearchSubmitted(val);
                           },
+                          onHistoryRemove: (val) =>
+                              locationProvider.removeFromSearchHistory(val),
                         ),
                       ),
                     ],
@@ -114,12 +119,22 @@ class _LocationPageState extends State<LocationPage> {
                 Consumer<LocationProvider>(
                   builder: (context, provider, _) {
                     if (provider.results.isNotEmpty) {
-                      _moveToLocation(provider.previewLat, provider.previewLon);
-                      if (_carouselController.hasClients &&
-                          _carouselController.page?.round() !=
-                              provider.currentIndex) {
-                        _carouselController.jumpToPage(provider.currentIndex);
-                      }
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) {
+                          _moveToLocation(
+                            provider.previewLat,
+                            provider.previewLon,
+                          );
+
+                          if (_carouselController.hasClients &&
+                              _carouselController.page?.round() !=
+                                  provider.currentIndex) {
+                            _carouselController.jumpToPage(
+                              provider.currentIndex,
+                            );
+                          }
+                        }
+                      });
 
                       return BottomLocationCard(
                         isInitialSelection: widget.isInitialSelection,

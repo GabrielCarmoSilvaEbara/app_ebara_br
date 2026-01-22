@@ -104,9 +104,6 @@ abstract class FilterStrategy {
                 focusNode: flowFocus,
                 textInputAction: TextInputAction.next,
                 onFieldSubmitted: (_) => headFocus.requestFocus(),
-                validator: (v) => v == null || v.isEmpty
-                    ? context.l10n.translate('required_field')
-                    : null,
                 suffixWidget: DropdownButton<String>(
                   value: unit,
                   dropdownColor: context.theme.cardColor,
@@ -145,9 +142,6 @@ abstract class FilterStrategy {
                 focusNode: headFocus,
                 textInputAction: headAction,
                 onFieldSubmitted: (_) => onHeadSubmitted?.call(),
-                validator: (v) => v == null || v.isEmpty
-                    ? context.l10n.translate('required_field')
-                    : null,
                 suffixWidget: DropdownButton<String>(
                   value: unit,
                   dropdownColor: context.theme.cardColor,

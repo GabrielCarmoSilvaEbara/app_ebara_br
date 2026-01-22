@@ -152,13 +152,19 @@ class FilterProvider with ChangeNotifier {
       application: application,
     );
 
+    final uniqueIds = <String>{};
+
     _models = data
-        .map(
-          (e) => {
-            'value': e['title_product'].toString(),
+        .where((e) {
+          final val = e['id_product']?.toString() ?? e['id']?.toString();
+          return uniqueIds.add(val ?? '');
+        })
+        .map((e) {
+          return {
+            'value': e['id_product']?.toString() ?? e['id'].toString(),
             'title': e['title_product'].toString(),
-          },
-        )
+          };
+        })
         .toList();
 
     if (_models.isNotEmpty) selectedModel = _models.first['value'];
@@ -263,10 +269,7 @@ class FilterProvider with ChangeNotifier {
     bool isPressurizer,
     bool isSolar,
   ) {
-    if (selectedApplication == null ||
-        selectedModel == null ||
-        flow.isEmpty ||
-        head.isEmpty) {
+    if (selectedApplication == null || selectedModel == null) {
       return true;
     }
 

@@ -153,6 +153,7 @@ class _AuthModalSheetState extends State<AuthModalSheet> {
                     ),
                   ),
                 ],
+
                 const SizedBox(height: AppDimens.gridSpacing),
                 if (isGuest)
                   AppPrimaryButton(

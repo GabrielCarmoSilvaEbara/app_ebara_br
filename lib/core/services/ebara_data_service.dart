@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'api_service.dart';
 import '../../core/utils/parse_util.dart';
 import '../../core/extensions/string_extensions.dart';
@@ -14,10 +13,7 @@ List<CategoryModel> _parseCategories(dynamic json) {
     return (json['data'] as List).map((cat) {
       final String id = cat['id']?.toString() ?? '';
       final String slug = cat['slug'] ?? '';
-      final icon =
-          EbaraDataService.categoryIcons[slug] ??
-          EbaraDataService.categoryIcons[id] ??
-          Icons.category;
+      final icon = CategoryUtil.getIconForCategory(id, slug);
       return CategoryModel.fromJson(cat, icon: icon);
     }).toList();
   }
@@ -94,6 +90,11 @@ List<Map<String, dynamic>> _parseGenericList(dynamic json) {
   return (json['data'] as List).map((e) => e as Map<String, dynamic>).toList();
 }
 
+List<Map<String, dynamic>> _parseRepresentatives(dynamic json) {
+  if (json['status'] != true || json['data'] == null) return [];
+  return List<Map<String, dynamic>>.from(json['data']);
+}
+
 class EbaraDataService {
   final ApiService _api;
 
@@ -111,23 +112,6 @@ class EbaraDataService {
               'api-token': AppConstants.apiToken,
             },
           );
-
-  static const Map<String, IconData> categoryIcons = {
-    CategorySlugs.centrifugal: Icons.tune,
-    CategorySlugs.submerged: Icons.water,
-    CategorySlugs.submersible: Icons.water_drop,
-    CategorySlugs.solar: Icons.wb_sunny,
-    CategorySlugs.pressurizer: Icons.compress,
-    CategorySlugs.industrial: Icons.factory,
-    CategorySlugs.residential: Icons.home,
-    CategoryIds.centrifugal: Icons.tune,
-    CategoryIds.submersible: Icons.water,
-    CategoryIds.deepWell: Icons.water_drop,
-    CategoryIds.solar: Icons.wb_sunny,
-    CategoryIds.pressurizer: Icons.compress,
-    CategoryIds.industrial: Icons.factory,
-    CategoryIds.residential: Icons.home,
-  };
 
   Future<List<CategoryModel>> fetchCategories({int idLanguage = 1}) async {
     final response = await _api.get<dynamic>(
@@ -277,5 +261,26 @@ class EbaraDataService {
       }
     }
     return null;
+  }
+
+  Future<List<Map<String, dynamic>>> getRepresentatives({
+    String? state,
+    String? brandId,
+    int idLanguage = 1,
+  }) async {
+    final Map<String, dynamic> params = {'lang': idLanguage};
+    if (state != null && state.isNotEmpty) params['state'] = state;
+    if (brandId != null && brandId.isNotEmpty) {
+      params['id_brand'] = brandId;
+    }
+
+    final response = await _api.get<dynamic>(
+      ApiEndpoints.searchRepresentatives,
+      queryParams: params,
+      cacheDuration: _shortCache,
+    );
+
+    if (!response.isSuccess) return [];
+    return compute(_parseRepresentatives, response.data);
   }
 }

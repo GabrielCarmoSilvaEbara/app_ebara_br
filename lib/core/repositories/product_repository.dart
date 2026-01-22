@@ -4,7 +4,6 @@ import '../models/product_filter_params.dart';
 import '../models/product_model.dart';
 import '../services/api_service.dart';
 import '../services/cache_service.dart';
-import '../services/ebara_data_service.dart';
 import '../providers/connectivity_provider.dart';
 import '../constants/api_endpoints.dart';
 import '../constants/app_constants.dart';
@@ -71,9 +70,7 @@ List<CategoryModel> parseCategoriesIsolate(dynamic json) {
     return (json['data'] as List).map((cat) {
       final String id = cat['id']?.toString() ?? '';
       final String slug = cat['slug'] ?? '';
-      final icon =
-          EbaraDataService.categoryIcons[slug] ??
-          EbaraDataService.categoryIcons[id];
+      final icon = CategoryUtil.getIconForCategory(id, slug);
       return CategoryModel.fromJson(cat, icon: icon);
     }).toList();
   }

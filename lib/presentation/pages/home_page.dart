@@ -26,6 +26,7 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     context.read<HomeProvider>().resetController();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<HomeProvider>().checkForUpdate(context);
     });
@@ -33,7 +34,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final homeProvider = context.read<HomeProvider>();
+    final homeProvider = context.watch<HomeProvider>();
     final productsProvider = context.read<ProductsProvider>();
     final locProvider = context.read<LocationProvider>();
 
@@ -63,7 +64,19 @@ class _HomePageState extends State<HomePage> {
               child: AppSearchBar(
                 hintText: context.l10n.translate('search'),
                 debounceDuration: AppDimens.durationSlow,
-                onChanged: (val) => productsProvider.onSearchInputChanged(val),
+                onChanged: null,
+                onClear: () => productsProvider.clearSearch(),
+                searchHistory: homeProvider.productSearchHistory,
+                onSubmitted: (val) {
+                  homeProvider.addToSearchHistory(val);
+                  productsProvider.onSearchInputChanged(val);
+                },
+                onHistorySelect: (val) {
+                  homeProvider.addToSearchHistory(val);
+                  productsProvider.onSearchInputChanged(val);
+                },
+                onHistoryRemove: (val) =>
+                    homeProvider.removeFromSearchHistory(val),
                 onFilterTap: () => homeProvider.openFilters(
                   context,
                   locProvider.apiLanguageId,

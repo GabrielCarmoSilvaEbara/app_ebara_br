@@ -93,6 +93,7 @@ class LocationService {
       'district': _extractDistrict(address),
       'state': address['state'] as String? ?? '',
       'country': address['country'] as String? ?? '',
+      'country_code': address['country_code'] as String? ?? '',
     };
   }
 
@@ -146,6 +147,7 @@ class LocationService {
             'city': _extractCity(address),
             'state': address['state'] as String? ?? '',
             'country': address['country'] as String? ?? '',
+            'country_code': address['country_code'] as String? ?? '',
             'lat': ParseUtil.toDoubleSafe(item['lat']).toString(),
             'lon': ParseUtil.toDoubleSafe(item['lon']).toString(),
           };

@@ -16,7 +16,7 @@ class DownloadService {
     return directory.path;
   }
 
-  Future<File?> _getLocalFile(String filename) async {
+  Future<File?> getLocalFile(String filename) async {
     final path = await _localPath;
     if (path == null) return null;
     return File('$path/$filename');
@@ -24,7 +24,7 @@ class DownloadService {
 
   Future<bool> isFileDownloaded(String filename) async {
     if (kIsWeb) return false;
-    final file = await _getLocalFile(filename);
+    final file = await getLocalFile(filename);
     return file != null && await file.exists();
   }
 
@@ -34,7 +34,7 @@ class DownloadService {
       return;
     }
 
-    final file = await _getLocalFile(filename);
+    final file = await getLocalFile(filename);
     if (file != null && await file.exists()) {
       final result = await OpenFilex.open(file.path);
       if (result.type != ResultType.done) {

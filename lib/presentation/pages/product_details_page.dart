@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../core/providers/product_details_provider.dart';
 import '../../core/providers/location_provider.dart';
@@ -7,10 +6,10 @@ import '../../core/providers/history_provider.dart';
 import '../../core/extensions/context_extensions.dart';
 import '../../core/models/product_model.dart';
 import '../theme/app_dimens.dart';
+import '../theme/app_colors.dart';
 import '../widgets/app_buttons.dart';
 import '../widgets/product/product_hero_section.dart';
 import '../widgets/product/product_info_section.dart';
-import '../widgets/product/comparison_sheet.dart';
 
 class ProductDetailsPage extends StatefulWidget {
   final String category;
@@ -66,16 +65,17 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     super.dispose();
   }
 
-  void _changeVariant(int index) {
-    if (index < 0 || index >= widget.variants.length) return;
+  void _handleAcquire(BuildContext context, ProductModel product) {
+    final hasEcommerce = product.ecommerceLink?.isNotEmpty == true;
+    if (hasEcommerce) {
+      context.read<ProductDetailsProvider>().launchEcommerce(
+        product.ecommerceLink,
+      );
+    }
+  }
 
-    HapticFeedback.lightImpact();
-    context.read<ProductDetailsProvider>().updateIndex(index);
-    _pageController.animateToPage(
-      index,
-      duration: AppDimens.durationNormal,
-      curve: Curves.easeInOut,
-    );
+  void _handleRepresentatives(BuildContext context, String? brandId) {
+    context.showAppBottomSheet(child: RepresentativesModal(brandId: brandId));
   }
 
   @override
@@ -106,7 +106,10 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                     child: Column(
                       children: [
                         const SizedBox(height: AppDimens.lg),
-                        ProductHeroSection(product: variant),
+                        ProductHeroSection(
+                          product: variant,
+                          allVariants: widget.variants,
+                        ),
                         const SizedBox(height: AppDimens.lg),
                         ProductInfoSection(product: variant),
                       ],
@@ -115,9 +118,57 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                 },
               ),
             ),
-            ProductBottomControls(
-              variants: widget.variants,
-              onVariantChange: _changeVariant,
+            Container(
+              padding: const EdgeInsets.all(AppDimens.lg),
+              decoration: BoxDecoration(
+                color: context.colors.surface,
+                boxShadow: [
+                  BoxShadow(
+                    color: context.colors.shadow.withValues(alpha: 0.15),
+                    blurRadius: AppDimens.lg,
+                    offset: const Offset(0, -5),
+                  ),
+                ],
+              ),
+              child: Selector<ProductDetailsProvider, int>(
+                selector: (_, p) => p.currentIndex,
+                builder: (context, currentIndex, _) {
+                  final currentVariant = widget.variants[currentIndex];
+                  final hasLink =
+                      currentVariant.ecommerceLink?.isNotEmpty == true;
+
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: AppPrimaryButton(
+                          onPressed: hasLink
+                              ? () => _handleAcquire(context, currentVariant)
+                              : null,
+                          text: context.l10n.translate('buy'),
+                          icon: Icons.shopping_cart_outlined,
+                          backgroundColor: hasLink
+                              ? AppColors.primary
+                              : AppColors.primary.withValues(alpha: 0.1),
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(width: AppDimens.md),
+                      Expanded(
+                        child: AppPrimaryButton(
+                          onPressed: () => _handleRepresentatives(
+                            context,
+                            currentVariant.brandId,
+                          ),
+                          text: context.l10n.translate('representatives'),
+                          icon: Icons.store,
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
             ),
           ],
         ),
@@ -187,98 +238,6 @@ class ProductDetailsHeader extends StatelessWidget {
             },
           ),
         ],
-      ),
-    );
-  }
-}
-
-class ProductBottomControls extends StatelessWidget {
-  final List<ProductModel> variants;
-  final ValueChanged<int> onVariantChange;
-
-  const ProductBottomControls({
-    super.key,
-    required this.variants,
-    required this.onVariantChange,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppDimens.xl,
-        vertical: AppDimens.lg,
-      ),
-      decoration: BoxDecoration(
-        color: context.colors.surface,
-        boxShadow: [
-          BoxShadow(
-            color: context.colors.shadow.withValues(alpha: 0.15),
-            blurRadius: AppDimens.lg,
-            offset: const Offset(0, -5),
-          ),
-        ],
-      ),
-      child: Selector<ProductDetailsProvider, int>(
-        selector: (_, p) => p.currentIndex,
-        builder: (context, currentIndex, _) {
-          return Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              AppSquareIconButton(
-                icon: Icons.arrow_back_ios_rounded,
-                isEnabled: currentIndex > 0,
-                onTap: currentIndex > 0
-                    ? () => onVariantChange(currentIndex - 1)
-                    : null,
-                iconSize: AppDimens.iconMd,
-              ),
-              GestureDetector(
-                onTap: variants.length > 1
-                    ? () {
-                        HapticFeedback.mediumImpact();
-                        final provider = context.read<ProductDetailsProvider>();
-                        final base = variants[provider.comparisonBaseIndex];
-                        final current = variants[currentIndex];
-
-                        context.showAppBottomSheet(
-                          child: ComparisonSheet(base: base, current: current),
-                        );
-                      }
-                    : null,
-                child: Container(
-                  width: 70,
-                  height: AppDimens.buttonHeight,
-                  decoration: BoxDecoration(
-                    color: variants.length > 1
-                        ? context.colors.primary
-                        : context.colors.onSurface.withValues(
-                            alpha: AppDimens.opacityLow,
-                          ),
-                    borderRadius: BorderRadius.circular(AppDimens.radiusMd),
-                  ),
-                  child: Icon(
-                    Icons.compare_arrows,
-                    size: 26,
-                    color: variants.length > 1
-                        ? context.colors.onPrimary
-                        : context.colors.onSurface.withValues(
-                            alpha: AppDimens.opacityMed,
-                          ),
-                  ),
-                ),
-              ),
-              AppSquareIconButton(
-                icon: Icons.arrow_forward_ios_rounded,
-                isEnabled: currentIndex < variants.length - 1,
-                onTap: currentIndex < variants.length - 1
-                    ? () => onVariantChange(currentIndex + 1)
-                    : null,
-                iconSize: AppDimens.iconMd,
-              ),
-            ],
-          );
-        },
       ),
     );
   }

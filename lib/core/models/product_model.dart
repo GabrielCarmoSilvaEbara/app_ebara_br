@@ -16,6 +16,7 @@ class ProductModel {
   final double mcaMin;
   final double mcaMax;
   final String? ecommerceLink;
+  final String brandId;
   final List<ProductModel> variants;
 
   ProductModel({
@@ -34,6 +35,7 @@ class ProductModel {
     this.mcaMin = 0.0,
     this.mcaMax = 0.0,
     this.ecommerceLink,
+    this.brandId = '',
     this.variants = const [],
   });
 
@@ -54,6 +56,7 @@ class ProductModel {
       mcaMin: ParseUtil.toDoubleSafe(json['mca_min']) ?? 0.0,
       mcaMax: ParseUtil.toDoubleSafe(json['mca_max']) ?? 0.0,
       ecommerceLink: json['ecommerce_link'],
+      brandId: json['id_brand']?.toString() ?? '',
       variants: json['variants'] != null
           ? (json['variants'] as List)
                 .map((v) => ProductModel.fromJson(v))
@@ -79,6 +82,7 @@ class ProductModel {
       mcaMin: mcaMin,
       mcaMax: mcaMax,
       ecommerceLink: ecommerceLink,
+      brandId: brandId,
       variants: variants ?? this.variants,
     );
   }
@@ -96,6 +100,7 @@ class ProductModel {
       'rate_max': rateMax,
       'frequency': frequency,
       'ecommerce_link': ecommerceLink,
+      'id_brand': brandId,
       'variants': variants.map((x) => x.toMap()).toList(),
     };
   }

@@ -130,6 +130,32 @@ class AppLocalizations {
           'A new version of the app is available. Update now to access new features.',
       'update_now': 'Update Now',
       'later': 'Later',
+      'buy': 'Buy',
+      'representatives': 'Representatives',
+      'no_representatives_found': 'No representatives found\nnear {city}',
+      'error_downloading': 'Error downloading file',
+      'variation': 'VARIATION',
+      'offline_catalog_updated':
+          'Offline catalog updated! ({count} categories processed)',
+      'error_starting_download': 'Error starting download',
+      'starting_download': 'Starting Download',
+      'download_background_info':
+          'The download will continue in the background. Track progress via the notification bar.',
+      'background_downloads': 'Background Downloads',
+      'downloading_offline_catalog': 'Downloading Offline Catalog',
+      'processing_category_progress':
+          'Processing category {current} of {total} ({progress}%)',
+      'download_completed': 'Download Completed',
+      'offline_catalog_success':
+          'The offline catalog has been successfully updated.',
+      'download_error': 'Download Error',
+      'error_downloading_catalog':
+          'An error occurred while downloading the catalog.',
+      'syncing_data': 'Syncing Data',
+      'sync_completed': 'Sync Completed',
+      'data_updated_server': 'Data has been updated with the server.',
+      'operation_error': 'Operation Error',
+      'error_processing_data': 'An error occurred while processing data.',
     },
     'pt': {
       'location': 'Localização',
@@ -246,6 +272,32 @@ class AppLocalizations {
           'Uma nova versão do aplicativo está disponível. Atualize agora para acessar novos recursos.',
       'update_now': 'Atualizar Agora',
       'later': 'Depois',
+      'buy': 'Comprar',
+      'representatives': 'Representantes',
+      'no_representatives_found':
+          'Nenhum representante encontrado\npróximo a {city}',
+      'error_downloading': 'Erro ao baixar arquivo',
+      'variation': 'VARIAÇÃO',
+      'offline_catalog_updated':
+          'Catálogo offline atualizado! ({count} categorias processadas)',
+      'error_starting_download': 'Erro ao iniciar download',
+      'starting_download': 'Iniciando Download',
+      'download_background_info':
+          'O download continuará em segundo plano. Acompanhe o progresso pela barra de notificações.',
+      'background_downloads': 'Downloads em Background',
+      'downloading_offline_catalog': 'Baixando Catálogo Offline',
+      'processing_category_progress':
+          'Processando categoria {current} de {total} ({progress}%)',
+      'download_completed': 'Download Concluído',
+      'offline_catalog_success':
+          'O catálogo offline foi atualizado com sucesso.',
+      'download_error': 'Erro no Download',
+      'error_downloading_catalog': 'Ocorreu um erro ao baixar o catálogo.',
+      'syncing_data': 'Sincronizando Dados',
+      'sync_completed': 'Sincronização Concluída',
+      'data_updated_server': 'Os dados foram atualizados com o servidor.',
+      'operation_error': 'Erro na Operação',
+      'error_processing_data': 'Ocorreu um erro ao processar os dados.',
     },
     'es': {
       'location': 'Ubicación',
@@ -362,6 +414,32 @@ class AppLocalizations {
           'Hay una nueva versión de la aplicación disponible. Actualice ahora para acceder a nuevas funciones.',
       'update_now': 'Actualizar Ahora',
       'later': 'Más tarde',
+      'buy': 'Comprar',
+      'representatives': 'Representantes',
+      'no_representatives_found':
+          'No se encontraron representantes\ncerca de {city}',
+      'error_downloading': 'Error al descargar archivo',
+      'variation': 'VARIACIÓN',
+      'offline_catalog_updated':
+          '¡Catálogo offline actualizado! ({count} categorías procesadas)',
+      'error_starting_download': 'Error al iniciar la descarga',
+      'starting_download': 'Iniciando descarga',
+      'download_background_info':
+          'La descarga continuará en segundo plano. Siga el progreso a través de la barra de notificaciones.',
+      'background_downloads': 'Descargas en segundo plano',
+      'downloading_offline_catalog': 'Descargando catálogo offline',
+      'processing_category_progress':
+          'Procesando categoría {current} de {total} ({progress}%)',
+      'download_completed': 'Descarga completa',
+      'offline_catalog_success':
+          'El catálogo offline se ha actualizado correctamente.',
+      'download_error': 'Error de descarga',
+      'error_downloading_catalog': 'Ocurrió un error al descargar el catálogo.',
+      'syncing_data': 'Sincronizando datos',
+      'sync_completed': 'Sincronización completa',
+      'data_updated_server': 'Los datos se han actualizado con el servidor.',
+      'operation_error': 'Error de operación',
+      'error_processing_data': 'Ocurrió un error al procesar los datos.',
     },
   };
 

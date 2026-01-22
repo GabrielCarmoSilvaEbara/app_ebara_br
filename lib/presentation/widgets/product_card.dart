@@ -25,39 +25,37 @@ class ProductCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final hasVariants = product.variants.isNotEmpty;
 
-    return RepaintBoundary(
-      child: Card(
-        elevation: AppDimens.zero,
-        color: context.theme.cardColor,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppDimens.radiusMd),
-        ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(AppDimens.radiusMd),
-          onTap: () {
-            context.read<HomeProvider>().navigateToProduct(
-              context,
-              product,
-              category,
-            );
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(AppDimens.xs),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: ProductImage(
-                    imageUrl: product.image,
-                    hasImage: product.image.isNotEmpty,
-                    heroTag: product.id,
-                  ),
+    return Card(
+      elevation: AppDimens.zero,
+      color: context.theme.cardColor,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppDimens.radiusMd),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppDimens.radiusMd),
+        onTap: () {
+          context.read<HomeProvider>().navigateToProduct(
+            context,
+            product,
+            category,
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(AppDimens.xs),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: ProductImage(
+                  imageUrl: product.image,
+                  hasImage: product.image.isNotEmpty,
+                  heroTag: product.id,
                 ),
-                const SizedBox(height: AppDimens.sm),
-                CategoryLabel(category: category),
-                ProductFooter(product: product, hasVariants: hasVariants),
-              ],
-            ),
+              ),
+              const SizedBox(height: AppDimens.sm),
+              CategoryLabel(category: category),
+              ProductFooter(product: product, hasVariants: hasVariants),
+            ],
           ),
         ),
       ),

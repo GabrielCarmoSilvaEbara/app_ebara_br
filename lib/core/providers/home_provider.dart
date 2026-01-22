@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'products_provider.dart';
 import 'categories_provider.dart';
 import '../services/ebara_data_service.dart';
@@ -17,11 +18,15 @@ class HomeProvider with ChangeNotifier {
   final ProductsProvider _productsProvider;
   final CategoriesProvider _categoriesProvider;
   final EbaraDataService _dataService;
+  final Box _settingsBox = Hive.box(StorageKeys.boxSettings);
 
   ItemScrollController _itemScrollController = ItemScrollController();
   ItemScrollController get itemScrollController => _itemScrollController;
 
   final PageController pageController = PageController();
+
+  List<String> _productSearchHistory = [];
+  List<String> get productSearchHistory => _productSearchHistory;
 
   HomeProvider({
     required ProductsProvider productsProvider,
@@ -29,7 +34,9 @@ class HomeProvider with ChangeNotifier {
     required EbaraDataService dataService,
   }) : _productsProvider = productsProvider,
        _categoriesProvider = categoriesProvider,
-       _dataService = dataService;
+       _dataService = dataService {
+    _loadSearchHistory();
+  }
 
   bool get isLoading => _productsProvider.isLoading;
   List<ProductModel> get visibleProducts => _productsProvider.visibleProducts;
@@ -39,6 +46,28 @@ class HomeProvider with ChangeNotifier {
 
   void resetController() {
     _itemScrollController = ItemScrollController();
+  }
+
+  void _loadSearchHistory() {
+    _productSearchHistory = _settingsBox
+        .get('product_search_history', defaultValue: <String>[])
+        .cast<String>();
+    notifyListeners();
+  }
+
+  void addToSearchHistory(String term) {
+    if (term.trim().isEmpty) return;
+    _productSearchHistory.remove(term);
+    _productSearchHistory.insert(0, term);
+    if (_productSearchHistory.length > 10) _productSearchHistory.removeLast();
+    _settingsBox.put('product_search_history', _productSearchHistory);
+    notifyListeners();
+  }
+
+  void removeFromSearchHistory(String term) {
+    _productSearchHistory.remove(term);
+    _settingsBox.put('product_search_history', _productSearchHistory);
+    notifyListeners();
   }
 
   Future<void> reloadData(int languageId) async {

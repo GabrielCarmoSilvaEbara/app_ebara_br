@@ -8,19 +8,22 @@ import '../../../../../core/models/product_model.dart';
 import '../../../../../core/router/app_router.dart';
 import '../../theme/app_dimens.dart';
 import '../app_buttons.dart';
+import 'comparison_sheet.dart';
 
 class ProductHeroSection extends StatelessWidget {
   final ProductModel product;
+  final List<ProductModel> allVariants;
 
-  const ProductHeroSection({super.key, required this.product});
+  const ProductHeroSection({
+    super.key,
+    required this.product,
+    required this.allVariants,
+  });
 
   @override
   Widget build(BuildContext context) {
     final imageUrl = product.image;
     final heroTag = product.id.isNotEmpty ? product.id : 'product_hero';
-    final ecommerceLink = product.ecommerceLink;
-    final isEcommerceEnabled =
-        ecommerceLink != null && ecommerceLink.isNotEmpty;
 
     final btnBgColor = context.colors.onPrimary.withValues(
       alpha: AppDimens.opacityLow,
@@ -67,57 +70,24 @@ class ProductHeroSection extends StatelessWidget {
           ),
           Positioned(
             top: btnPadding,
-            left: btnPadding,
-            child: AppBouncingButton(
-              onTap: isEcommerceEnabled
-                  ? () => context
-                        .read<ProductDetailsProvider>()
-                        .launchEcommerce(ecommerceLink)
-                  : null,
-              child: _ActionButton(
-                icon: Icons.monetization_on_outlined,
-                isActive: isEcommerceEnabled,
-                activeColor: btnBgColor,
-                inactiveColor: context.colors.onPrimary.withValues(alpha: 0.05),
-              ),
-            ),
-          ),
-          Positioned(
-            top: btnPadding,
             right: btnPadding,
-            child: Selector<ProductDetailsProvider, int>(
-              selector: (_, p) => p.comparisonBaseIndex,
-              builder: (context, baseIndex, _) {
-                final currentIndex = context
-                    .read<ProductDetailsProvider>()
-                    .currentIndex;
-                final isBase = currentIndex == baseIndex;
-
-                return AppBouncingButton(
-                  onTap: () => context
-                      .read<ProductDetailsProvider>()
-                      .setComparisonBase(currentIndex),
-                  child: AnimatedContainer(
-                    duration: AppDimens.durationNormal,
-                    padding: const EdgeInsets.all(AppDimens.sm),
-                    decoration: BoxDecoration(
-                      color: btnBgColor,
-                      borderRadius: BorderRadius.circular(AppDimens.radiusMd),
-                      border: Border.all(
-                        color: isBase
-                            ? context.colors.onPrimary.withValues(alpha: 0.8)
-                            : Colors.transparent,
-                        width: 1.5,
-                      ),
-                    ),
-                    child: Icon(
-                      isBase ? Icons.push_pin : Icons.push_pin_outlined,
-                      color: isBase ? context.colors.onPrimary : btnIconColor,
-                      size: AppDimens.iconLg,
-                    ),
-                  ),
-                );
+            child: AppBouncingButton(
+              onTap: () {
+                if (allVariants.length > 1) {
+                  context.showAppBottomSheet(
+                    child: ComparisonSheet(variants: allVariants),
+                  );
+                } else {
+                  context.showSnackBar(
+                    context.l10n.translate('no_products_found'),
+                  );
+                }
               },
+              child: _IconContainer(
+                icon: Icons.compare_arrows,
+                bg: btnBgColor,
+                fg: btnIconColor,
+              ),
             ),
           ),
           Positioned(
@@ -128,7 +98,7 @@ class ProductHeroSection extends StatelessWidget {
                 product,
                 context.l10n.translate(
                   'share_text',
-                  params: {'name': '{name}', 'model': '{model}'},
+                  params: {'name': product.name, 'model': product.model},
                 ),
               ),
               child: _IconContainer(
@@ -154,45 +124,6 @@ class ProductHeroSection extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _ActionButton extends StatelessWidget {
-  final IconData icon;
-  final bool isActive;
-  final Color activeColor;
-  final Color inactiveColor;
-
-  const _ActionButton({
-    required this.icon,
-    required this.isActive,
-    required this.activeColor,
-    required this.inactiveColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: AppDimens.durationNormal,
-      padding: const EdgeInsets.all(AppDimens.sm),
-      decoration: BoxDecoration(
-        color: isActive ? activeColor : inactiveColor,
-        borderRadius: BorderRadius.circular(AppDimens.radiusMd),
-        border: Border.all(
-          color: isActive
-              ? context.colors.onPrimary.withValues(alpha: AppDimens.opacityLow)
-              : context.colors.onPrimary.withValues(alpha: 0.1),
-          width: 1.5,
-        ),
-      ),
-      child: Icon(
-        icon,
-        color: isActive
-            ? context.colors.onPrimary
-            : context.colors.onPrimary.withValues(alpha: AppDimens.opacityMed),
-        size: AppDimens.iconLg,
       ),
     );
   }

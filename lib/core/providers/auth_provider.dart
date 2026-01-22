@@ -28,7 +28,7 @@ class AuthProvider with ChangeNotifier {
     try {
       await _googleSignIn.initialize(
         serverClientId:
-            '701048514790-4dn7k8t8le0at7rbqfdejvd3hk6ovb71.apps.googleusercontent.com',
+            '701048514790-2u6k9dn5d120h4lpedpifjcs3dv93up4.apps.googleusercontent.com',
       );
     } catch (_) {}
 

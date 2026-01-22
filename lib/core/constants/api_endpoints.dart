@@ -14,4 +14,5 @@ class ApiEndpoints {
   static const String getDiameters = 'busca-bombas/diametros';
   static const String applicationsList = 'aplicacoes';
   static const String update = 'update';
+  static const String searchRepresentatives = 'busca_representantes';
 }

@@ -1,11 +1,18 @@
+import 'dart:io';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/ebara_data_service.dart';
 import '../services/analytics_service.dart';
+import '../services/download_service.dart';
 import '../models/product_model.dart';
+import '../models/representative_model.dart';
+import '../router/app_router.dart';
 import 'history_provider.dart';
+import '../../core/extensions/context_extensions.dart';
 
 class ProductDescKeys {
   static const String description = 'description';
@@ -16,6 +23,7 @@ class ProductDescKeys {
 
 class ProductDetailsProvider with ChangeNotifier {
   final EbaraDataService _dataService;
+  final DownloadService _downloadService;
 
   int _currentIndex = 0;
   int _comparisonBaseIndex = 0;
@@ -30,8 +38,11 @@ class ProductDetailsProvider with ChangeNotifier {
   final ExpansibleController optionsCtrl = ExpansibleController();
   final ExpansibleController docsCtrl = ExpansibleController();
 
-  ProductDetailsProvider({required EbaraDataService dataService})
-    : _dataService = dataService;
+  ProductDetailsProvider({
+    required EbaraDataService dataService,
+    required DownloadService downloadService,
+  }) : _dataService = dataService,
+       _downloadService = downloadService;
 
   int get currentIndex => _currentIndex;
   int get comparisonBaseIndex => _comparisonBaseIndex;
@@ -82,6 +93,77 @@ class ProductDetailsProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  Future<bool> checkFileStatus(String fileName) async {
+    return _downloadService.isFileDownloaded(fileName);
+  }
+
+  Future<void> openDocument(
+    BuildContext context, {
+    required Map<String, dynamic> fileData,
+    required Function(double) onProgress,
+    required VoidCallback onStart,
+    required VoidCallback onFinish,
+    required String productName,
+  }) async {
+    onStart();
+    final String fileName = fileData['file'];
+    final String url = fileData['full_url'];
+    final String extension = fileData['extension'] ?? '';
+    final String title = fileData['name'];
+    final bool isPdf = extension.toLowerCase() == 'pdf';
+
+    AnalyticsService.logDownloadDocument(title, productName);
+
+    try {
+      final isDownloaded = await _downloadService.isFileDownloaded(fileName);
+
+      if (isDownloaded) {
+        if (isPdf) {
+          final localFile = await _downloadService.getLocalFile(fileName);
+          if (localFile != null && context.mounted) {
+            context.pushNamed(
+              AppRoutes.pdfViewer,
+              extra: {'path': localFile.path, 'title': title},
+            );
+          }
+        } else {
+          await _downloadService.openFile(fileName, url);
+        }
+      } else {
+        if (Uri.base.scheme.startsWith('http')) {
+          await _downloadService.openFile(fileName, url);
+        } else {
+          await _downloadService.downloadFile(
+            url: url,
+            filename: fileName,
+            onProgress: onProgress,
+          );
+
+          if (isPdf) {
+            final localFile = await _downloadService.getLocalFile(fileName);
+            if (localFile != null && context.mounted) {
+              context.pushNamed(
+                AppRoutes.pdfViewer,
+                extra: {'path': localFile.path, 'title': title},
+              );
+            }
+          } else {
+            await _downloadService.openFile(fileName, url);
+          }
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        context.showSnackBar(
+          context.l10n.translate('error_downloading'),
+          isError: true,
+        );
+      }
+    } finally {
+      onFinish();
+    }
+  }
+
   Future<void> shareProduct(
     ProductModel product,
     String shareTextTemplate,
@@ -89,12 +171,34 @@ class ProductDetailsProvider with ChangeNotifier {
     final String name = product.name;
     final String model = product.model;
     final String link = product.ecommerceLink ?? 'https://ebara.com.br';
+    final String imageUrl = product.image;
 
     final text = shareTextTemplate
         .replaceAll('{name}', name)
         .replaceAll('{model}', model);
 
-    await SharePlus.instance.share(ShareParams(text: '$text $link'));
+    final fullText = '$text $link';
+
+    if (imageUrl.isNotEmpty && imageUrl.startsWith('http')) {
+      try {
+        final dio = Dio();
+        final response = await dio.get<List<int>>(
+          imageUrl,
+          options: Options(responseType: ResponseType.bytes),
+        );
+        final bytes = response.data!;
+        final temp = await getTemporaryDirectory();
+        final path = '${temp.path}/${name}_$model.jpg';
+        File(path).writeAsBytesSync(bytes);
+
+        await SharePlus.instance.share(
+          ShareParams(text: fullText, files: [XFile(path)]),
+        );
+        return;
+      } catch (_) {}
+    }
+
+    await SharePlus.instance.share(ShareParams(text: fullText));
   }
 
   Future<void> launchEcommerce(String? url) async {
@@ -103,6 +207,19 @@ class ProductDetailsProvider with ChangeNotifier {
     }
     final Uri uri = Uri.parse(url);
     await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  Future<List<RepresentativeModel>> fetchRepresentatives({
+    required String state,
+    required int languageId,
+    String? brandId,
+  }) async {
+    final rawData = await _dataService.getRepresentatives(
+      state: state,
+      idLanguage: languageId,
+      brandId: brandId,
+    );
+    return rawData.map((e) => RepresentativeModel.fromJson(e)).toList();
   }
 
   void handleSectionExpansion(ExpansibleController selected) {

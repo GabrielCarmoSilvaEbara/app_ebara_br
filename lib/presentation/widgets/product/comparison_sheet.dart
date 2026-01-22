@@ -5,44 +5,122 @@ import '../../../../../core/models/product_model.dart';
 import '../../theme/app_dimens.dart';
 import '../app_modal_wrapper.dart';
 
-class ComparisonSheet extends StatelessWidget {
-  final ProductModel base;
-  final ProductModel current;
+class ComparisonSheet extends StatefulWidget {
+  final List<ProductModel> variants;
 
-  const ComparisonSheet({super.key, required this.base, required this.current});
+  const ComparisonSheet({super.key, required this.variants});
+
+  @override
+  State<ComparisonSheet> createState() => _ComparisonSheetState();
+}
+
+class _ComparisonSheetState extends State<ComparisonSheet> {
+  final Set<int> _selectedIndices = {};
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.variants.isNotEmpty) {
+      _selectedIndices.add(0);
+      if (widget.variants.length > 1) {
+        _selectedIndices.add(1);
+      }
+    }
+  }
+
+  void _toggleVariant(int index) {
+    setState(() {
+      if (_selectedIndices.contains(index)) {
+        if (_selectedIndices.length > 1) {
+          _selectedIndices.remove(index);
+        }
+      } else {
+        _selectedIndices.add(index);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return AppModalWrapper(
       title: context.l10n.translate('technical_comparison'),
-      maxHeightFactor: AppDimens.modalHeightMd,
-      backgroundColor: context.colors.surface,
-      child: ListView(
-        padding: const EdgeInsets.all(AppDimens.lg),
+      maxHeightFactor: AppDimens.modalHeightLg,
+      backgroundColor: colors.surface,
+      child: Column(
         children: [
-          ComparisonItem(
-            label: context.l10n.translate('power'),
-            baseValue: base.power,
-            currentValue: current.power,
-            unit: "CV",
+          SizedBox(
+            height: 60,
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: AppDimens.lg),
+              scrollDirection: Axis.horizontal,
+              itemCount: widget.variants.length,
+              separatorBuilder: (_, _) => const SizedBox(width: AppDimens.sm),
+              itemBuilder: (context, index) {
+                final isSelected = _selectedIndices.contains(index);
+                return Center(
+                  child: FilterChip(
+                    label: Text(
+                      "${context.l10n.translate('variation')} ${index + 1}",
+                    ),
+                    selected: isSelected,
+                    onSelected: (_) => _toggleVariant(index),
+                    backgroundColor: colors.surfaceContainer,
+                    selectedColor: colors.primary,
+                    labelStyle: TextStyle(
+                      color: isSelected ? colors.onPrimary : colors.onSurface,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    checkmarkColor: colors.onPrimary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppDimens.radiusXl),
+                      side: BorderSide(
+                        color: isSelected
+                            ? colors.primary
+                            : colors.surfaceContainer,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
-          ComparisonItem(
-            label: context.l10n.translate('rotation'),
-            baseValue: base.rpm,
-            currentValue: current.rpm,
-            unit: "RPM",
-          ),
-          ComparisonItem(
-            label: context.l10n.translate('max_pressure'),
-            baseValue: base.mcaMax,
-            currentValue: current.mcaMax,
-            unit: "MCA",
-          ),
-          ComparisonItem(
-            label: context.l10n.translate('max_flow'),
-            baseValue: base.rateMax,
-            currentValue: current.rateMax,
-            unit: "m³/h",
+          const Divider(),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(AppDimens.lg),
+              children: [
+                _MultiComparisonItem(
+                  label: context.l10n.translate('power'),
+                  unit: "CV",
+                  variants: widget.variants,
+                  selectedIndices: _selectedIndices,
+                  valueGetter: (p) => p.power,
+                ),
+                _MultiComparisonItem(
+                  label: context.l10n.translate('rotation'),
+                  unit: "RPM",
+                  variants: widget.variants,
+                  selectedIndices: _selectedIndices,
+                  valueGetter: (p) => p.rpm,
+                ),
+                _MultiComparisonItem(
+                  label: context.l10n.translate('max_pressure'),
+                  unit: "MCA",
+                  variants: widget.variants,
+                  selectedIndices: _selectedIndices,
+                  valueGetter: (p) => p.mcaMax,
+                ),
+                _MultiComparisonItem(
+                  label: context.l10n.translate('max_flow'),
+                  unit: "m³/h",
+                  variants: widget.variants,
+                  selectedIndices: _selectedIndices,
+                  valueGetter: (p) => p.rateMax,
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -50,18 +128,19 @@ class ComparisonSheet extends StatelessWidget {
   }
 }
 
-class ComparisonItem extends StatelessWidget {
+class _MultiComparisonItem extends StatelessWidget {
   final String label;
-  final double baseValue;
-  final double currentValue;
   final String unit;
+  final List<ProductModel> variants;
+  final Set<int> selectedIndices;
+  final double Function(ProductModel) valueGetter;
 
-  const ComparisonItem({
-    super.key,
+  const _MultiComparisonItem({
     required this.label,
-    required this.baseValue,
-    required this.currentValue,
     required this.unit,
+    required this.variants,
+    required this.selectedIndices,
+    required this.valueGetter,
   });
 
   @override
@@ -70,25 +149,24 @@ class ComparisonItem extends StatelessWidget {
     final isDark = context.theme.brightness == Brightness.dark;
     final textColor = isDark ? colors.onPrimary : colors.primary;
 
-    final maxVal = (baseValue > currentValue ? baseValue : currentValue);
-    final safeMax = maxVal == 0 ? 1.0 : maxVal;
+    double maxValue = 0.0;
+    final sortedIndices = selectedIndices.toList()..sort();
 
-    final p1 = (baseValue / safeMax).clamp(0.0, 1.0);
-    final p2 = (currentValue / safeMax).clamp(0.0, 1.0);
+    for (final idx in sortedIndices) {
+      final val = valueGetter(variants[idx]);
+      if (val > maxValue) maxValue = val;
+    }
+    if (maxValue == 0) maxValue = 1.0;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: AppDimens.sm),
+      margin: const EdgeInsets.only(bottom: AppDimens.md),
       padding: const EdgeInsets.all(AppDimens.md),
       decoration: BoxDecoration(
         color: colors.surfaceContainer,
         borderRadius: BorderRadius.circular(AppDimens.radiusMd),
-        border: baseValue != currentValue
-            ? Border.all(
-                color: colors.primary.withValues(alpha: AppDimens.opacityLow),
-              )
-            : null,
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -108,36 +186,35 @@ class ComparisonItem extends StatelessWidget {
             ],
           ),
           AppDimens.sm.vGap,
-          StatBar(
-            value: baseValue,
-            percent: p1,
-            color: colors.error,
-            label: context.l10n.translate('comparison_base'),
-            labelColor: colors.error,
-          ),
-          AppDimens.xs.vGap,
-          StatBar(
-            value: currentValue,
-            percent: p2,
-            color: colors.primary,
-            label: context.l10n.translate('comparison_current'),
-            labelColor: colors.primary,
-          ),
+          ...sortedIndices.map((index) {
+            final val = valueGetter(variants[index]);
+            final percent = (val / maxValue).clamp(0.0, 1.0);
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: _StatBar(
+                value: val,
+                percent: percent,
+                color: colors.primary,
+                label: "${context.l10n.translate('variation')} ${index + 1}",
+                labelColor: colors.onSurface.withValues(alpha: 0.7),
+              ),
+            );
+          }),
         ],
       ),
     );
   }
 }
 
-class StatBar extends StatelessWidget {
+class _StatBar extends StatelessWidget {
   final double value;
   final double percent;
   final Color color;
   final String label;
   final Color? labelColor;
 
-  const StatBar({
-    super.key,
+  const _StatBar({
     required this.value,
     required this.percent,
     required this.color,
@@ -150,16 +227,12 @@ class StatBar extends StatelessWidget {
     return Row(
       children: [
         SizedBox(
-          width: AppDimens.xxxxl,
+          width: 85,
           child: Text(
             label,
             style: TextStyle(
               fontSize: AppDimens.fontXs,
-              color:
-                  labelColor ??
-                  context.colors.onSurface.withValues(
-                    alpha: AppDimens.opacityHigh,
-                  ),
+              color: labelColor,
               fontWeight: FontWeight.bold,
             ),
           ),

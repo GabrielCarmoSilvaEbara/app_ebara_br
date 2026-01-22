@@ -6,6 +6,7 @@ import '../../presentation/pages/login_page.dart';
 import '../../presentation/pages/location_page.dart';
 import '../../presentation/pages/product_details_page.dart';
 import '../../presentation/pages/deep_link_loading_page.dart';
+import '../../presentation/pages/pdf_viewer_page.dart';
 import '../../presentation/widgets/image_viewer.dart';
 import '../../core/models/product_model.dart';
 
@@ -17,6 +18,7 @@ class AppRoutes {
   static const String productDetails = 'product_details';
   static const String deepLinkProduct = 'deep_link_product';
   static const String imageViewer = 'image_viewer';
+  static const String pdfViewer = 'pdf_viewer';
 }
 
 class AppRouter {
@@ -83,6 +85,17 @@ class AppRouter {
             transitionsBuilder: (_, animation, _, child) {
               return FadeTransition(opacity: animation, child: child);
             },
+          );
+        },
+      ),
+      GoRoute(
+        path: '/pdf-viewer',
+        name: AppRoutes.pdfViewer,
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>;
+          return PdfViewerPage(
+            path: extra['path'] as String,
+            title: extra['title'] as String,
           );
         },
       ),

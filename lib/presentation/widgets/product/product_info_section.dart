@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../../core/extensions/context_extensions.dart';
 import '../../../../../core/extensions/widget_extensions.dart';
 import '../../../../../core/providers/product_details_provider.dart';
+import '../../../../../core/providers/location_provider.dart';
 import '../../../../../core/utils/parse_util.dart';
 import '../../../../../core/utils/file_type_util.dart';
 import '../../../../../core/models/product_model.dart';
+import '../../../../../core/models/representative_model.dart';
 import '../../theme/app_dimens.dart';
+import '../../theme/app_shadows.dart';
 import '../app_skeletons.dart';
-import '../../../../../core/services/analytics_service.dart';
-import '../../../../../core/services/download_service.dart';
 import '../app_expansion_tile.dart';
+import '../app_buttons.dart';
+import '../app_modal_wrapper.dart';
 
 class ProductInfoSection extends StatefulWidget {
   final ProductModel product;
@@ -24,13 +27,6 @@ class ProductInfoSection extends StatefulWidget {
 }
 
 class _ProductInfoSectionState extends State<ProductInfoSection> {
-  static const String _keyApps = "Aplicações";
-  static const String _keyTechSheet = "Ficha Técnica";
-  static const String _keyFeatures = "Características";
-  static const String _keySpecs = "Especificações";
-  static const String _keyOptions = "Opções";
-  static const String _keyDocs = "Documentos";
-
   final ExpansibleController _featuresCtrl = ExpansibleController();
   final ExpansibleController _specsCtrl = ExpansibleController();
   final ExpansibleController _optionsCtrl = ExpansibleController();
@@ -66,7 +62,7 @@ class _ProductInfoSectionState extends State<ProductInfoSection> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _TitleRow(product: widget.product),
+          ProductTitle(product: widget.product),
           AppDimens.sm.vGap,
           Selector<ProductDetailsProvider, bool>(
             selector: (_, p) => p.isLoading,
@@ -77,132 +73,66 @@ class _ProductInfoSectionState extends State<ProductInfoSection> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _SectionTitle(title: context.l10n.translate(_keyApps)),
+                _SectionHeader(title: context.l10n.translate('Aplicações')),
                 AppDimens.md.vGap,
-                Selector<ProductDetailsProvider, List<Map<String, dynamic>>>(
-                  selector: (_, p) => p.applications,
-                  builder: (_, apps, _) => _ApplicationIcons(apps: apps),
-                ),
-                _SectionTitle(title: context.l10n.translate(_keyTechSheet)),
+                const ProductApplications(),
+                _SectionHeader(title: context.l10n.translate('Ficha Técnica')),
                 AppDimens.md.vGap,
-                _TechnicalSpecs(product: widget.product),
+                ProductTechnicalSpecs(product: widget.product),
                 Selector<ProductDetailsProvider, Map<String, dynamic>?>(
                   selector: (_, p) => p.descriptions,
                   builder: (context, descriptions, _) {
                     if (descriptions == null) return const SizedBox.shrink();
                     return Column(
                       children: [
-                        _buildListSection(
-                          context,
-                          title: _keyFeatures,
+                        ProductDescriptionSection(
+                          title: 'Características',
                           items: descriptions[ProductDescKeys.description],
                           controller: _featuresCtrl,
+                          onExpansionChanged: (isOpen) {
+                            if (isOpen) _handleSectionExpansion(_featuresCtrl);
+                          },
                         ),
-                        _buildListSection(
-                          context,
-                          title: _keySpecs,
+                        ProductDescriptionSection(
+                          title: 'Especificações',
                           items: descriptions[ProductDescKeys.specifications],
                           controller: _specsCtrl,
+                          onExpansionChanged: (isOpen) {
+                            if (isOpen) _handleSectionExpansion(_specsCtrl);
+                          },
                         ),
-                        _buildListSection(
-                          context,
-                          title: _keyOptions,
+                        ProductDescriptionSection(
+                          title: 'Opções',
                           items: descriptions[ProductDescKeys.options],
                           controller: _optionsCtrl,
+                          onExpansionChanged: (isOpen) {
+                            if (isOpen) _handleSectionExpansion(_optionsCtrl);
+                          },
                         ),
                       ],
                     );
                   },
                 ),
-                AppExpansionTile(
+                ProductDocumentsSection(
                   controller: _docsCtrl,
-                  title: context.l10n.translate(_keyDocs),
+                  productName: widget.product.name,
                   onExpansionChanged: (isOpen) {
                     if (isOpen) _handleSectionExpansion(_docsCtrl);
                   },
-                  children: [
-                    Selector<
-                      ProductDetailsProvider,
-                      List<Map<String, dynamic>>
-                    >(
-                      selector: (_, p) => p.files,
-                      builder: (context, files, _) {
-                        if (files.isEmpty) return const _EmptyDocuments();
-                        return Column(
-                          children: files
-                              .map(
-                                (file) => _FileLinkItem(
-                                  file: file,
-                                  productName: widget.product.name,
-                                ),
-                              )
-                              .toList(),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: AppDimens.gridSpacing),
-                  ],
                 ),
+                AppDimens.xxl.vGap,
               ],
             ),
           ),
-          AppDimens.xxl.vGap,
         ],
       ),
     );
   }
-
-  Widget _buildListSection(
-    BuildContext context, {
-    required String title,
-    required List<dynamic>? items,
-    required ExpansibleController controller,
-  }) {
-    if (items == null || items.isEmpty) return const SizedBox.shrink();
-
-    final isDark = context.theme.brightness == Brightness.dark;
-    final textColor = isDark
-        ? context.colors.onPrimary
-        : context.colors.primary;
-    final list = items.cast<String>();
-
-    return AppExpansionTile(
-      controller: controller,
-      title: context.l10n.translate(title),
-      onExpansionChanged: (isOpen) {
-        if (isOpen) _handleSectionExpansion(controller);
-      },
-      children: list
-          .map(
-            (text) => Container(
-              width: double.infinity,
-              margin: const EdgeInsets.only(bottom: AppDimens.xs),
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppDimens.md,
-                vertical: AppDimens.sm,
-              ),
-              decoration: BoxDecoration(
-                color: context.colors.surfaceContainer,
-                borderRadius: BorderRadius.circular(AppDimens.radiusMd),
-              ),
-              child: Text(
-                text,
-                style: context.bodySmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  fontSize: AppDimens.fontMd,
-                  color: textColor,
-                ),
-              ),
-            ),
-          )
-          .toList(),
-    );
-  }
 }
 
-class _TitleRow extends StatelessWidget {
+class ProductTitle extends StatelessWidget {
   final ProductModel product;
-  const _TitleRow({required this.product});
+  const ProductTitle({super.key, required this.product});
 
   @override
   Widget build(BuildContext context) {
@@ -227,9 +157,9 @@ class _TitleRow extends StatelessWidget {
   }
 }
 
-class _SectionTitle extends StatelessWidget {
+class _SectionHeader extends StatelessWidget {
   final String title;
-  const _SectionTitle({required this.title});
+  const _SectionHeader({required this.title});
 
   @override
   Widget build(BuildContext context) {
@@ -244,71 +174,77 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
-class _ApplicationIcons extends StatelessWidget {
-  final List<Map<String, dynamic>> apps;
-  const _ApplicationIcons({required this.apps});
+class ProductApplications extends StatelessWidget {
+  const ProductApplications({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.colors;
-    final isDark = context.theme.brightness == Brightness.dark;
-    final iconColor = isDark ? colors.onPrimary : colors.primary;
-    final bgColor = isDark
-        ? colors.onPrimary.withValues(alpha: AppDimens.opacityLow)
-        : colors.primary.withValues(alpha: 0.05);
+    return Selector<ProductDetailsProvider, List<Map<String, dynamic>>>(
+      selector: (_, p) => p.applications,
+      builder: (_, apps, _) {
+        final colors = context.colors;
+        final isDark = context.theme.brightness == Brightness.dark;
+        final iconColor = isDark ? colors.onPrimary : colors.primary;
+        final bgColor = isDark
+            ? colors.onPrimary.withValues(alpha: AppDimens.opacityLow)
+            : colors.primary.withValues(alpha: 0.05);
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppDimens.md),
-      child: Wrap(
-        spacing: AppDimens.sm,
-        runSpacing: AppDimens.sm,
-        children: apps.map((app) {
-          final String iconFile = app['icon_file'] ?? '';
-          final String fullUrl = iconFile.isNotEmpty
-              ? "https://ebara.com.br/userfiles/aplicacoes/$iconFile"
-              : '';
+        return Padding(
+          padding: const EdgeInsets.only(bottom: AppDimens.md),
+          child: Wrap(
+            spacing: AppDimens.sm,
+            runSpacing: AppDimens.sm,
+            children: apps.map((app) {
+              final String iconFile = app['icon_file'] ?? '';
+              final String fullUrl = iconFile.isNotEmpty
+                  ? "https://ebara.com.br/userfiles/aplicacoes/$iconFile"
+                  : '';
 
-          return Tooltip(
-            message: app['application_name'] ?? '',
-            triggerMode: TooltipTriggerMode.tap,
-            showDuration: const Duration(seconds: 3),
-            child: Container(
-              padding: const EdgeInsets.all(AppDimens.xs),
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: bgColor,
-                borderRadius: BorderRadius.circular(AppDimens.gridSpacing),
-                border: Border.all(
-                  color: isDark
-                      ? colors.outline
-                      : colors.primary.withValues(alpha: AppDimens.opacityLow),
+              return Tooltip(
+                message: app['application_name'] ?? '',
+                triggerMode: TooltipTriggerMode.tap,
+                showDuration: const Duration(seconds: 3),
+                child: Container(
+                  padding: const EdgeInsets.all(AppDimens.xs),
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: bgColor,
+                    borderRadius: BorderRadius.circular(AppDimens.gridSpacing),
+                    border: Border.all(
+                      color: isDark
+                          ? colors.outline
+                          : colors.primary.withValues(
+                              alpha: AppDimens.opacityLow,
+                            ),
+                    ),
+                  ),
+                  child: iconFile.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: fullUrl,
+                          fit: BoxFit.contain,
+                          errorWidget: (_, _, _) => Icon(
+                            Icons.image_not_supported_outlined,
+                            size: AppDimens.iconLg,
+                            color: iconColor.withValues(
+                              alpha: AppDimens.opacityHigh,
+                            ),
+                          ),
+                        )
+                      : Icon(Icons.apps, color: iconColor),
                 ),
-              ),
-              child: iconFile.isNotEmpty
-                  ? CachedNetworkImage(
-                      imageUrl: fullUrl,
-                      fit: BoxFit.contain,
-                      errorWidget: (_, _, _) => Icon(
-                        Icons.image_not_supported_outlined,
-                        size: AppDimens.iconLg,
-                        color: iconColor.withValues(
-                          alpha: AppDimens.opacityHigh,
-                        ),
-                      ),
-                    )
-                  : Icon(Icons.apps, color: iconColor),
-            ),
-          );
-        }).toList(),
-      ),
+              );
+            }).toList(),
+          ),
+        );
+      },
     );
   }
 }
 
-class _TechnicalSpecs extends StatelessWidget {
+class ProductTechnicalSpecs extends StatelessWidget {
   final ProductModel product;
-  const _TechnicalSpecs({required this.product});
+  const ProductTechnicalSpecs({super.key, required this.product});
 
   @override
   Widget build(BuildContext context) {
@@ -384,6 +320,103 @@ class _TechTile extends StatelessWidget {
   }
 }
 
+class ProductDescriptionSection extends StatelessWidget {
+  final String title;
+  final List<dynamic>? items;
+  final ExpansibleController controller;
+  final ValueChanged<bool> onExpansionChanged;
+
+  const ProductDescriptionSection({
+    super.key,
+    required this.title,
+    required this.items,
+    required this.controller,
+    required this.onExpansionChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (items == null || items!.isEmpty) return const SizedBox.shrink();
+
+    final isDark = context.theme.brightness == Brightness.dark;
+    final textColor = isDark
+        ? context.colors.onPrimary
+        : context.colors.primary;
+    final list = items!.cast<String>();
+
+    return AppExpansionTile(
+      controller: controller,
+      title: context.l10n.translate(title),
+      onExpansionChanged: onExpansionChanged,
+      children: list
+          .map(
+            (text) => Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(bottom: AppDimens.xs),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppDimens.md,
+                vertical: AppDimens.sm,
+              ),
+              decoration: BoxDecoration(
+                color: context.colors.surfaceContainer,
+                borderRadius: BorderRadius.circular(AppDimens.radiusMd),
+              ),
+              child: Text(
+                text,
+                style: context.bodySmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  fontSize: AppDimens.fontMd,
+                  color: textColor,
+                ),
+              ),
+            ),
+          )
+          .toList(),
+    );
+  }
+}
+
+class ProductDocumentsSection extends StatelessWidget {
+  final ExpansibleController controller;
+  final String productName;
+  final ValueChanged<bool> onExpansionChanged;
+
+  const ProductDocumentsSection({
+    super.key,
+    required this.controller,
+    required this.productName,
+    required this.onExpansionChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AppExpansionTile(
+      controller: controller,
+      title: context.l10n.translate('Documentos'),
+      onExpansionChanged: onExpansionChanged,
+      children: [
+        Selector<ProductDetailsProvider, List<Map<String, dynamic>>>(
+          selector: (_, p) => p.files,
+          builder: (context, files, _) {
+            if (files.isEmpty) return const _EmptyDocuments();
+            return Column(
+              children: files
+                  .map(
+                    (file) => ProductDocumentTile(
+                      file: file,
+                      productName: productName,
+                    ),
+                  )
+                  .toList(),
+            );
+          },
+        ),
+        const SizedBox(height: AppDimens.gridSpacing),
+      ],
+    );
+  }
+}
+
 class _EmptyDocuments extends StatelessWidget {
   const _EmptyDocuments();
 
@@ -411,20 +444,23 @@ class _EmptyDocuments extends StatelessWidget {
   }
 }
 
-class _FileLinkItem extends StatefulWidget {
+class ProductDocumentTile extends StatefulWidget {
   final Map<String, dynamic> file;
   final String productName;
 
-  const _FileLinkItem({required this.file, required this.productName});
+  const ProductDocumentTile({
+    super.key,
+    required this.file,
+    required this.productName,
+  });
 
   @override
-  State<_FileLinkItem> createState() => _FileLinkItemState();
+  State<ProductDocumentTile> createState() => _ProductDocumentTileState();
 }
 
-class _FileLinkItemState extends State<_FileLinkItem> {
+class _ProductDocumentTileState extends State<ProductDocumentTile> {
   bool _isDownloading = false;
   bool _isDownloaded = false;
-  bool _isBusy = false;
   double _progress = 0.0;
 
   @override
@@ -434,8 +470,8 @@ class _FileLinkItemState extends State<_FileLinkItem> {
   }
 
   Future<void> _checkFileStatus() async {
-    final downloadService = context.read<DownloadService>();
-    final exists = await downloadService.isFileDownloaded(widget.file['file']);
+    final provider = context.read<ProductDetailsProvider>();
+    final exists = await provider.checkFileStatus(widget.file['file']);
     if (mounted) {
       setState(() {
         _isDownloaded = exists;
@@ -443,77 +479,30 @@ class _FileLinkItemState extends State<_FileLinkItem> {
     }
   }
 
-  Future<void> _handleAction() async {
-    if (_isBusy) return;
-    setState(() => _isBusy = true);
+  void _handleAction() {
+    if (_isDownloading) return;
 
-    try {
-      final downloadService = context.read<DownloadService>();
+    final provider = context.read<ProductDetailsProvider>();
 
-      if (_isDownloaded) {
-        await downloadService.openFile(
-          widget.file['file'],
-          widget.file['full_url'],
-        );
-      } else {
-        if (_isDownloading) return;
-
-        setState(() {
-          _isDownloading = true;
-          _progress = 0.0;
-        });
-
-        AnalyticsService.logDownloadDocument(
-          widget.file['name'],
-          widget.productName,
-        );
-
-        if (kIsWeb) {
-          await downloadService.openFile(
-            widget.file['file'],
-            widget.file['full_url'],
-          );
-          if (mounted) {
-            setState(() {
-              _isDownloading = false;
-              _isDownloaded = true;
-            });
-          }
-          return;
+    provider.openDocument(
+      context,
+      fileData: widget.file,
+      productName: widget.productName,
+      onStart: () {
+        if (mounted) setState(() => _isDownloading = true);
+      },
+      onProgress: (val) {
+        if (mounted) setState(() => _progress = val);
+      },
+      onFinish: () {
+        if (mounted) {
+          setState(() {
+            _isDownloading = false;
+            _isDownloaded = true;
+          });
         }
-
-        try {
-          await downloadService.downloadFile(
-            url: widget.file['full_url'],
-            filename: widget.file['file'],
-            onProgress: (progress) {
-              if (mounted) {
-                setState(() {
-                  _progress = progress;
-                });
-              }
-            },
-          );
-          if (mounted) {
-            setState(() {
-              _isDownloading = false;
-              _isDownloaded = true;
-            });
-            await downloadService.openFile(
-              widget.file['file'],
-              widget.file['full_url'],
-            );
-          }
-        } catch (e) {
-          if (mounted) {
-            setState(() => _isDownloading = false);
-            context.showSnackBar("Erro ao baixar arquivo", isError: true);
-          }
-        }
-      }
-    } finally {
-      if (mounted) setState(() => _isBusy = false);
-    }
+      },
+    );
   }
 
   @override
@@ -568,7 +557,9 @@ class _FileLinkItemState extends State<_FileLinkItem> {
                     ),
                   Icon(
                     _isDownloaded
-                        ? Icons.file_open_outlined
+                        ? (widget.file['extension'] == 'pdf'
+                              ? Icons.visibility
+                              : Icons.file_open_outlined)
                         : (_isDownloading
                               ? Icons.stop_rounded
                               : Icons.file_download_outlined),
@@ -580,6 +571,246 @@ class _FileLinkItemState extends State<_FileLinkItem> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class RepresentativesModal extends StatelessWidget {
+  final String? brandId;
+
+  const RepresentativesModal({super.key, this.brandId});
+
+  @override
+  Widget build(BuildContext context) {
+    final locProvider = context.read<LocationProvider>();
+    final productProvider = context.read<ProductDetailsProvider>();
+
+    return AppModalWrapper(
+      title: context.l10n.translate('representatives'),
+      maxHeightFactor: null,
+      backgroundColor: context.colors.surface,
+      child: FutureBuilder<List<RepresentativeModel>>(
+        future: productProvider.fetchRepresentatives(
+          state: locProvider.state,
+          languageId: locProvider.apiLanguageId,
+          brandId: brandId,
+        ),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const SizedBox(
+              height: 200,
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
+
+          if (snapshot.hasError ||
+              !snapshot.hasData ||
+              snapshot.data!.isEmpty) {
+            return _EmptyState(city: locProvider.city);
+          }
+
+          final List<RepresentativeModel> reps = snapshot.data!;
+          return _RepresentativesCarousel(representatives: reps);
+        },
+      ),
+    );
+  }
+}
+
+class _RepresentativesCarousel extends StatelessWidget {
+  final List<RepresentativeModel> representatives;
+
+  const _RepresentativesCarousel({required this.representatives});
+
+  @override
+  Widget build(BuildContext context) {
+    final int initialPage = 1000 * representatives.length;
+
+    return SizedBox(
+      height: 200,
+      child: PageView.builder(
+        controller: PageController(
+          viewportFraction: 0.9,
+          initialPage: initialPage,
+        ),
+        itemBuilder: (context, index) {
+          final rep = representatives[index % representatives.length];
+          return Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppDimens.xxs,
+              vertical: AppDimens.sm,
+            ),
+            child: _RepresentativeCardV2(data: rep),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _RepresentativeCardV2 extends StatelessWidget {
+  final RepresentativeModel data;
+
+  const _RepresentativeCardV2({required this.data});
+
+  void _launch(String url) async {
+    if (await canLaunchUrl(Uri.parse(url))) {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    }
+  }
+
+  void _openWhatsapp(String phone) {
+    final clean = phone.replaceAll(RegExp(r'[^\d]'), '');
+    if (clean.isNotEmpty) {
+      _launch("https://wa.me/55$clean");
+    }
+  }
+
+  void _call(String phone) {
+    final clean = phone.replaceAll(RegExp(r'[^\d]'), '');
+    if (clean.isNotEmpty) {
+      _launch("tel:$clean");
+    }
+  }
+
+  void _openMaps(String address, String city, String state) {
+    final query = Uri.encodeComponent("$address, $city, $state");
+    _launch("https://maps.google.com/?q=$query");
+  }
+
+  void _sendEmail(String email) {
+    if (email.isEmpty) return;
+    _launch("mailto:$email");
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+
+    final hasAddress = data.address.isNotEmpty || data.city.isNotEmpty;
+    final hasPhone = data.phone.isNotEmpty;
+    final hasEmail = data.email.isNotEmpty;
+
+    return Container(
+      padding: const EdgeInsets.all(AppDimens.md),
+      decoration: BoxDecoration(
+        color: context.theme.cardColor,
+        borderRadius: BorderRadius.circular(AppDimens.radiusLg),
+        boxShadow: AppShadows.md(colors.shadow),
+        border: Border.all(color: colors.outline.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: colors.primary.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.store,
+                  color: colors.primary,
+                  size: AppDimens.iconLg,
+                ),
+              ),
+              AppDimens.sm.hGap,
+              Expanded(
+                child: Text(
+                  data.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.subtitleStyle?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    fontSize: AppDimens.fontXl,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const Divider(height: 24),
+
+          const SizedBox(height: 16),
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              AppSquareIconButton(
+                icon: Icons.map_outlined,
+                isEnabled: hasAddress,
+                onTap: hasAddress
+                    ? () => _openMaps(data.address, data.city, data.stateUf)
+                    : null,
+                backgroundColor: colors.primary,
+                iconColor: colors.onPrimary,
+                size: 55,
+                iconSize: 26,
+              ),
+              AppSquareIconButton(
+                icon: Icons.phone,
+                isEnabled: hasPhone,
+                onTap: hasPhone ? () => _call(data.phone) : null,
+                backgroundColor: colors.primary,
+                iconColor: colors.onPrimary,
+                size: 55,
+                iconSize: 26,
+              ),
+              AppSquareIconButton(
+                icon: Icons.message,
+                isEnabled: hasPhone,
+                onTap: hasPhone ? () => _openWhatsapp(data.phone) : null,
+                backgroundColor: colors.primary,
+                iconColor: colors.onPrimary,
+                size: 55,
+                iconSize: 26,
+              ),
+              AppSquareIconButton(
+                icon: Icons.email_outlined,
+                isEnabled: hasEmail,
+                onTap: hasEmail ? () => _sendEmail(data.email) : null,
+                backgroundColor: colors.primary,
+                iconColor: colors.onPrimary,
+                size: 55,
+                iconSize: 26,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  final String city;
+
+  const _EmptyState({required this.city});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.location_off,
+            size: AppDimens.iconHuge,
+            color: context.colors.primary.withValues(alpha: 0.5),
+          ),
+          const SizedBox(height: AppDimens.md),
+          Text(
+            context.l10n.translate(
+              'no_representatives_found',
+              params: {'city': city},
+            ),
+            textAlign: TextAlign.center,
+            style: context.bodyStyle,
+          ),
+        ],
       ),
     );
   }

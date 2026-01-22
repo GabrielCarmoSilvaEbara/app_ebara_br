@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 class AppConstants {
   static const String apiBaseUrl = 'https://ebara.com.br/api/';
   static const String ebaraBaseUrl = 'https://ebara.com.br';
@@ -44,6 +46,33 @@ class CategorySlugs {
   static const String residential = 'residencial';
 }
 
+class CategoryUtil {
+  static IconData getIconForCategory(String id, String slug) {
+    if (slug == CategorySlugs.centrifugal || id == CategoryIds.centrifugal) {
+      return Icons.tune;
+    }
+    if (slug == CategorySlugs.submerged || id == CategoryIds.deepWell) {
+      return Icons.water;
+    }
+    if (slug == CategorySlugs.submersible || id == CategoryIds.submersible) {
+      return Icons.water_drop;
+    }
+    if (slug == CategorySlugs.solar || id == CategoryIds.solar) {
+      return Icons.wb_sunny;
+    }
+    if (slug == CategorySlugs.pressurizer || id == CategoryIds.pressurizer) {
+      return Icons.compress;
+    }
+    if (slug == CategorySlugs.industrial || id == CategoryIds.industrial) {
+      return Icons.factory;
+    }
+    if (slug == CategorySlugs.residential || id == CategoryIds.residential) {
+      return Icons.home;
+    }
+    return Icons.category;
+  }
+}
+
 class SystemConstants {
   static const String all = 'TODOS';
   static const String pressostat = 'pressostato';
@@ -57,7 +86,6 @@ class SystemConstants {
 class StorageKeys {
   static const String boxSettings = 'settings';
   static const String boxApiCache = 'api_cache';
-
   static const String keyUserLocation = 'user_location';
   static const String keyIsDarkMode = 'is_dark_mode';
   static const String keyIsGuest = 'is_guest';
